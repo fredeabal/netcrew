@@ -1,0 +1,716 @@
+/* =============================================
+   Estilos personalizados de la aplicación
+   ============================================= */
+
+/* =============================================
+   VARIABLES GLOBALES DE COLOR
+   Modifica estos valores para cambiar rápidamente 
+   la paleta de colores de toda la aplicación.
+   ============================================= */
+:root, [data-bs-theme="dark"] {
+    /* Color Principal (Botones primarios, enlaces activos, etc. - Cloudflare Orange) */
+    --bs-primary: #F38020 !important;
+    --bs-primary-rgb: 243, 128, 32 !important;
+    --bs-primary-bg-subtle: rgba(243, 128, 32, 0.15) !important;
+    --bs-primary-text-emphasis: #c4600e !important;
+
+    /* Color Secundario */
+    --bs-secondary: #49beff !important;
+    --bs-secondary-rgb: 73, 190, 255 !important;
+    --bs-secondary-bg-subtle: rgba(73, 190, 255, 0.15) !important;
+
+    /* Color de Éxito (Emerald Green) */
+    --bs-success: #10B981 !important;
+    --bs-success-rgb: 16, 185, 129 !important;
+    --bs-success-bg-subtle: rgba(16, 185, 129, 0.15) !important;
+
+    /* Color de Peligro / Error (El rojo/granate vibrante) */
+    --bs-danger: #b31b34 !important;
+    --bs-danger-rgb: 179, 27, 52 !important;
+    --bs-danger-bg-subtle: rgba(179, 27, 52, 0.15) !important;
+    --bs-danger-text-emphasis: #d82b4a !important;
+
+    /* Color de Advertencia (Cloudflare Yellow/Amber) */
+    --bs-warning: #FAAD14 !important;
+    --bs-warning-rgb: 250, 173, 20 !important;
+    --bs-warning-bg-subtle: rgba(250, 173, 20, 0.15) !important;
+
+    /* Color de Información */
+    --bs-info: #539bff !important;
+    --bs-info-rgb: 83, 155, 255 !important;
+    --bs-info-bg-subtle: rgba(83, 155, 255, 0.15) !important;
+}
+
+/* Forzar Primary en componentes específicos */
+.btn-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+.btn-primary:hover {
+    filter: brightness(0.9);
+}
+
+.btn-outline-primary {
+    color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    background-color: transparent !important;
+}
+.btn-outline-primary:hover {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+
+/* Forzar Warning en componentes específicos */
+.btn-warning {
+    background-color: var(--bs-warning) !important;
+    border-color: var(--bs-warning) !important;
+    color: #000;
+}
+.btn-warning:hover {
+    filter: brightness(0.9);
+}
+
+/* Forzar Danger en componentes específicos */
+.btn-danger {
+    background-color: var(--bs-danger) !important;
+    border-color: var(--bs-danger) !important;
+    color: #fff !important;
+}
+.btn-danger:hover {
+    filter: brightness(0.9);
+}
+
+/* --- Avatar circular con inicial del usuario --- */
+.user-avatar-circle {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+}
+
+/* --- Modal de confirmación de eliminación --- */
+.delete-modal-icon {
+    width: 64px;
+    height: 64px;
+}
+
+/* --- Tabla de usuarios --- */
+#users-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+/* --- Botones de acción en tablas --- */
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    transform: scale(1.1);
+}
+
+/* --- Indicador circular para badges (estilo Modernize) --- */
+.round-8 {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+}
+
+/* --- Paginación personalizada --- */
+.pagination .page-link {
+    width: 35px;
+    height: 35px;
+    padding: 0;
+    margin: 0 4px;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bs-heading-color, #2A3547);
+    background-color: var(--bs-secondary-bg, #f8f9fa);
+    transition: all 0.2s ease;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 9px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: transparent !important;
+    opacity: 0.5;
+}
+
+.pagination .page-link:hover:not(.disabled) {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+}
+
+/* --- Badge de rol con efecto sutil --- */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* --- Barra de búsqueda mejorada --- */
+.input-group:focus-within {
+    box-shadow: 0 0 0 0.15rem rgba(var(--bs-primary-rgb), 0.15);
+    border-radius: var(--bs-border-radius);
+}
+
+/* --- Clases para responsive y regla 9 --- */
+.badge-status {
+    display: inline-block;
+    width: 105px;
+    text-align: center;
+    font-size: 0.68rem !important;
+}
+
+.text-login-time {
+    font-size: 0.8rem;
+}
+
+.search-form-responsive {
+    width: 100%;
+}
+
+/* =============================================
+   Light Theme Overrides
+   ============================================= */
+[data-bs-theme="light"] body {
+    background-color: #00000004 !important;
+}
+
+
+/* =============================================
+   Premium Dark Theme Overrides (Apuestas Style)
+   Solo aplica cuando data-bs-theme="dark"
+   ============================================= */
+[data-bs-theme="dark"] {
+    /* Backgrounds Base */
+    --bs-body-bg: #0b1114 !important;
+    --bs-body-bg-rgb: 11, 17, 20 !important;
+    --bs-dark: #0b1114 !important;
+    --bs-dark-rgb: 11, 17, 20 !important;
+    
+    /* Superficies y Tarjetas */
+    --bs-card-bg: #121a1f !important;
+    --bs-secondary-bg: #121a1f !important;
+    --bs-tertiary-bg: #1a262d !important;
+    
+    /* Bordes Generales */
+    --bs-border-color: #1a262d !important;
+
+    /* Subtle Dark */
+    --bs-dark-bg-subtle: #121a1f !important;
+    --bs-dark-border-subtle: #1a262d !important;
+}
+
+/* Cabecera y Menú Lateral Oscuros */
+[data-bs-theme="dark"] .left-sidebar,
+[data-bs-theme="dark"] .topbar {
+    background-color: #0b1114 !important;
+}
+
+[data-bs-theme="dark"] .left-sidebar {
+    border-right: 1px solid #1a262d !important;
+}
+
+/* Controles de Formulario y Buscador */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: #0b1114 !important;
+    border: 1px solid #1a262d !important;
+    color: #a8b6c2 !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    background-color: #0b1114 !important;
+    border-color: rgba(var(--bs-primary-rgb), 0.5) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25) !important;
+}
+
+[data-bs-theme="dark"] .form-control::placeholder {
+    color: #8c9ca6 !important;
+}
+
+/* Tablas Premium Dark */
+[data-bs-theme="dark"] .table {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: #f8f9fa !important;
+    --bs-table-border-color: rgba(255, 255, 255, 0.05) !important;
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02) !important;
+    --bs-table-hover-bg: rgba(var(--bs-primary-rgb), 0.05) !important;
+}
+
+[data-bs-theme="dark"] .table thead th {
+    background-color: #121a1f !important;
+    color: #f6f9fc !important;
+    border-bottom: 2px solid #1a262d !important;
+}
+
+[data-bs-theme="dark"] .table tbody td {
+    background-color: #0b1114 !important;
+    color: #f8f9fa !important;
+}
+
+/* --- Slide-Over Panel (Drawer) --- */
+.drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.drawer-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 500px;
+    height: 100vh;
+    background-color: var(--bs-card-bg, #fff);
+    z-index: 1050;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--bs-border-color, #e5e5e5);
+}
+
+.drawer.show {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--bs-border-color, #e5e5e5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.drawer-body {
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.drawer-footer {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid var(--bs-border-color, #e5e5e5);
+    background-color: var(--bs-tertiary-bg, #fcfcfc);
+}
+
+/* --- QR Code Container & Styling --- */
+.qr-container {
+    background-color: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    display: inline-block;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.qr-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 1.5rem 0;
+}
+
+/* --- Config Area for WireGuard --- */
+.config-pre {
+    background-color: #1a262d;
+    color: #e5e5e5;
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.85rem;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* --- Hover and transition for nodes list --- */
+.device-item {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    border-bottom: 1px solid var(--bs-border-color, #e5e5e5);
+    padding: 0.75rem 0;
+}
+
+.device-item:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.03);
+}
+
+/* --- Botón cuadrado --- */
+.btn-square {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Contenedor de caja de búsqueda con icono --- */
+.search-box-container {
+    width: 100%;
+}
+.search-box-container .form-control {
+    padding-left: 2.25rem;
+}
+.search-box-container .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.text-primary-hover {
+    transition: color 0.15s ease-in-out;
+}
+.text-primary-hover:hover {
+    color: var(--bs-primary) !important;
+}
+
+.network-icon-circle {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+}
+
+/* --- Wireguard Peer Premium Status CSS --- */
+.status-indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-indicator-dot.status-online {
+    background-color: var(--bs-success);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: status-pulse-green 1.8s infinite;
+}
+
+.status-indicator-dot.status-offline {
+    background-color: #6c757d;
+}
+
+.status-indicator-dot.status-checking {
+    background-color: var(--bs-warning);
+    box-shadow: 0 0 0 0 rgba(250, 173, 20, 0.7);
+    animation: status-pulse-yellow 1.8s infinite;
+}
+
+@keyframes status-pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+@keyframes status-pulse-yellow {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(250, 173, 20, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(250, 173, 20, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(250, 173, 20, 0);
+    }
+}
+
+.peer-transfer-info {
+    font-size: 0.72rem;
+    letter-spacing: -0.2px;
+    font-weight: 500;
+}
+
+.peer-endpoint-info {
+    font-size: 0.68rem;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* --- Punto de estado online/offline para móvil/desktop --- */
+.status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.status-dot.online {
+    background-color: #13deb9; /* Success Green */
+    box-shadow: 0 0 8px rgba(19, 222, 185, 0.6);
+}
+
+.status-dot.offline {
+    background-color: #fa896b; /* Danger Red */
+    box-shadow: 0 0 8px rgba(250, 137, 107, 0.6);
+}
+
+.cursor-pointer {
+    cursor: pointer !important;
+}
+.switch-custom-size {
+    width: 2.5em !important;
+    height: 1.25em !important;
+    cursor: pointer !important;
+}
+.display-inline-block {
+    display: inline-block !important;
+}
+.overflow-visible {
+    overflow: visible !important;
+}
+.relative-z0 {
+    position: relative !important;
+    z-index: 0 !important;
+}
+
+/* =============================================
+   ESTILOS DE LA LANDING PAGE (NETCREW)
+   ============================================= */
+.landing-body {
+    background-color: #0b1114;
+    color: #f8f9fa;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow-x: hidden;
+}
+
+.landing-header {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(11, 17, 20, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 1030;
+}
+
+.landing-logo {
+    height: 30px;
+    width: auto;
+}
+
+.landing-nav-link {
+    color: #a8b6c2;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+    text-decoration: none;
+}
+
+.landing-nav-link:hover {
+    color: var(--bs-primary);
+}
+
+.landing-z-index-2 {
+    z-index: 2;
+}
+
+/* Hero Section */
+.landing-hero {
+    min-height: 80vh;
+    background: radial-gradient(circle at 80% 20%, rgba(243, 128, 32, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 10% 80%, rgba(73, 190, 255, 0.05) 0%, transparent 50%);
+}
+
+.landing-hero-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -1px;
+}
+
+.landing-hero-subtitle {
+    font-size: 1.15rem;
+    line-height: 1.7;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #ff9e4f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.landing-hero-img-wrapper {
+    position: relative;
+    display: inline-block;
+    animation: landing-float 6s ease-in-out infinite;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
+}
+
+.landing-hero-img {
+    max-height: 480px;
+    object-fit: cover;
+}
+
+@keyframes landing-float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+}
+
+.landing-hero-gradient-ball-1 {
+    position: absolute;
+    width: 350px;
+    height: 350px;
+    top: 15%;
+    right: 5%;
+    background: radial-gradient(circle, rgba(243, 128, 32, 0.15) 0%, transparent 70%);
+    filter: blur(40px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.landing-hero-gradient-ball-2 {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    bottom: 10%;
+    left: 5%;
+    background: radial-gradient(circle, rgba(73, 190, 255, 0.1) 0%, transparent 70%);
+    filter: blur(30px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Feature Cards (Glassmorphism) */
+.landing-feature-card {
+    background: rgba(18, 26, 31, 0.5) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 20px !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.landing-feature-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(var(--bs-primary-rgb), 0.3) !important;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.landing-feature-icon-wrapper {
+    width: 75px;
+    height: 75px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+}
+
+.max-w-700 {
+    max-width: 700px;
+}
+
+.landing-section-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* Steps Timeline */
+.landing-step-item {
+    background: rgba(18, 26, 31, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    transition: border-color 0.3s ease;
+}
+
+.landing-step-item:hover {
+    border-color: rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.landing-step-number {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--bs-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(var(--bs-primary-rgb), 0.3);
+}
+
+/* Benefits & CTA Card */
+.landing-cta-card {
+    background: linear-gradient(135deg, rgba(18, 26, 31, 0.9) 0%, rgba(18, 26, 31, 0.6) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 24px !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.landing-cta-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 100% 0%, rgba(243, 128, 32, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+/* Buttons and Micro-animations */
+.landing-btn-pulse {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-btn-pulse:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 15px rgba(var(--bs-primary-rgb), 0.3) !important;
+}
+
+.landing-btn-primary-gradient {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #ff9e4f 100%) !important;
+    border: none !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.landing-btn-primary-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(var(--bs-primary-rgb), 0.4) !important;
+}

@@ -34,6 +34,11 @@ class DeviceController extends BaseController
 
         $devices = $this->deviceModel->where('network_id', $networkId)->findAll();
 
+        // Ordenar dispositivos correctamente por IP (evitando ordenamiento alfabético de SQLite)
+        usort($devices, function($a, $b) {
+            return ip2long($a->ip_address) <=> ip2long($b->ip_address);
+        });
+
         $data = [
             'title'   => 'Administrar Nodos - ' . $network->name,
             'network' => $network,

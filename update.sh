@@ -48,13 +48,19 @@ composer install --no-dev --optimize-autoloader
 echo -e "${YELLOW}⏳ [3/4] Aplicando migraciones de base de datos...${NC}"
 php spark migrate
 
-echo -e "${YELLOW}⏳ [4/4] Restaurando permisos seguros...${NC}"
+echo -e "${YELLOW}⏳ [4/5] Restaurando permisos seguros...${NC}"
 # Asegurar que la carpeta uploads exista antes de darle permisos
 mkdir -p /var/www/netcrew/public/uploads
 
 chown -R www-data:www-data /var/www/netcrew
 chmod -R 775 /var/www/netcrew/writable
 chmod -R 775 /var/www/netcrew/public/uploads
+
+echo -e "${YELLOW}⏳ [5/5] Reiniciando servicios y limpiando caché (OPCache)...${NC}"
+systemctl restart php8.1-fpm 2>/dev/null || true
+systemctl restart php8.2-fpm 2>/dev/null || true
+systemctl restart php8.3-fpm 2>/dev/null || true
+systemctl restart php-fpm 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}======================================================================${NC}"

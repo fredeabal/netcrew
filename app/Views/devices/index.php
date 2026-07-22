@@ -58,6 +58,14 @@
                 <code class="fw-semibold text-primary"><?= count($devices) ?></code>
               </div>
             </div>
+
+            <!-- Capacidad de IPs basada en /24 -->
+            <div class="col-12 col-sm-6 col-md-3">
+              <div class="border p-3 rounded">
+                <span class="text-muted d-block small mb-1">Capacidad (/24)</span>
+                <code class="fw-semibold text-primary"><?= count($devices) ?> / 254</code>
+              </div>
+            </div>
           </div>
 
           <!-- Tabla de Nodos / Dispositivos -->

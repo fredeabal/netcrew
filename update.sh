@@ -57,9 +57,10 @@ chmod -R 775 /var/www/netcrew/writable
 chmod -R 775 /var/www/netcrew/public/uploads
 
 echo -e "${YELLOW}⏳ [5/5] Reiniciando servicios y limpiando caché (OPCache)...${NC}"
-systemctl restart php8.1-fpm 2>/dev/null || true
-systemctl restart php8.2-fpm 2>/dev/null || true
-systemctl restart php8.3-fpm 2>/dev/null || true
+# Buscar dinámicamente cualquier versión de PHP-FPM instalada (ej: php8.1-fpm, php9.0-fpm)
+for service in $(systemctl list-unit-files --type=service 2>/dev/null | grep -oE 'php[0-9.]*-fpm\.service'); do
+    systemctl restart "$service" 2>/dev/null || true
+done
 systemctl restart php-fpm 2>/dev/null || true
 
 echo ""

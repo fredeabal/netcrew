@@ -1,9 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =================================================================================
 # NETCREW - AUTOMATIC UPDATER SCRIPT
 # =================================================================================
 # Este script descarga e instala la última versión de NetCrew sin perder datos.
 # =================================================================================
+
+# Si se ejecuta mediante curl/pipe, guardar en un archivo temporal y reconectar la terminal
+if [ ! -t 0 ] && [ -z "$NETCREW_SELF_RUN" ]; then
+    TMP_SCRIPT=$(mktemp /tmp/netcrew_update.XXXXXX.sh)
+    cat > "$TMP_SCRIPT"
+    chmod +x "$TMP_SCRIPT"
+    export NETCREW_SELF_RUN=1
+    exec "$TMP_SCRIPT" "$@" < /dev/tty
+fi
 
 # Colores para salida de terminal
 GREEN='\033[0;32m'
@@ -24,47 +33,53 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 2. Verificar si NetCrew está instalado
-if [ ! -d "/var/www/netcrew" ]; then
-  echo -e "${RED}¡ERROR! No se encontró una instalación de NetCrew en /var/www/netcrew.${NC}"
+INSTALL_DIR="/var/www/netcrew"
+if [ ! -d "$INSTALL_DIR" ]; then
+  echo -e "${RED}¡ERROR! No se encontró una instalación de NetCrew en ${INSTALL_DIR}.${NC}"
   echo -e "Si aún no lo has instalado, utiliza el instalador primero."
   exit 1
 fi
 
+cd "$INSTALL_DIR"
+
 # 3. Entrar a la carpeta e iniciar actualización
-echo -e "${YELLOW}⏳ [1/4] Descargando última versión desde GitHub...${NC}"
-cd /var/www/netcrew
+echo -e "${YELLOW}⏳ [1/5] Descargando última versión desde GitHub...${NC}"
 
 # Configurar Git para confiar en el directorio aunque pertenezca a www-data
-git config --global --add safe.directory /var/www/netcrew
+git config --global --add safe.directory "$INSTALL_DIR"
 
-# Hacer stash de cualquier cambio local (sin commitear) para no perderlos
-git stash > /dev/null 2>&1
+# Guardar cambios locales sin commitear por seguridad
+git stash > /dev/null 2>&1 || true
 
-# Descargar la última versión y forzar sincronización exacta con GitHub (ignorar commits locales)
+# Descargar la última versión y forzar sincronización exacta con GitHub
 git fetch origin main
 git reset --hard origin/main
 
-echo -e "${YELLOW}⏳ [2/4] Actualizando dependencias de PHP (Composer)...${NC}"
+echo -e "${YELLOW}⏳ [2/5] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1
-composer install --no-dev --optimize-autoloader
+composer install --no-dev --optimize-autoloader --no-interaction
 
-echo -e "${YELLOW}⏳ [3/4] Aplicando migraciones de base de datos...${NC}"
+echo -e "${YELLOW}⏳ [3/5] Aplicando migraciones de base de datos...${NC}"
 php spark migrate
 
-echo -e "${YELLOW}⏳ [4/5] Restaurando permisos seguros...${NC}"
+echo -e "${YELLOW}⏳ [4/5] Restaurando permisos y limpiando caché de la aplicación...${NC}"
+# Limpiar caché interno de CodeIgniter 4
+php spark cache:clear 2>/dev/null || true
+
 # Asegurar que la carpeta uploads exista antes de darle permisos
-mkdir -p /var/www/netcrew/public/uploads
+mkdir -p "$INSTALL_DIR/public/uploads"
 
-chown -R www-data:www-data /var/www/netcrew
-chmod -R 775 /var/www/netcrew/writable
-chmod -R 775 /var/www/netcrew/public/uploads
+chown -R www-data:www-data "$INSTALL_DIR"
+chmod -R 775 "$INSTALL_DIR/writable"
+chmod -R 775 "$INSTALL_DIR/public/uploads"
 
-echo -e "${YELLOW}⏳ [5/5] Reiniciando servicios y limpiando caché (OPCache)...${NC}"
-# Buscar dinámicamente cualquier versión de PHP-FPM instalada (ej: php8.1-fpm, php9.0-fpm)
+echo -e "${YELLOW}⏳ [5/5] Reiniciando servicios y limpiando caché (OPCache / Nginx)...${NC}"
+# Buscar dinámicamente cualquier versión de PHP-FPM instalada (ej: php8.1-fpm, php8.2-fpm, php9.0-fpm)
 for service in $(systemctl list-unit-files --type=service 2>/dev/null | grep -oE 'php[0-9.]*-fpm\.service'); do
     systemctl restart "$service" 2>/dev/null || true
 done
 systemctl restart php-fpm 2>/dev/null || true
+systemctl reload nginx 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}======================================================================${NC}"

@@ -37,9 +37,12 @@ cd /var/www/netcrew
 # Configurar Git para confiar en el directorio aunque pertenezca a www-data
 git config --global --add safe.directory /var/www/netcrew
 
-# Hacer stash de cualquier cambio local por si acaso para no romper el pull
+# Hacer stash de cualquier cambio local (sin commitear) para no perderlos
 git stash > /dev/null 2>&1
-git pull origin main
+
+# Descargar la última versión y forzar sincronización exacta con GitHub (ignorar commits locales)
+git fetch origin main
+git reset --hard origin/main
 
 echo -e "${YELLOW}⏳ [2/4] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1

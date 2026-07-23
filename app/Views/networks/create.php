@@ -48,6 +48,12 @@
             </div>
           </div>
 
+          <div class="mb-3">
+            <label for="dns" class="form-label">Servidores DNS</label>
+            <input type="text" class="form-control" id="dns" name="dns" value="<?= old('dns', '1.1.1.1') ?>" placeholder="Ej: 1.1.1.1, 8.8.8.8">
+            <div class="form-text fs-2 text-muted">Puedes ingresar múltiples servidores DNS separados por comas.</div>
+          </div>
+
 
 
           <?php if (auth()->user()->inGroup('superadmin', 'supervisor') && !empty($users)): ?>

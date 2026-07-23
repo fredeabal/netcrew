@@ -459,7 +459,7 @@ class DeviceController extends BaseController
         $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
             (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
 
-        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint);
+        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
 
         return $this->response->setJSON([
             'success' => true,
@@ -497,7 +497,7 @@ class DeviceController extends BaseController
         $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
             (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
 
-        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint);
+        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
 
         $filename = url_title($device->name, '-', true) . '.conf';
 
@@ -544,7 +544,7 @@ class DeviceController extends BaseController
     // ---------------------------------------------------------------------
     // Helper: Formatear contenido del archivo .conf
     // ---------------------------------------------------------------------
-    protected function buildConfigContent($privateKey, $ipAddress, $serverPublicKey, $allowedIps, $serverEndpoint)
+    protected function buildConfigContent($privateKey, $ipAddress, $serverPublicKey, $allowedIps, $serverEndpoint, $dns = null)
     {
         // Limpiar endpoint de esquemas (http://, https://) y barras diagonales accidentales
         $serverEndpoint = trim($serverEndpoint);
@@ -561,6 +561,10 @@ class DeviceController extends BaseController
         $config = "[Interface]\n" .
                   "PrivateKey = {$privateKey}\n" .
                   "Address = {$ipAddress}/{$mask}\n";
+
+        if (!empty($dns)) {
+            $config .= "DNS = " . trim($dns) . "\n";
+        }
                   
         $allowedIpsList = [$allowedIps];
                   
@@ -573,7 +577,7 @@ class DeviceController extends BaseController
                    "AllowedIPs = {$allowedIpsString}\n" .
                    "Endpoint = {$serverEndpoint}\n" .
                    "PersistentKeepalive = 25\n";
-                   
+                     
         return $config;
     }
 

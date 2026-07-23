@@ -13,7 +13,7 @@ class NetworkModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'owner_id', 'name', 'cidr', 'active'
+        'owner_id', 'name', 'cidr', 'dns', 'active'
     ];
 
     // Dates
@@ -29,6 +29,7 @@ class NetworkModel extends Model
         'id'       => 'permit_empty|is_natural_no_zero',
         'name'     => 'required|min_length[3]|max_length[100]',
         'cidr'     => 'required|min_length[9]|max_length[45]|is_unique[networks.cidr,id,{id}]',
+        'dns'      => 'permit_empty|string|max_length[255]',
         'owner_id' => 'required|integer',
     ];
     protected $validationMessages   = [

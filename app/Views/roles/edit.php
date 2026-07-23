@@ -1,5 +1,8 @@
 <div class="container-fluid">
-    <!-- Encabezado de la página -->
+    <!-- =====================================================================
+         CABECERA Y BREADCRUMB (NAVEGACIÓN)
+         Muestra el título de edición de permisos y la ruta de navegación.
+         ===================================================================== -->
     <div class="card shadow-none border position-relative overflow-hidden mb-4">
         <div class="card-body px-4 py-3">
             <div class="row align-items-center">
@@ -21,7 +24,10 @@
         </div>
     </div>
 
-    <!-- Formulario de permisos -->
+    <!-- =====================================================================
+         FORMULARIO DE PERMISOS
+         Muestra los permisos agrupados por categoría con switches para activarlos.
+         ===================================================================== -->
     <div class="row">
         <div class="col-12">
             <form action="<?= base_url('roles/update/' . esc($groupName)) ?>" method="POST">

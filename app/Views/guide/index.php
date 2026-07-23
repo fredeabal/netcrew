@@ -1,4 +1,8 @@
 <div class="container-fluid">
+  <!-- =====================================================================
+       CABECERA Y BREADCRUMB (NAVEGACIÓN)
+       Muestra el título de la Guía de Uso y la ruta de navegación.
+       ===================================================================== -->
   <!-- Cabecera de la Guía -->
   <div class="card border shadow-none position-relative overflow-hidden mb-4">
     <div class="card-body px-4 py-3">
@@ -17,6 +21,10 @@
       </div>
     </div>
   </div>
+  <!-- =====================================================================
+       CONTENIDO DE LA GUÍA (PASOS)
+       Tarjetas informativas que explican cómo usar la plataforma paso a paso.
+       ===================================================================== -->
   <!-- Contenedor de Pasos -->
   <div class="row">
     <!-- Paso 1: Crear la red -->

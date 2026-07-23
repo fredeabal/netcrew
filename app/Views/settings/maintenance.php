@@ -1,4 +1,7 @@
-<div class="container-fluid">
+<!-- =====================================================================
+     CABECERA Y BREADCRUMB (NAVEGACIÓN)
+     Muestra el título de mantenimiento del sistema y la ruta de navegación.
+     ===================================================================== -->
     <!-- Card del Breadcrumb -->
     <div class="card shadow-none border position-relative overflow-hidden mb-4">
         <div class="card-body px-4 py-3">
@@ -16,7 +19,10 @@
         </div>
     </div>
 
-    <!-- Contenido Principal -->
+    <!-- =====================================================================
+         OPCIONES DE MANTENIMIENTO
+         Tarjetas con acciones para limpiar sesiones, debugbar, logs y gestionar backups.
+         ===================================================================== -->
     <div class="row">
         <!-- Tarjeta de Mantenimiento General -->
         <div class="col-12 mb-4">

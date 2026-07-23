@@ -1,4 +1,7 @@
-<!-- Listado de Redes -->
+<!-- =====================================================================
+     CABECERA Y BREADCRUMB (NAVEGACIÓN)
+     Muestra el título de la gestión de redes y el botón para crear una nueva red.
+     ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
@@ -25,6 +28,10 @@
   </div>
 </div>
 
+<!-- =====================================================================
+     LISTADO DE REDES Y BÚSQUEDA
+     Tabla principal con las redes, barra de búsqueda en vivo y paginación.
+     ===================================================================== -->
 <div class="row">
   <div class="col-12">
     <div class="card">
@@ -143,7 +150,10 @@
   </div>
 </div>
 
-<!-- script de busqueda de redes -->
+<!-- =====================================================================
+     SCRIPT DE BÚSQUEDA EN TIEMPO REAL
+     Filtra visualmente las filas de la tabla buscando por nombre o CIDR.
+     ===================================================================== -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('search-networks');

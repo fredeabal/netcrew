@@ -1,4 +1,7 @@
 <?php
+// ---------------------------------------------------------------------
+// Etiquetas legibles para los tipos de dispositivos
+// ---------------------------------------------------------------------
 $typeLabels = [
     'pc'     => 'Computadora / Laptop',
     'server' => 'Servidor',
@@ -6,6 +9,9 @@ $typeLabels = [
     'tablet' => 'Tablet',
     'router' => 'Router / Firewall'
 ];
+// ---------------------------------------------------------------------
+// Iconos asociados a cada tipo de dispositivo (se usan en la vista)
+// ---------------------------------------------------------------------
 $typeIcons  = [
     'pc'     => 'ti-device-laptop',
     'server' => 'ti-server',
@@ -14,9 +20,15 @@ $typeIcons  = [
     'router' => 'ti-router'
 ];
 
+// ---------------------------------------------------------------------
+// Asignación de valores por defecto y verificación de estado
+// ---------------------------------------------------------------------
 $deviceType  = $device->device_type ?? 'pc';
 $wgConnected = $wg && $wg['connected'];
 
+// ---------------------------------------------------------------------
+// Función auxiliar (helper) para formatear bytes a un formato legible
+// ---------------------------------------------------------------------
 $formatBytesView = static function (int $bytes): string {
     if ($bytes <= 0) return '0 B';
     $sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -24,6 +36,9 @@ $formatBytesView = static function (int $bytes): string {
     return round($bytes / pow(1024, $i), 1) . ' ' . $sizes[$i];
 };
 
+// ---------------------------------------------------------------------
+// Función auxiliar (helper) para mostrar el tiempo transcurrido "Hace X..."
+// ---------------------------------------------------------------------
 $timeAgoView = static function (?int $ts, int $ref): string {
     if (!$ts) return '—';
     $sec = $ref - $ts;
@@ -37,6 +52,10 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 };
 ?>
 
+<!-- =====================================================================
+     CABECERA Y BREADCRUMB (NAVEGACIÓN)
+     Muestra el título del dispositivo y la ruta de navegación (migas de pan).
+     ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
@@ -66,6 +85,10 @@ $timeAgoView = static function (?int $ts, int $ref): string {
   </div>
 </div>
 
+<!-- =====================================================================
+     INFORMACIÓN PRINCIPAL DEL DISPOSITIVO
+     Muestra detalles como IP, red, tipo, última conexión y fechas.
+     ===================================================================== -->
 <div class="row">
   <div class="col-12">
     <div class="card mb-4">
@@ -134,6 +157,11 @@ $timeAgoView = static function (?int $ts, int $ref): string {
   </div>
 </div>
 
+<!-- =====================================================================
+     ESTADO DE CONEXIÓN WIREGUARD
+     Esta sección solo se renderiza si existen datos de conexión ($wg).
+     Muestra IP pública, puerto, handshake y tráfico (subida/bajada).
+     ===================================================================== -->
 <?php if ($wg !== null): ?>
 <div class="row">
   <div class="col-12">
@@ -207,6 +235,10 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 </div>
 <?php endif; ?>
 
+<!-- =====================================================================
+     ACCIONES DEL DISPOSITIVO
+     Botones para activar/desactivar y eliminar el dispositivo del sistema.
+     ===================================================================== -->
 <div class="row">
   <div class="col-12">
     <div class="card mb-4">

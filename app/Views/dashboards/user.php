@@ -1,4 +1,7 @@
-<!-- Dashboard de Usuario -->
+<!-- =====================================================================
+     CABECERA Y BREADCRUMB (NAVEGACIÓN)
+     Muestra el título del panel de usuario y la ruta de navegación.
+     ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
@@ -18,6 +21,9 @@
 </div>
 
 <?php
+// ---------------------------------------------------------------------
+// Lógica para contar cuántas redes del usuario están actualmente activas
+// ---------------------------------------------------------------------
 $activeNetworksCount = 0;
 if (!empty($networks)) {
     foreach ($networks as $net) {
@@ -26,6 +32,10 @@ if (!empty($networks)) {
 }
 ?>
 
+<!-- =====================================================================
+     TARJETAS DE ESTADÍSTICAS (MÉTRICAS DEL USUARIO)
+     Muestra el resumen de las redes y dispositivos pertenecientes al usuario.
+     ===================================================================== -->
 <div class="row">
     <!-- Card Mis Redes -->
     <div class="col-md-4 mb-4">

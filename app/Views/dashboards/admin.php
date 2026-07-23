@@ -1,4 +1,7 @@
-<!-- Dashboard de Administrador -->
+<!-- =====================================================================
+     CABECERA Y BREADCRUMB (NAVEGACIÓN)
+     Muestra el título del panel de administración y la ruta de navegación.
+     ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
@@ -17,6 +20,10 @@
   </div>
 </div>
 
+<!-- =====================================================================
+     TARJETAS DE ESTADÍSTICAS (MÉTRICAS GLOBALES)
+     Muestra el resumen general del sistema: usuarios, redes y dispositivos.
+     ===================================================================== -->
 <div class="row">
     <!-- Card Usuarios Registrados -->
     <div class="col-md-6 col-lg-4 mb-4">

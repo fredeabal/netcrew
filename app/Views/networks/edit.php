@@ -1,6 +1,5 @@
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     Muestra el título para la edición de red y la ruta de navegación.
      ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
@@ -25,7 +24,6 @@
 
 <!-- =====================================================================
      FORMULARIO DE EDICIÓN DE RED
-     Campos para modificar el nombre, rango CIDR, propietario y estado activo.
      ===================================================================== -->
 <div class="row">
   <div class="col-12">

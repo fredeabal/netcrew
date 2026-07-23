@@ -1,6 +1,5 @@
 <!-- =====================================================================
      CABECERA PRINCIPAL (HEADER)
-     Metadatos, carga de estilos CSS y barra de navegación superior (Topbar).
      ===================================================================== -->
 <!DOCTYPE html>
 <html lang="es" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical" data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed">

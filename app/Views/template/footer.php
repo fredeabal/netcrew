@@ -3,7 +3,6 @@
     </div>
   <!-- =====================================================================
        PIE DE PÁGINA Y SCRIPTS GLOBALES (FOOTER)
-       Carga de librerías JS, manejo de alertas globales (SweetAlert) y temas.
        ===================================================================== -->
   <!-- Importar Archivos Js -->
   <script src="<?= base_url('assets/') ?>libs/jquery/dist/jquery.min.js"></script>

@@ -1,7 +1,6 @@
 <div class="container-fluid">
     <!-- =====================================================================
          CABECERA Y BREADCRUMB (NAVEGACIÓN)
-         Muestra el título de ajustes globales de WireGuard y la ruta de navegación.
          ===================================================================== -->
     <div class="card shadow-none border position-relative overflow-hidden mb-4">
         <div class="card-body px-4 py-3">
@@ -21,7 +20,6 @@
 
     <!-- =====================================================================
          FORMULARIO DE CONFIGURACIÓN WIREGUARD
-         Campos para configurar la conexión SSH al servidor y los parámetros de red.
          ===================================================================== -->
     <div class="row">
         <div class="col-12">

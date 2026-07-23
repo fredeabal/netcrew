@@ -1,6 +1,5 @@
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     Muestra el título de la gestión de roles y la ruta de navegación.
      ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
@@ -24,7 +23,6 @@
 
 <!-- =====================================================================
      LISTADO DE ROLES
-     Tabla con los grupos/roles disponibles y acceso a su configuración de permisos.
      ===================================================================== -->
 <div class="row">
     <div class="col-12">

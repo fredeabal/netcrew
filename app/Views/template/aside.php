@@ -1,6 +1,5 @@
     <!-- =====================================================================
          BARRA LATERAL DE NAVEGACIÓN (ASIDE / SIDEBAR)
-         Menú principal de la aplicación, generado dinámicamente según permisos.
          ===================================================================== -->
     <!-- Inicio del Menú Lateral -->
     <aside class="left-sidebar with-vertical">

@@ -1,6 +1,5 @@
   <!-- =====================================================================
        CABECERA Y BREADCRUMB (NAVEGACIÓN)
-       Muestra el título de la red y el botón para añadir un nuevo nodo.
        ===================================================================== -->
   <div class="card border shadow-none position-relative overflow-hidden mb-4">
     <div class="card-body px-4 py-3">
@@ -35,7 +34,6 @@
 
   <!-- =====================================================================
        INFORMACIÓN GENERAL DE LA RED Y TABLA DE NODOS
-       Muestra detalles como el rango CIDR, estado, capacidad y la lista de nodos.
        ===================================================================== -->
   <div class="row">
     <div class="col-12">
@@ -215,7 +213,6 @@
 
 <!-- =====================================================================
      MODAL: AGREGAR NUEVO DISPOSITIVO
-     Formulario flotante para generar un nuevo nodo WireGuard en esta red.
      ===================================================================== -->
 <div class="modal fade" id="modal-add-device" tabindex="-1" aria-labelledby="modalAddDeviceLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -255,7 +252,6 @@
 
 <!-- =====================================================================
      MODAL: EDITAR DISPOSITIVO
-     Formulario flotante para cambiar el nombre o tipo de un nodo existente.
      ===================================================================== -->
 <div class="modal fade" id="modal-edit-device" tabindex="-1" aria-labelledby="modalEditDeviceLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -294,7 +290,6 @@
 
 <!-- =====================================================================
      MODAL: VER CONFIGURACIÓN / QR
-     Muestra el código QR y permite descargar el archivo .conf del nodo.
      ===================================================================== -->
 <div class="modal fade" id="modal-view-config" tabindex="-1" aria-labelledby="modalViewConfigLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -325,7 +320,6 @@
 
 <!-- =====================================================================
      SCRIPTS DE FUNCIONALIDAD (AJAX, QR Y TIEMPO REAL)
-     Manejo de formularios sin recarga, búsqueda y actualización de estado WireGuard.
      ===================================================================== -->
 <!-- Librería QR -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

@@ -1,6 +1,5 @@
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     Muestra el título de Mi Perfil y la ruta de navegación.
      ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
@@ -24,7 +23,6 @@
 
 <!-- =====================================================================
      FORMULARIO DE PERFIL DE USUARIO
-     Permite actualizar el avatar, datos personales, contraseña y preferencias de tema.
      ===================================================================== -->
 <div class="row">
     <div class="col-12">
@@ -108,7 +106,6 @@
 
 <!-- =====================================================================
      SCRIPT DE PREVISUALIZACIÓN DE IMAGEN
-     Permite ver el avatar seleccionado en tiempo real antes de subirlo.
      ===================================================================== -->
 <script>
 function previewImage(event) {

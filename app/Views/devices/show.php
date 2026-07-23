@@ -54,7 +54,6 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     Muestra el título del dispositivo y la ruta de navegación (migas de pan).
      ===================================================================== -->
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
@@ -87,7 +86,6 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 
 <!-- =====================================================================
      INFORMACIÓN PRINCIPAL DEL DISPOSITIVO
-     Muestra detalles como IP, red, tipo, última conexión y fechas.
      ===================================================================== -->
 <div class="row">
   <div class="col-12">
@@ -237,7 +235,6 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 
 <!-- =====================================================================
      ACCIONES DEL DISPOSITIVO
-     Botones para activar/desactivar y eliminar el dispositivo del sistema.
      ===================================================================== -->
 <div class="row">
   <div class="col-12">

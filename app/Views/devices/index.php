@@ -163,6 +163,11 @@
                               </a>
                             </li>
                             <li>
+                              <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-edit-device" data-id="<?= $dev->id ?>" data-name="<?= esc($dev->name) ?>" data-type="<?= esc($dev->device_type ?? 'pc') ?>">
+                                <i class="ti ti-pencil"></i> Editar
+                              </a>
+                            </li>
+                            <li>
                               <hr class="dropdown-divider">
                             </li>
                             <li>
@@ -223,6 +228,39 @@
         <div class="modal-footer border-top-0 pt-0">
           <button type="button" class="btn btn-danger border-0" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary border-0" id="btn-save-device">Generar Nodo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR DISPOSITIVO -->
+<div class="modal fade" id="modal-edit-device" tabindex="-1" aria-labelledby="modalEditDeviceLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-semibold" id="modalEditDeviceLabel">Editar Nodo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="form-edit-device-page">
+        <div class="modal-body py-4">
+          <?= csrf_field() ?>
+          <input type="hidden" name="device_id" id="edit-device-id" value="">
+          <div class="mb-3">
+            <label for="edit-device-name" class="form-label">Nombre del Dispositivo</label>
+            <input type="text" class="form-control" id="edit-device-name" name="name" placeholder="Ej: Laptop Oficina" required minlength="2" maxlength="100">
+          </div>
+          <div class="mb-3">
+            <label for="edit-device-type" class="form-label">Tipo de Dispositivo</label>
+            <select class="form-select" id="edit-device-type" name="device_type">
+              <option value="pc">Computadora / Laptop / Servidor (PC)</option>
+              <option value="mobile">Teléfono / Tablet (Móvil)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-danger border-0" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary border-0" id="btn-update-device">Guardar Cambios</button>
         </div>
       </form>
     </div>
@@ -405,6 +443,75 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   });
+
+  // ---------------------------------------------------------------------
+  // Editar dispositivo
+  // ---------------------------------------------------------------------
+  const modalEditEl = document.getElementById('modal-edit-device');
+  const modalEdit = modalEditEl ? new bootstrap.Modal(modalEditEl) : null;
+
+  document.querySelectorAll('.btn-edit-device').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('edit-device-id').value = this.dataset.id;
+      document.getElementById('edit-device-name').value = this.dataset.name;
+      document.getElementById('edit-device-type').value = this.dataset.type;
+      modalEdit.show();
+    });
+  });
+
+  const formEdit = document.getElementById('form-edit-device-page');
+  if (formEdit) {
+    formEdit.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const btnSubmit = document.getElementById('btn-update-device');
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Guardando...';
+
+      const formData = new FormData(this);
+      const deviceId = formData.get('device_id');
+
+      fetch('<?= base_url('devices/update/') ?>' + deviceId, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(res => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = 'Guardar Cambios';
+        if (res.success) {
+          modalEdit.hide();
+          Swal.fire({
+            icon: 'success',
+            title: '¡Actualizado!',
+            text: res.message,
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.reload();
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: res.message || 'No se pudo actualizar.'
+          });
+        }
+      })
+      .catch(err => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = 'Guardar Cambios';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de Red',
+          text: 'Ocurrió un error al intentar guardar los cambios.'
+        });
+      });
+    });
+  }
 
   // Buscador de nodos en tiempo real (nombre o IP)
   const searchInput = document.getElementById('search-devices');

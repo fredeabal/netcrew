@@ -288,6 +288,73 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
+    // Actualizar un dispositivo (Nombre / Tipo)
+    // ---------------------------------------------------------------------
+    public function update($id)
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Método no permitido.'
+            ])->setStatusCode(405);
+        }
+
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Dispositivo no encontrado.'
+            ])->setStatusCode(404);
+        }
+
+        $network = $this->networkModel->find($device->network_id);
+        if (!$network) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Red no encontrada.'
+            ])->setStatusCode(404);
+        }
+
+        // Validar propiedad
+        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No tienes permisos para editar este nodo.'
+            ])->setStatusCode(403);
+        }
+
+        $name = trim($this->request->getPost('name') ?? '');
+        $deviceType = $this->request->getPost('device_type') ?? 'pc';
+
+        if (empty($name)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'El nombre es obligatorio.'
+            ])->setStatusCode(400);
+        }
+
+        if (!in_array($deviceType, ['pc', 'mobile'])) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Tipo de dispositivo no válido.'
+            ])->setStatusCode(400);
+        }
+
+        if ($this->deviceModel->update($id, ['name' => $name, 'device_type' => $deviceType])) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Nodo actualizado correctamente.'
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'success' => false,
+            'message' => 'Error al actualizar el nodo.',
+            'errors'  => $this->deviceModel->errors()
+        ])->setStatusCode(400);
+    }
+
+    // ---------------------------------------------------------------------
     // Eliminar un dispositivo
     // ---------------------------------------------------------------------
     public function delete($id)

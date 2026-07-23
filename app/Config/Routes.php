@@ -68,6 +68,7 @@ $routes->group('networks', ['filter' => 'session'], static function ($routes) {
 $routes->group('devices', ['filter' => 'session'], static function ($routes) {
     $routes->get('list/(:num)', 'DeviceController::listByNetwork/$1', ['filter' => 'permission:devices.view']);
     $routes->post('store', 'DeviceController::store', ['filter' => 'permission:devices.create']);
+    $routes->post('update/(:num)', 'DeviceController::update/$1', ['filter' => 'permission:devices.edit']);
     $routes->post('delete/(:num)', 'DeviceController::delete/$1', ['filter' => 'permission:devices.delete']);
     $routes->post('toggle-active/(:num)', 'DeviceController::toggleActive/$1', ['filter' => 'permission:devices.edit']);
     $routes->get('download/(:num)', 'DeviceController::downloadConfig/$1', ['filter' => 'permission:devices.view']);

@@ -109,11 +109,17 @@
                           <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper <?= $dev->active ? 'bg-danger-subtle text-danger' : 'bg-light text-muted' ?>"
                                data-pubkey="<?= esc($dev->public_key) ?>"
                                data-active="<?= $dev->active ? '1' : '0' ?>">
-                            <?php if (($dev->device_type ?? 'pc') === 'mobile'): ?>
-                              <i class="ti ti-device-mobile fs-5"></i>
-                            <?php else: ?>
-                              <i class="ti ti-device-laptop fs-5"></i>
-                            <?php endif; ?>
+                             <?php
+                               $typeIconsMap = [
+                                 'pc'     => 'ti-device-laptop',
+                                 'server' => 'ti-server',
+                                 'mobile' => 'ti-device-mobile',
+                                 'tablet' => 'ti-device-tablet',
+                                 'router' => 'ti-router'
+                               ];
+                               $iconClass = $typeIconsMap[$dev->device_type ?? 'pc'] ?? 'ti-device-laptop';
+                             ?>
+                             <i class="ti <?= $iconClass ?> fs-5"></i>
                           </div>
                           <div>
                             <h6 class="fw-semibold mb-0">
@@ -220,8 +226,11 @@
           <div class="mb-3">
             <label for="device-type" class="form-label">Tipo de Dispositivo</label>
             <select class="form-select" id="device-type" name="device_type">
-              <option value="pc">Computadora / Laptop / Servidor (PC)</option>
-              <option value="mobile">Teléfono / Tablet (Móvil)</option>
+              <option value="pc">Computadora / Laptop (PC)</option>
+              <option value="server">Servidor</option>
+              <option value="mobile">Teléfono</option>
+              <option value="tablet">Tablet</option>
+              <option value="router">Router / Firewall</option>
             </select>
           </div>
         </div>
@@ -253,8 +262,11 @@
           <div class="mb-3">
             <label for="edit-device-type" class="form-label">Tipo de Dispositivo</label>
             <select class="form-select" id="edit-device-type" name="device_type">
-              <option value="pc">Computadora / Laptop / Servidor (PC)</option>
-              <option value="mobile">Teléfono / Tablet (Móvil)</option>
+              <option value="pc">Computadora / Laptop (PC)</option>
+              <option value="server">Servidor</option>
+              <option value="mobile">Teléfono</option>
+              <option value="tablet">Tablet</option>
+              <option value="router">Router / Firewall</option>
             </select>
           </div>
         </div>

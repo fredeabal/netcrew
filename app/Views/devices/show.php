@@ -1,6 +1,18 @@
 <?php
-$typeLabels = ['pc' => 'Computadora / Laptop', 'mobile' => 'Teléfono / Tablet'];
-$typeIcons  = ['pc' => 'ti-device-laptop', 'mobile' => 'ti-device-mobile'];
+$typeLabels = [
+    'pc'     => 'Computadora / Laptop',
+    'server' => 'Servidor',
+    'mobile' => 'Teléfono',
+    'tablet' => 'Tablet',
+    'router' => 'Router / Firewall'
+];
+$typeIcons  = [
+    'pc'     => 'ti-device-laptop',
+    'server' => 'ti-server',
+    'mobile' => 'ti-device-mobile',
+    'tablet' => 'ti-device-tablet',
+    'router' => 'ti-router'
+];
 
 $deviceType  = $device->device_type ?? 'pc';
 $wgConnected = $wg && $wg['connected'];

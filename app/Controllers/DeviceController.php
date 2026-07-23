@@ -247,7 +247,7 @@ class DeviceController extends BaseController
         $publicKey = base64_encode(sodium_crypto_box_publickey($keypair));
 
         $deviceType = $this->request->getPost('device_type') ?? 'pc';
-        if (!in_array($deviceType, ['pc', 'mobile'])) {
+        if (!in_array($deviceType, ['pc', 'server', 'mobile', 'tablet', 'router'])) {
             $deviceType = 'pc';
         }
 
@@ -333,7 +333,7 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        if (!in_array($deviceType, ['pc', 'mobile'])) {
+        if (!in_array($deviceType, ['pc', 'server', 'mobile', 'tablet', 'router'])) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Tipo de dispositivo no válido.'

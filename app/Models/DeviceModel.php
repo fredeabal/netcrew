@@ -32,7 +32,7 @@ class DeviceModel extends Model
         'public_key'  => 'required',
         'private_key' => 'required',
         'os'          => 'permit_empty|in_list[linux,windows,osx,ios,android]',
-        'device_type' => 'required|in_list[pc,mobile]',
+        'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
     ];
     
     protected $validationMessages   = [

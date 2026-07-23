@@ -269,8 +269,14 @@ class WireguardController extends BaseController
         }
 
         if ($needWriteConf && !empty($privKey)) {
-            // Escribir el archivo de configuración con reglas de firewall para comunicación entre peers
-            $confContent = "[Interface]\nAddress = {$serverIpString}\nSaveConfig = true\nListenPort = 51820\nPrivateKey = {$privKey}\nPostUp = iptables -A FORWARD -i {$interface} -o {$interface} -j ACCEPT\nPostDown = iptables -D FORWARD -i {$interface} -o {$interface} -j ACCEPT\n";
+            // Escribir el archivo de configuración con reglas de firewall para comunicación entre peers e internet
+            $confContent = "[Interface]\n" .
+                           "Address = {$serverIpString}\n" .
+                           "SaveConfig = true\n" .
+                           "ListenPort = 51820\n" .
+                           "PrivateKey = {$privKey}\n" .
+                           "PostUp = iptables -A FORWARD -i {$interface} -o {$interface} -j ACCEPT; DEFAULT_DEV=\$(ip route show | grep default | awk '{print \$5}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -A FORWARD -i {$interface} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi\n" .
+                           "PostDown = iptables -D FORWARD -i {$interface} -o {$interface} -j ACCEPT; DEFAULT_DEV=\$(ip route show | grep default | awk '{print \$5}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -D FORWARD -i {$interface} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi\n";
             
             $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)));
             $ssh->exec($writeConfCmd);

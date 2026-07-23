@@ -163,12 +163,12 @@
                               </a>
                             </li>
                             <li>
+                              <hr class="dropdown-divider">
+                            </li>
+                            <li>
                               <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-edit-device" data-id="<?= $dev->id ?>" data-name="<?= esc($dev->name) ?>" data-type="<?= esc($dev->device_type ?? 'pc') ?>">
                                 <i class="ti ti-pencil"></i> Editar
                               </a>
-                            </li>
-                            <li>
-                              <hr class="dropdown-divider">
                             </li>
                             <li>
                               <form action="<?= site_url('devices/toggle-active/' . $dev->id) ?>" method="post" data-confirm="<?= $dev->active ? '¿Desactivar este nodo? Perderá acceso a la VPN.' : '¿Activar este nodo?' ?>">

@@ -63,7 +63,7 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
   <img src="docs/assets/nodos.png" width="100%" alt="Gestión de Nodos">
 </p>
 <p align="center">
-  <img src="docs/assets/importar-config.png" width="100%" alt="Importar Configuración al Cliente">
+  <img src="docs/assets/importar-config.png" width="60%" alt="Importar Configuración al Cliente">
 </p>
 
 ### ⚡ Sincronización & Mantenimiento en Tiempo Real

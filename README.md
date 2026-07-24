@@ -60,10 +60,12 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 <p align="center">
   <img src="docs/assets/redes.png" width="100%" alt="Gestión de Redes">
 </p>
+
 ### 🔸 Gestión de Nodos
 <p align="center">
   <img src="docs/assets/nodos.png" width="100%" alt="Gestión de Nodos">
 </p>
+
 ### 🔸 Importar Configuración al Cliente
 <p align="center">
   <img src="docs/assets/importar-config.png" width="60%" alt="Importar Configuración al Cliente">
@@ -78,6 +80,7 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 <p align="center">
   <img src="docs/assets/ajustes-wireguard.png" width="100%" alt="Ajustes WireGuard">
 </p>
+
 ### 🔸 Mantenimiento del Sistema
 <p align="center">
   <img src="docs/assets/mantenimiento.png" width="100%" alt="Mantenimiento del Sistema">
@@ -92,6 +95,7 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 <p align="center">
   <img src="docs/assets/gestion-de-usuarios.png" width="100%" alt="Gestión de Usuarios">
 </p>
+
 ### 🔸 Gestión de Permisos (RBAC)
 <p align="center">
   <img src="docs/assets/gestion-de-permisos.png" width="100%" alt="Gestión de Permisos (RBAC)">

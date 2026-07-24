@@ -242,6 +242,11 @@ $timeAgoView = static function (?int $ts, int $ref): string {
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-center gap-2">
 
+          <button type="button" class="btn btn-dark border-0 shadow-none text-white" onclick="pingDevice(<?= $device->id ?>)">
+            <i class="ti ti-wifi me-1"></i>
+            Hacer Ping
+          </button>
+
           <form action="<?= site_url('devices/toggle-active/' . $device->id) ?>"
                 method="post"
                 data-confirm="<?= $device->active ? '¿Desactivar este nodo? Perderá acceso a la VPN.' : '¿Activar este nodo?' ?>">
@@ -271,3 +276,50 @@ $timeAgoView = static function (?int $ts, int $ref): string {
     </div>
   </div>
 </div>
+
+<script>
+function pingDevice(deviceId) {
+    Swal.fire({
+        title: 'Haciendo Ping...',
+        text: 'Enviando paquetes ICMP al nodo, por favor espera (aprox. 4-8 segundos).',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    let formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+    fetch('<?= site_url('devices/ping/') ?>' + deviceId, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            Swal.fire({
+                title: 'Ping Exitoso',
+                html: `<pre class="text-start bg-dark text-success p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${data.output}</pre>`,
+                icon: 'success',
+                confirmButtonColor: '#34c759',
+                width: '600px'
+            });
+        } else {
+            Swal.fire({
+                title: 'Ping Fallido',
+                html: `<p class="mb-2">${data.message}</p><pre class="text-start bg-dark text-danger p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${data.output || 'Sin respuesta'}</pre>`,
+                icon: 'error',
+                confirmButtonColor: '#b31b34',
+                width: '600px'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire('Error', 'No se pudo completar la solicitud de ping. Revisa tu conexión al servidor.', 'error');
+    });
+}
+</script>

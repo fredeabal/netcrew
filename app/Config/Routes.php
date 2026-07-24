@@ -72,6 +72,7 @@ $routes->group('devices', ['filter' => 'session'], static function ($routes) {
     $routes->post('store', 'DeviceController::store', ['filter' => 'permission:devices.create']);
     $routes->post('update/(:num)', 'DeviceController::update/$1', ['filter' => 'permission:devices.edit']);
     $routes->post('delete/(:num)', 'DeviceController::delete/$1', ['filter' => 'permission:devices.delete']);
+    $routes->post('ping/(:num)', 'DeviceController::ping/$1', ['filter' => 'permission:devices.view']);
     $routes->post('toggle-active/(:num)', 'DeviceController::toggleActive/$1', ['filter' => 'permission:devices.edit']);
     $routes->get('download/(:num)', 'DeviceController::downloadConfig/$1', ['filter' => 'permission:devices.view']);
     $routes->get('details-json/(:num)', 'DeviceController::getDetailsJson/$1', ['filter' => 'permission:devices.view']);

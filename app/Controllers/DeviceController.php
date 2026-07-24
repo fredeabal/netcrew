@@ -756,6 +756,56 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
+    // Hacer ping a un dispositivo (ICMP)
+    // ---------------------------------------------------------------------
+    public function ping($id)
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Método no permitido'])->setStatusCode(405);
+        }
+
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Dispositivo no encontrado'])->setStatusCode(404);
+        }
+
+        // Obtener red para comprobar permisos
+        $network = $this->networkModel->find($device->network_id);
+        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'No tienes permisos para esta red'])->setStatusCode(403);
+        }
+
+        try {
+            $ssh = $this->getSshSession(10);
+            
+            // Ejecutar ping enviando 4 paquetes, timeout 2 segundos por paquete
+            $ip = escapeshellarg($device->ip_address);
+            $cmd = $this->wrapSudoCommand("ping -c 4 -W 2 {$ip} 2>&1");
+            $output = $ssh->exec($cmd);
+            $exitStatus = $ssh->getExitStatus();
+
+            if ($exitStatus === 0) {
+                return $this->response->setJSON([
+                    'status' => 'success',
+                    'output' => $output
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
+                    'output' => $output
+                ]);
+            }
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Error de conexión SSH con el servidor VPN.',
+                'output' => $e->getMessage()
+            ]);
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Obtener estado de conexión en tiempo real de todos los nodos
     // ---------------------------------------------------------------------
     public function realtimeStatus($networkId)

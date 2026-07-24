@@ -40,108 +40,9 @@
             </div>
         </div>
 
-        <!-- Opciones Individuales -->
-        <!-- 1. Sincronizar Servidor VPN -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-none border">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="p-2 rounded bg-light-warning text-warning d-flex align-items-center justify-content-center">
-                                <i class="ti ti-refresh fs-7"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0">Sincronizar Servidor VPN</h5>
-                        </div>
-                        <p class="text-muted">Reconcilia los peers entre la base de datos y el servidor. Elimina peers inactivos/fantasmas del servidor y restaura automáticamente los nodos activos que falten.</p>
-                    </div>
-                    <div class="mt-3">
-                        <form action="<?= base_url('settings/maintenance/clear-ghost-peers') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn btn-warning text-white w-100">
-                                Sincronizar y Limpiar Servidor
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ================= SECCIÓN: DATOS Y RESPALDOS ================= -->
 
-        <!-- 2. Sesiones inactivas -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-none border">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="p-2 rounded bg-light-info text-info d-flex align-items-center justify-content-center">
-                                <i class="ti ti-users fs-7"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0">Sesiones de Usuario</h5>
-                        </div>
-                        <p class="text-muted">Elimina archivos de sesión antiguos y temporales del servidor. Tu sesión activa actual se conservará para evitar que seas desconectado.</p>
-                    </div>
-                    <div class="mt-3">
-                        <form action="<?= base_url('settings/maintenance/clear-sessions') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn btn-info w-100">
-                             Limpiar Sesiones
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Debugbar -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-none border">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="p-2 rounded bg-light-danger text-danger d-flex align-items-center justify-content-center">
-                                <i class="ti ti-bug fs-7"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0">Debugbar de CodeIgniter</h5>
-                        </div>
-                        <p class="text-muted">Vacía la caché y los archivos generados por la barra de herramientas de depuración (Debugbar) para liberar espacio en disco.</p>
-                    </div>
-                    <div class="mt-3">
-                        <form action="<?= base_url('settings/maintenance/clear-debugbar') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn btn-danger w-100">
-                             Limpiar Debugbar
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Logs del Sistema -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-none border">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="p-2 rounded bg-light-success text-success d-flex align-items-center justify-content-center">
-                                <i class="ti ti-file-text fs-7"></i>
-                            </div>
-                            <h5 class="fw-bold mb-0">Logs del Sistema</h5>
-                        </div>
-                        <p class="text-muted">Elimina los archivos históricos de registro de errores de CodeIgniter que se acumulan en la carpeta writable.</p>
-                    </div>
-                    <div class="mt-3">
-                        <form action="<?= base_url('settings/maintenance/clear-logs') ?>" method="POST">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn btn-success w-100">
-                             Limpiar Historial de Logs
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. Respaldos (Backup) -->
+        <!-- Respaldos (Backup) -->
         <div class="col-12 mb-4">
             <div class="card shadow-none border">
                 <div class="card-body">
@@ -194,8 +95,164 @@
                 </div>
             </div>
         </div>
+
+        <!-- Optimizar Base de Datos -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-primary text-primary d-flex align-items-center justify-content-center">
+                                <i class="ti ti-database-export fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Optimizar Base de Datos</h5>
+                        </div>
+                        <p class="text-muted">Desfragmenta y comprime la base de datos SQLite (VACUUM) para liberar espacio en disco y mejorar el rendimiento y tiempos de respuesta del panel.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/optimize-db') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-primary w-100">
+                             Ejecutar Optimización
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= SECCIÓN: RED Y CONECTIVIDAD ================= -->
+
+        <!-- Sincronizar Servidor VPN -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-warning text-warning d-flex align-items-center justify-content-center">
+                                <i class="ti ti-refresh fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Sincronizar Servidor VPN</h5>
+                        </div>
+                        <p class="text-muted">Reconcilia los peers entre la base de datos y el servidor. Elimina peers inactivos/fantasmas del servidor y restaura automáticamente los nodos activos que falten.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/clear-ghost-peers') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-warning text-white w-100">
+                                Sincronizar y Limpiar Servidor
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reiniciar WireGuard -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-secondary text-secondary d-flex align-items-center justify-content-center">
+                                <i class="ti ti-power fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Reiniciar Servicio WireGuard</h5>
+                        </div>
+                        <p class="text-muted">Fuerza el reinicio del demonio de WireGuard en el servidor si los nodos no responden o si hiciste cambios manuales externos.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/restart-wireguard') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-secondary text-white w-100">
+                             Reiniciar WireGuard
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= SECCIÓN: SISTEMA Y REGISTROS ================= -->
+
+        <!-- Sesiones inactivas -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-info text-info d-flex align-items-center justify-content-center">
+                                <i class="ti ti-users fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Sesiones de Usuario</h5>
+                        </div>
+                        <p class="text-muted">Elimina archivos de sesión antiguos y temporales del servidor. Tu sesión activa actual se conservará para evitar que seas desconectado.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/clear-sessions') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-info w-100">
+                             Limpiar Sesiones
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debugbar -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-danger text-danger d-flex align-items-center justify-content-center">
+                                <i class="ti ti-bug fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Debugbar de CodeIgniter</h5>
+                        </div>
+                        <p class="text-muted">Vacía la caché y los archivos generados por la barra de herramientas de depuración (Debugbar) para liberar espacio en disco.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/clear-debugbar') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger w-100">
+                             Limpiar Debugbar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs del Sistema -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-none border">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="p-2 rounded bg-light-success text-success d-flex align-items-center justify-content-center">
+                                <i class="ti ti-file-text fs-7"></i>
+                            </div>
+                            <h5 class="fw-bold mb-0">Logs del Sistema</h5>
+                        </div>
+                        <p class="text-muted">Elimina los archivos históricos de registro de errores de CodeIgniter que se acumulan en la carpeta writable.</p>
+                    </div>
+                    <div class="mt-3">
+                        <form action="<?= base_url('settings/maintenance/clear-logs') ?>" method="POST">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-success w-100">
+                             Limpiar Historial de Logs
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {

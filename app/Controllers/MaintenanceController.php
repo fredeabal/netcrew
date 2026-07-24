@@ -54,12 +54,52 @@ class MaintenanceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
+    // Optimizar Base de Datos (VACUUM)
+    // ---------------------------------------------------------------------
+    public function optimizeDb()
+    {
+        try {
+            $db = \Config\Database::connect();
+            $db->query('VACUUM;');
+            return redirect()->to(base_url('settings/maintenance'))->with('message', 'La base de datos SQLite ha sido desfragmentada y optimizada correctamente.');
+        } catch (\Exception $e) {
+            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al optimizar la base de datos: ' . $e->getMessage());
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Limpieza de archivos de logs
     // ---------------------------------------------------------------------
     public function clearLogs()
     {
         $count = $this->cleanDirectory(WRITEPATH . 'logs');
         return redirect()->to(base_url('settings/maintenance'))->with('message', "Se limpiaron {$count} archivos de logs de error.");
+    }
+
+    // ---------------------------------------------------------------------
+    // Reiniciar servicio WireGuard
+    // ---------------------------------------------------------------------
+    public function restartWireguard()
+    {
+        $settings = service('settings');
+        $interface = $settings->get('WireGuard.interface') ?: 'wg0';
+
+        try {
+            $ssh = $this->getSshSession(10);
+            
+            // Usamos wg-quick down y luego wg-quick up, o systemctl restart
+            // systemctl restart wg-quick@wg0 es el estándar en las distribuciones con systemd
+            $cmd = $this->wrapSudoCommand("systemctl restart wg-quick@" . escapeshellarg($interface));
+            $output = $ssh->exec($cmd);
+
+            if ($ssh->getExitStatus() !== 0) {
+                 return redirect()->to(base_url('settings/maintenance'))->with('error', "Error al reiniciar WireGuard: " . $output);
+            }
+
+            return redirect()->to(base_url('settings/maintenance'))->with('message', "El servicio WireGuard ({$interface}) ha sido reiniciado correctamente.");
+        } catch (\Exception $e) {
+            return redirect()->to(base_url('settings/maintenance'))->with('error', "Error de conexión al reiniciar WireGuard: " . $e->getMessage());
+        }
     }
 
     // ---------------------------------------------------------------------

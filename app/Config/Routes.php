@@ -47,6 +47,8 @@ $routes->group('settings', ['filter' => ['session', 'permission:admin.settings']
     $routes->post('maintenance/clear-sessions', 'MaintenanceController::clearSessions');
     $routes->post('maintenance/clear-debugbar', 'MaintenanceController::clearDebugbar');
     $routes->post('maintenance/clear-logs', 'MaintenanceController::clearLogs');
+    $routes->post('maintenance/restart-wireguard', 'MaintenanceController::restartWireguard');
+    $routes->post('maintenance/optimize-db', 'MaintenanceController::optimizeDb');
     $routes->post('maintenance/clear-all', 'MaintenanceController::clearAll');
     $routes->get('maintenance/backup/download', 'MaintenanceController::downloadBackup');
     $routes->post('maintenance/backup/restore', 'MaintenanceController::restoreBackup');

@@ -242,8 +242,12 @@
           </div>
         </div>
         <div class="modal-footer border-top-0 pt-0">
-          <button type="button" class="btn btn-danger border-0" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary border-0" id="btn-save-device">Generar Nodo</button>
+          <button type="button" class="btn btn-danger px-4 border-0" data-bs-dismiss="modal">
+            <i class="ti ti-x me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary px-4 border-0" id="btn-save-device">
+            <i class="ti ti-device-floppy me-1"></i>Generar Nodo
+          </button>
         </div>
       </form>
     </div>
@@ -280,8 +284,12 @@
           </div>
         </div>
         <div class="modal-footer border-top-0 pt-0">
-          <button type="button" class="btn btn-danger border-0" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary border-0" id="btn-update-device">Guardar Cambios</button>
+          <button type="button" class="btn btn-danger px-4 border-0" data-bs-dismiss="modal">
+            <i class="ti ti-x me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary px-4 border-0" id="btn-update-device">
+            <i class="ti ti-device-floppy me-1"></i>Guardar
+          </button>
         </div>
       </form>
     </div>

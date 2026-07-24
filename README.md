@@ -51,20 +51,38 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 
 ## ✨ Características Principales
 
-### 🌐 Gestión de Redes y Topología
+### 🌐 Gestión de Redes, Nodos y Topología
 * **Arquitectura Hub-and-Spoke:** Los nodos se conectan centralizadamente al servidor WireGuard, permitiendo la interconexión transparente entre ellos.
 * **Asignación IP Inteligente:** Cálculo y prevención de colisiones dentro del rango CIDR asignado a cada red.
 * **Despliegue al Instante:** Descarga directa de archivos de configuración `.conf` y lectura mediante **código QR** para dispositivos móviles (iOS, Android) y de escritorio (Windows, macOS, Linux).
 
+<p align="center">
+  <img src="docs/assets/redes.png" width="49%" alt="Gestión de Redes">
+  <img src="docs/assets/nodos.png" width="49%" alt="Gestión de Nodos">
+</p>
+<p align="center">
+  <img src="docs/assets/importar-config.png" width="60%" alt="Importar Configuración al Cliente">
+</p>
+
 ### ⚡ Sincronización & Mantenimiento en Tiempo Real
 * **Integración SSH Segura:** Sincronización automatizada de peers con el motor WireGuard usando `phpseclib3`.
 * **Limpieza de Peers Fantasma:** Eliminación en memoria de sesiones inactivas y peers eliminados del panel.
-* **Mantenimiento en 1 Clic:** Limpieza integrada de logs, temporales de debugbar y sesiones caducadas.
+* **Mantenimiento en 1 Clic:** Limpieza integrada de logs, base de datos y control de servicios.
+
+<p align="center">
+  <img src="docs/assets/ajustes-wireguard.png" width="49%" alt="Ajustes WireGuard">
+  <img src="docs/assets/mantenimiento.png" width="49%" alt="Mantenimiento del Sistema">
+</p>
 
 ### 🛡️ Seguridad Avanzada y Roles (RBAC)
 * **Gestión de Permisos Modular:** Integración nativa con **CodeIgniter Shield** para definir roles granulares (`superadmin`, `supervisor`, `user`).
 * **Encriptación de Extremo a Extremo:** Almacenamiento seguro en base de datos para llaves privadas de WireGuard y credenciales SSH.
 * **Protección Anti-CSRF:** Filtros activos en todos los formularios y endpoints del sistema.
+
+<p align="center">
+  <img src="docs/assets/gestion-de-usuarios.png" width="49%" alt="Gestión de Usuarios">
+  <img src="docs/assets/gestion-de-permisos.png" width="49%" alt="Gestión de Permisos (RBAC)">
+</p>
 
 
 ---

@@ -88,10 +88,6 @@
                             </div>
                         </div>
 
-
-
-
-
                         <div class="d-flex justify-content-center gap-2 mt-4 ">
                             <a href="<?= base_url('dashboard') ?>" class="btn btn-danger px-4 me-2">Cancelar</a>
                             <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning text-white px-4 me-2">Probar</button>

@@ -20,9 +20,9 @@
     --bs-secondary-bg-subtle: rgba(73, 190, 255, 0.15) !important;
 
     /* Color de Éxito (Emerald Green) */
-    --bs-success: #10B981 !important;
-    --bs-success-rgb: 16, 185, 129 !important;
-    --bs-success-bg-subtle: rgba(16, 185, 129, 0.15) !important;
+    --bs-success: #34c759 !important;
+    --bs-success-rgb: 52, 199, 89 !important;
+    --bs-success-bg-subtle: rgba(52, 199, 89, 0.15) !important;
 
     /* Color de Peligro / Error (El rojo/granate vibrante) */
     --bs-danger: #b31b34 !important;
@@ -78,6 +78,18 @@
 }
 .btn-danger:hover {
     filter: brightness(0.9);
+}
+
+/* Forzar Success en componentes específicos */
+.btn-success {
+    background-color: var(--bs-success) !important;
+    border-color: var(--bs-success) !important;
+    color: #fff !important;
+}
+.btn-success:hover {
+    background-color: #2ba84b !important;
+    border-color: #2ba84b !important;
+    color: #fff !important;
 }
 
 /* --- Avatar circular con inicial del usuario --- */

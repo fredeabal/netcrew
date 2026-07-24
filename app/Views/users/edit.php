@@ -73,8 +73,12 @@
                         </label>
                     </div>
                     <div class="d-flex justify-content-center mt-4">
-                        <a href="<?= url_to('\App\Controllers\UsersController::index') ?>" class="btn btn-danger px-4 me-2">Cancelar</a>
-                        <button type="submit" class="btn btn-primary px-4">Modificar</button>
+                        <a href="<?= url_to('\App\Controllers\UsersController::index') ?>" class="btn btn-danger px-4 me-2">
+                            <i class="ti ti-x me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="ti ti-device-floppy me-1"></i>Modificar
+                        </button>
                     </div>
                 </form>
             </div>

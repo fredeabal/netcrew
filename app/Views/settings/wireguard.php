@@ -88,10 +88,16 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-center gap-2 mt-4 ">
-                            <a href="<?= base_url('dashboard') ?>" class="btn btn-danger px-4 me-2">Cancelar</a>
-                            <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning text-white px-4 me-2">Probar</button>
-                            <button type="submit" class="btn btn-primary px-4">Guardar</button>
+                        <div class="d-flex justify-content-center mt-4">
+                            <a href="<?= base_url('dashboard') ?>" class="btn btn-danger px-4 me-2">
+                                <i class="ti ti-x me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning text-white px-4 me-2">
+                                <i class="ti ti-plug-connected me-1"></i>Probar
+                            </button>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="ti ti-device-floppy me-1"></i>Guardar
+                            </button>
                         </div>
                     </form>
                 </div>

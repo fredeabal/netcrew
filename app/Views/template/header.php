@@ -137,7 +137,7 @@
                         <div class="d-grid py-4 px-7 pt-8">
                           <a href="<?= url_to('logout') ?>" class="btn btn-outline-primary w-100">Cerrar Sesión</a>
                           <div class="text-center mt-4 fs-2 text-white">
-                            <small>Netcrew - 1.2.1</small>
+                            <a class="text-white" href="https://netcrew.es" target="_blank"><small>Netcrew - 1.2.1</small></a>
                           </div>
                         </div>
                       </div>

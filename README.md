@@ -74,16 +74,19 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 * **Despliegue al Instante:** Descarga directa de archivos de configuración `.conf` y lectura mediante **código QR** para dispositivos móviles (iOS, Android) y de escritorio (Windows, macOS, Linux).
 
 ### 🔸 Gestión de Redes
+Crea y administra múltiples redes VPN virtuales asignando rangos CIDR únicos, subredes e interfaces personalizadas de forma sencilla.
 <p align="center">
   <img src="docs/assets/redes.png" width="100%" alt="Gestión de Redes">
 </p>
 
 ### 🔸 Gestión de Nodos
+Añade, edita y supervisa el estado de los dispositivos (peers) conectados a cada red, controlando sus IPs asignadas y llaves de acceso.
 <p align="center">
   <img src="docs/assets/nodos.png" width="100%" alt="Gestión de Nodos">
 </p>
 
 ### 🔸 Importar Configuración al Cliente
+Genera instantáneamente archivos `.conf` o escanea códigos QR para vincular dispositivos móviles y de escritorio sin complicaciones.
 <p align="center">
   <img src="docs/assets/importar-config.png" width="60%" alt="Importar Configuración al Cliente">
 </p>
@@ -94,11 +97,13 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 * **Mantenimiento en 1 Clic:** Limpieza integrada de logs, base de datos y control de servicios.
 
 ### 🔸 Ajustes WireGuard
+Configura los parámetros del servidor WireGuard, incluyendo puertos de escucha, interfaz y credenciales de sincronización SSH.
 <p align="center">
   <img src="docs/assets/ajustes-wireguard.png" width="100%" alt="Ajustes WireGuard">
 </p>
 
 ### 🔸 Mantenimiento del Sistema
+Herramientas integradas para realizar optimizaciones de base de datos, depuración de logs de sistema y control de servicios en 1 clic.
 <p align="center">
   <img src="docs/assets/mantenimiento.png" width="100%" alt="Mantenimiento del Sistema">
 </p>
@@ -109,11 +114,13 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 * **Protección Anti-CSRF:** Filtros activos en todos los formularios y endpoints del sistema.
 
 ### 🔸 Gestión de Usuarios
+Administra las cuentas con acceso a la plataforma, asignando datos de perfil, estados y roles de usuario.
 <p align="center">
   <img src="docs/assets/gestion-de-usuarios.png" width="100%" alt="Gestión de Usuarios">
 </p>
 
 ### 🔸 Gestión de Permisos (RBAC)
+Control de acceso granular basado en roles para definir y restringir permisos específicos por módulo a cada perfil.
 <p align="center">
   <img src="docs/assets/gestion-de-permisos.png" width="100%" alt="Gestión de Permisos (RBAC)">
 </p>

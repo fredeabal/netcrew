@@ -34,12 +34,11 @@ El script se encargará automáticamente de todo el proceso de instalación y co
 Para el correcto funcionamiento de todas las características de NetCrew, es necesario configurar dos componentes clave en el panel de administración:
 
 #### 1. 🔑 Acceso SSH y Sincronización WireGuard
-NetCrew se comunica con el servidor WireGuard mediante SSH para sincronizar nodos y mantener la red activa en tiempo real.
-* **Instalador Automático:** Si usaste el script `install.sh`, este ya generó una clave SSH en `writable/netcrew_ssh_key`, configuró el acceso local para el usuario `root` en `authorized_keys` y cargó los ajustes en la plataforma.
-* **Instalación Manual o Servidor Remoto:** Si realizas una instalación manual o el servidor WireGuard está en otra máquina:
-  1. Ve a **Ajustes WireGuard** en la barra lateral del panel.
-  2. Configura el **Host SSH**, **Puerto**, **Usuario** (debe tener privilegios para ejecutar comandos `wg` e `ip`, típicamente `root`).
-  3. Proporciona la **Clave Privada SSH** (o contraseña) correspondiente para permitir la conexión de forma segura.
+NetCrew utiliza SSH para comunicarse con el servidor WireGuard y aplicar las configuraciones en tiempo real.
+* **Mismo Servidor (Despliegue Local):** Si ejecutas NetCrew en el mismo servidor donde se encuentra WireGuard, **no requiere ninguna configuración adicional** (el sistema queda vinculado automáticamente tras la instalación).
+* **Servidor Remoto o Instalación Manual:** Si el motor de WireGuard se encuentra en una máquina o servidor diferente:
+  1. Dirígete a **Ajustes WireGuard** en la barra lateral del panel.
+  2. Introduce los datos de acceso SSH de la máquina remota (**Host SSH**, **Puerto**, **Usuario** con permisos de administración y su **Clave Privada** o contraseña).
 
 #### 2. 📧 Configuración de Correo (SMTP)
 NetCrew utiliza el servicio de correo para la recuperación de contraseñas de usuarios y otras notificaciones del sistema.

@@ -146,3 +146,13 @@ Control de acceso granular basado en roles para definir y restringir permisos es
 - **Privacidad Local:** NetCrew no recopila ni transmite información a servidores externos. Toda la configuración se almacena localmente en tu propio servidor.
 - **Responsabilidad:** El usuario es el único responsable de la seguridad de su infraestructura y de realizar copias de seguridad de sus archivos de datos y llaves SSH.
 - **Licencia:** Distribuido "tal cual" (As Is) bajo la licencia MIT.
+
+  <br>
+
+---
+
+<p align="center">
+  <a href="https://donate.stripe.com/5kQ7sEdPB0IY3g49aCgnK00">
+    <img src="https://img.shields.io/badge/☕_%C2%A1Invítame_un_café!-%23635BFF.svg?style=for-the-badge&logo=Stripe&logoColor=white" alt="Donar con Stripe" />
+  </a>
+</p>

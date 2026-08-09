@@ -317,16 +317,18 @@ class WireguardController extends BaseController
         $isolationUpStr   = !empty($isolationUp)   ? implode('; ', $isolationUp)   . '; ' : '';
         $isolationDownStr = !empty($isolationDown) ? implode('; ', $isolationDown) . '; ' : '';
 
-        // 1. Construir reglas PostUp/PostDown: NAT universal para tráfico que salga fuera de la interfaz VPN
+        // 1. Construir reglas PostUp/PostDown: NAT sobre la interfaz WAN detectada dinámicamente
         $postUp = "{$isolationUpStr}" .
                   "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
                   "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
-                  "iptables -t nat -A POSTROUTING ! -o {$interface} -j MASQUERADE";
+                  "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
+                  "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
 
         $postDown = "{$isolationDownStr}" .
                     "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
                     "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
-                    "iptables -t nat -D POSTROUTING ! -o {$interface} -j MASQUERADE";
+                    "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
+                    "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
 
         // 2. Determinar si hay que reescribir el archivo de configuración
         $needWriteConf = !$confExists;

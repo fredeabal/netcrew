@@ -85,13 +85,13 @@
   <script src="<?= base_url('assets/libs/sweetalert2/dist/sweetalert2.min.js') ?>"></script>
   
   <!-- Particles.js para la animación de nodos -->
-  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="<?= base_url('assets/libs/particles.js/particles.min.js') ?>"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const toastMessage = <?= json_encode(session()->getFlashdata('message') ?? session()->getFlashdata('success')) ?>;
-      const toastError = <?= json_encode(session()->getFlashdata('error')) ?>;
-      const toastErrors = <?= json_encode(session()->getFlashdata('errors')) ?>;
+      const toastMessage = <?= session()->has('message') ? json_encode(session('message')) : 'null' ?>;
+      const toastError = <?= session()->has('error') ? json_encode(session('error')) : 'null' ?>;
+      const toastErrors = <?= session()->has('errors') ? json_encode(session('errors')) : 'null' ?>;
       
       const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
       
@@ -119,41 +119,41 @@
         systemAlert.fire({ icon: 'error', title: 'Error de Validación', html: `<div class="text-center">${errorContent}</div>`, iconColor: '#b31b34' });
       }
 
-      // Inicializar Particles.js solo si el contenedor existe (pantallas grandes)
+      // Inicializar Particles.js con la configuración por defecto de vincentgarreau.com
       if (document.getElementById('particles-js')) {
         particlesJS("particles-js", {
           "particles": {
-            "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+            "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
             "color": { "value": "#ffffff" },
             "shape": { "type": "circle" },
-            "opacity": { "value": 0.4, "random": false },
+            "opacity": { "value": 0.5, "random": false },
             "size": { "value": 3, "random": true },
             "line_linked": {
               "enable": true,
               "distance": 150,
               "color": "#ffffff",
-              "opacity": 0.3,
+              "opacity": 0.4,
               "width": 1
             },
             "move": {
               "enable": true,
-              "speed": 1.5,
+              "speed": 6,
               "direction": "none",
               "random": false,
               "straight": false,
               "out_mode": "out",
-              "bounce": false,
+              "bounce": false
             }
           },
           "interactivity": {
             "detect_on": "canvas",
             "events": {
-              "onhover": { "enable": true, "mode": "grab" },
+              "onhover": { "enable": true, "mode": "repulse" },
               "onclick": { "enable": true, "mode": "push" },
               "resize": true
             },
             "modes": {
-              "grab": { "distance": 180, "line_linked": { "opacity": 0.8 } },
+              "repulse": { "distance": 200, "duration": 0.4 },
               "push": { "particles_nb": 4 }
             }
           },

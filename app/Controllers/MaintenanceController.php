@@ -35,46 +35,7 @@ class MaintenanceController extends BaseController
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Limpieza de archivos de sesión de CodeIgniter
-    // ---------------------------------------------------------------------
-    public function clearSessions()
-    {
-        $count = $this->cleanDirectory(WRITEPATH . 'session');
-        return redirect()->to(base_url('settings/maintenance'))->with('message', "Se limpiaron {$count} archivos de sesión inactivos.");
-    }
 
-    // ---------------------------------------------------------------------
-    // Limpieza de archivos del Debugbar
-    // ---------------------------------------------------------------------
-    public function clearDebugbar()
-    {
-        $count = $this->cleanDirectory(WRITEPATH . 'debugbar');
-        return redirect()->to(base_url('settings/maintenance'))->with('message', "Se limpiaron {$count} archivos de depuración del Debugbar.");
-    }
-
-    // ---------------------------------------------------------------------
-    // Optimizar Base de Datos (VACUUM)
-    // ---------------------------------------------------------------------
-    public function optimizeDb()
-    {
-        try {
-            $db = \Config\Database::connect();
-            $db->query('VACUUM;');
-            return redirect()->to(base_url('settings/maintenance'))->with('message', 'La base de datos SQLite ha sido desfragmentada y optimizada correctamente.');
-        } catch (\Exception $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al optimizar la base de datos: ' . $e->getMessage());
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // Limpieza de archivos de logs
-    // ---------------------------------------------------------------------
-    public function clearLogs()
-    {
-        $count = $this->cleanDirectory(WRITEPATH . 'logs');
-        return redirect()->to(base_url('settings/maintenance'))->with('message', "Se limpiaron {$count} archivos de logs de error.");
-    }
 
     // ---------------------------------------------------------------------
     // Reiniciar servicio WireGuard

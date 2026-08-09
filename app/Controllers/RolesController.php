@@ -30,13 +30,19 @@ class RolesController extends BaseController
             return redirect()->to('roles')->with('error', 'El rol especificado no existe.');
         }
 
-        $db = \Config\Database::connect();
-        $assigned = $db->table('auth_group_permissions')
-                       ->where('group', $groupName)
-                       ->get()
-                       ->getResultArray();
-        
-        $assignedPerms = array_column($assigned, 'permission');
+        $allPermissions = config('AuthGroups')->permissions;
+
+        if ($groupName === 'superadmin') {
+            $assignedPerms = array_keys($allPermissions);
+        } else {
+            $db = \Config\Database::connect();
+            $assigned = $db->table('auth_group_permissions')
+                           ->where('group', $groupName)
+                           ->get()
+                           ->getResultArray();
+            
+            $assignedPerms = array_column($assigned, 'permission');
+        }
 
         // Mapeo amigable de permisos
         $friendlyNames = [
@@ -113,13 +119,11 @@ class RolesController extends BaseController
             return redirect()->to('roles')->with('error', 'El rol especificado no existe.');
         }
 
-        // El superadmin no debería poder quitarse sus propios permisos vitales de administración
+        // El superadmin no debería poder quitarse sus propios permisos
         $selectedPerms = $this->request->getPost('permissions') ?? [];
 
         if ($groupName === 'superadmin') {
-            if (!in_array('admin.users', $selectedPerms)) $selectedPerms[] = 'admin.users';
-            if (!in_array('admin.roles', $selectedPerms)) $selectedPerms[] = 'admin.roles';
-            if (!in_array('admin.settings', $selectedPerms)) $selectedPerms[] = 'admin.settings';
+            $selectedPerms = array_keys(config('AuthGroups')->permissions);
         }
 
         $db = \Config\Database::connect();

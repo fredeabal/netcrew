@@ -82,8 +82,8 @@
                             <div class="col-12">
                                 <label for="wg_restricted_cidrs" class="form-label fw-semibold">Redes Restringidas (Bloqueadas)</label>
                                 <input type="text" class="form-control" id="wg_restricted_cidrs" name="wg_restricted_cidrs" value="<?= old('wg_restricted_cidrs', esc($wg_restricted_cidrs ?? '')) ?>" placeholder="Ej: 192.168.1.0, 10.0.0.0">
-                                <div class="mt-2">
-                                  <span class="badge bg-primary-subtle text-primary text-wrap text-start fw-normal lh-base fs-2"><i class="ti ti-alert-circle"></i> <strong>Importante:</strong> Separa por comas las redes locales del servidor o de salida a Internet. (Ejemplo: 192.168.1.0, 10.0.0.0)</span>
+                                <div class="my-2">
+                                  <small class="text-primary"><i class="ti ti-alert-circle"></i> <strong>Importante:</strong> Separa por comas las redes a restringir. (Ejemplo: 192.168.1.0, 10.0.0.0)</small>
                                 </div>
                             </div>
                         </div>

@@ -111,6 +111,16 @@ class MaintenanceController extends BaseController
         $debugCount = $this->cleanDirectory(WRITEPATH . 'debugbar');
         $logsCount = $this->cleanDirectory(WRITEPATH . 'logs');
 
+        // Optimizar Base de Datos
+        $dbMsg = "";
+        try {
+            $db = \Config\Database::connect();
+            $db->query('VACUUM;');
+            $dbMsg = "<br><small class='text-muted'>Base de datos SQLite optimizada (VACUUM).</small>";
+        } catch (\Exception $e) {
+            $dbMsg = "<br><small class='text-danger'>Error al optimizar BD: " . $e->getMessage() . "</small>";
+        }
+
         // Ejecutar la sincronización de WireGuard
         $syncResult = $this->syncWireguardPeers();
         $ghostMsg = "";
@@ -120,7 +130,7 @@ class MaintenanceController extends BaseController
             $ghostMsg = "<br><small class='text-danger'>Error de sincronización: " . $syncResult['message'] . "</small>";
         }
 
-        return redirect()->to(base_url('settings/maintenance'))->with('message', "Mantenimiento general completado.<br><small class='text-muted'>{$sessionsCount} sesiones, {$debugCount} debugs y {$logsCount} logs eliminados.</small>{$ghostMsg}");
+        return redirect()->to(base_url('settings/maintenance'))->with('message', "Mantenimiento general completado.<br><small class='text-muted'>{$sessionsCount} sesiones, {$debugCount} debugs y {$logsCount} logs eliminados.</small>{$dbMsg}{$ghostMsg}");
     }
 
     // ---------------------------------------------------------------------

@@ -50,7 +50,8 @@
                                                        name="permissions[]" 
                                                        id="perm_<?= esc(str_replace('.', '_', $perm['key'])) ?>" 
                                                        value="<?= esc($perm['key']) ?>" 
-                                                       <?= $perm['checked'] ? 'checked' : '' ?>>
+                                                       <?= $perm['checked'] ? 'checked' : '' ?>
+                                                       <?= $groupName === 'superadmin' ? 'disabled' : '' ?>>
                                                 <label class="form-check-label fw-medium cursor-pointer" 
                                                        for="perm_<?= esc(str_replace('.', '_', $perm['key'])) ?>">
                                                     <?= esc($perm['friendly']) ?>

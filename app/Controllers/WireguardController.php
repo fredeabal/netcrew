@@ -200,6 +200,12 @@ class WireguardController extends BaseController
             // Intentar instalar
             $installCmd = $this->wrapSudoCommand("apt-get update") . " && " . $this->wrapSudoCommand("DEBIAN_FRONTEND=noninteractive apt-get install wireguard iptables -y");
             $ssh->exec($installCmd);
+            
+            // Verificar si ahora sí está instalado
+            $wgCheckAfter = $ssh->exec("which wg");
+            if (empty(trim($wgCheckAfter))) {
+                throw new \RuntimeException("WireGuard no está instalado en el servidor y falló la instalación automática.");
+            }
         }
 
         // Habilitar IP Forwarding permanentemente en el servidor
@@ -222,7 +228,7 @@ class WireguardController extends BaseController
         $readPrivCmd = $this->wrapSudoCommand("cat /etc/wireguard/privatekey");
         $privKeyRaw = trim($ssh->exec($readPrivCmd));
         $privKey = '';
-        if (preg_match('/([A-Za-z0-9+\/]{42,43}=)$/', $privKeyRaw, $matches)) {
+        if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $privKeyRaw, $matches)) {
             $privKey = $matches[1];
         }
 
@@ -300,13 +306,20 @@ class WireguardController extends BaseController
         if (empty(trim($activeOutput)) || strpos($activeOutput, 'Unable to modify interface') !== false || strpos($activeOutput, 'No such device') !== false) {
             $startCmd = $this->wrapSudoCommand("wg-quick up " . escapeshellarg($interface)) . " && " . $this->wrapSudoCommand("systemctl enable wg-quick@" . escapeshellarg($interface));
             $ssh->exec($startCmd);
+
+            // Verificar si finalmente se levantó la interfaz
+            $verifyActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface));
+            $verifyOutput = $ssh->exec($verifyActiveCmd);
+            if (empty(trim($verifyOutput)) || strpos($verifyOutput, 'Unable to modify interface') !== false || strpos($verifyOutput, 'No such device') !== false) {
+                throw new \RuntimeException("No se pudo levantar la interfaz de WireGuard ({$interface}) en el servidor. Verifica los logs de red del servidor.");
+            }
         }
         
         // 4. Leer y retornar la clave pública
         $readPubCmd = $this->wrapSudoCommand("cat /etc/wireguard/publickey");
         $pubkey = trim($ssh->exec($readPubCmd));
         
-        if (preg_match('/([A-Za-z0-9+\/={43,44}]+)$/', $pubkey, $matches)) {
+        if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $pubkey, $matches)) {
             return $matches[1];
         }
         

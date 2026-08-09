@@ -49,6 +49,8 @@ class WireguardController extends BaseController
             'wg_ssh_user'      => 'required',
             'wg_ssh_port'      => 'required|numeric',
             'wg_ssh_auth_type' => 'required|in_list[password,key]',
+            'wg_interface'     => 'required|alpha_dash',
+            'wg_endpoint'      => 'permit_empty|regex_match[/^[\w\.-]+:\d+$/]',
         ];
 
         if (!$this->validate($rules)) {

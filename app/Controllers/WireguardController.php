@@ -209,7 +209,7 @@ class WireguardController extends BaseController
         }
 
         // Habilitar IP Forwarding permanentemente en el servidor
-        $forwardCmd = "sysctl -w net.ipv4.ip_forward=1 && echo 'net.ipv4.ip_forward=1' | tee /etc/sysctl.d/99-wireguard-forward.conf > /dev/null";
+        $forwardCmd = "sysctl -w net.ipv4.ip_forward=1 && sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf";
         $forwardCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($forwardCmd));
         $ssh->exec($forwardCmd);
 

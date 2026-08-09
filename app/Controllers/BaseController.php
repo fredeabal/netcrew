@@ -8,44 +8,25 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * BaseController provides a convenient place for loading components
- * and performing functions that are needed by all your controllers.
- *
- * Extend this class in any new controllers:
- * ```
- *     class Home extends BaseController
- * ```
- *
- * For security, be sure to declare any new methods as protected or private.
+ * BaseController proporciona helpers y utilidades comunes para los controladores.
  */
 abstract class BaseController extends Controller
 {
-    /**
-     * Be sure to declare properties for any property fetch you initialized.
-     * The creation of dynamic property is deprecated in PHP 8.2.
-     */
-
-    // protected $session;
-
     /**
      * @return void
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        // Load here all helpers you want to be available in your controllers that extend BaseController.
-        // Caution: Do not put the this below the parent::initController() call below.
-        // $this->helpers = ['form', 'url'];
-
-        // Caution: Do not edit this line.
         parent::initController($request, $response, $logger);
-
-        // Preload any models, libraries, etc, here.
-        // $this->session = service('session');
     }
 
+    // ---------------------------------------------------------------------
+    // Sesión SSH
+    // ---------------------------------------------------------------------
+
     /**
-     * Obtiene una sesión SSH autenticada con el servidor WireGuard usando la configuración global.
-     * 
+     * Obtiene una sesión SSH autenticada con el servidor WireGuard usando la configuración global de la BD.
+     *
      * Soporta dos métodos de autenticación:
      * - 'password': Autenticación por contraseña tradicional.
      * - 'key': Autenticación por Llave Privada SSH (PEM, OpenSSH, etc.).
@@ -57,45 +38,73 @@ abstract class BaseController extends Controller
     protected function getSshSession(int $timeout = 5): \phpseclib3\Net\SSH2
     {
         $settings = service('settings');
-        $host = $settings->get('WireGuard.sshHost');
-        $user = $settings->get('WireGuard.sshUser');
-        $port = (int)($settings->get('WireGuard.sshPort') ?: 22);
+        $host     = $settings->get('WireGuard.sshHost');
+        $user     = $settings->get('WireGuard.sshUser');
+        $port     = (int)($settings->get('WireGuard.sshPort') ?: 22);
         $authType = $settings->get('WireGuard.sshAuthType') ?: 'password';
 
         if (empty($host) || empty($user)) {
             throw new \Exception('La configuración del servidor SSH o el usuario está incompleta.');
         }
 
-        $encrypter = \Config\Services::encrypter();
+        $encrypter  = \Config\Services::encrypter();
+        $credential = '';
 
-        // Determinar credencial según el tipo de autenticación
         if ($authType === 'key') {
             $encryptedKey = $settings->get('WireGuard.sshPrivateKey');
             if (empty($encryptedKey)) {
                 throw new \Exception('No se ha configurado ninguna llave privada SSH.');
             }
             try {
-                // Desencriptamos la llave privada
                 $privateKeyString = $encrypter->decrypt(base64_decode($encryptedKey));
-                // phpseclib3 carga la llave desde el string
-                $credential = \phpseclib3\Crypt\PublicKeyLoader::load($privateKeyString);
+                $credential       = \phpseclib3\Crypt\PublicKeyLoader::load($privateKeyString);
             } catch (\Exception $e) {
                 throw new \Exception('Error al procesar la llave privada SSH: ' . $e->getMessage());
             }
         } else {
             $encryptedPass = $settings->get('WireGuard.sshPassword');
-            $password = '';
             if (!empty($encryptedPass)) {
                 try {
-                    $password = $encrypter->decrypt(base64_decode($encryptedPass));
+                    $credential = $encrypter->decrypt(base64_decode($encryptedPass));
                 } catch (\Exception $e) {
                     throw new \Exception('Error al desencriptar la contraseña SSH: ' . $e->getMessage());
                 }
             }
-            $credential = $password;
         }
 
-        // Conectar e iniciar sesión
+        return $this->getSshSessionWithParams($host, $user, $port, $authType, $credential, $timeout);
+    }
+
+    /**
+     * Igual que getSshSession() pero usando credenciales explícitas en lugar de leerlas de la BD.
+     * Se usa en wireguardTest() para no persistir settings temporales durante la prueba.
+     *
+     * @param string $host
+     * @param string $user
+     * @param int    $port
+     * @param string $authType   'password' | 'key'
+     * @param mixed  $credential Contraseña en texto plano, llave privada en texto plano o instancia de PublicKeyLoader
+     * @param int    $timeout
+     * @return \phpseclib3\Net\SSH2
+     * @throws \Exception
+     */
+    protected function getSshSessionWithParams(string $host, string $user, int $port, string $authType, mixed $credential, int $timeout = 10): \phpseclib3\Net\SSH2
+    {
+        if (empty($host) || empty($user)) {
+            throw new \Exception('El host o el usuario SSH están vacíos.');
+        }
+
+        if ($authType === 'key' && is_string($credential)) {
+            if (empty($credential)) {
+                throw new \Exception('No se ha proporcionado ninguna llave privada SSH.');
+            }
+            try {
+                $credential = \phpseclib3\Crypt\PublicKeyLoader::load($credential);
+            } catch (\Exception $e) {
+                throw new \Exception('Error al procesar la llave privada SSH: ' . $e->getMessage());
+            }
+        }
+
         $ssh = new \phpseclib3\Net\SSH2($host, $port, $timeout);
         if (!$ssh->login($user, $credential)) {
             throw new \Exception('Fallo de autenticación SSH. Verifica el usuario, la contraseña o la llave privada.');
@@ -104,20 +113,25 @@ abstract class BaseController extends Controller
         return $ssh;
     }
 
+    // ---------------------------------------------------------------------
+    // Utilidades de comandos SSH
+    // ---------------------------------------------------------------------
+
     /**
-     * Enmascara de forma inteligente un comando con 'sudo' si el usuario no es 'root'.
+     * Enmascara de forma segura un comando con 'sudo' si el usuario no es 'root'.
      *
      * - Si el usuario es 'root', devuelve el comando tal cual.
      * - Si es otro usuario y usa 'key', asume passwordless sudo ("sudo cmd").
-     * - Si es otro usuario y usa 'password', inyecta la contraseña ("echo pass | sudo -S cmd").
+     * - Si es otro usuario y usa 'password', inyecta la contraseña de forma segura usando printf.
      *
-     * @param string $cmd Comando a ejecutar
+     * @param string      $cmd              Comando a ejecutar
+     * @param string|null $overridePassword Permite forzar una contraseña explícita (para pruebas sin persistir en BD)
      * @return string
      */
-    protected function wrapSudoCommand(string $cmd): string
+    protected function wrapSudoCommand(string $cmd, ?string $overridePassword = null): string
     {
         $settings = service('settings');
-        $user = $settings->get('WireGuard.sshUser');
+        $user     = $settings->get('WireGuard.sshUser');
         $authType = $settings->get('WireGuard.sshAuthType') ?: 'password';
 
         if ($user === 'root') {
@@ -125,24 +139,30 @@ abstract class BaseController extends Controller
         }
 
         if ($authType === 'key') {
-            // Autenticación por llave: asumimos que sudo no requiere contraseña
             return "sudo " . $cmd;
         }
 
-        // Autenticación por contraseña: intentamos entubar la contraseña a sudo -S
-        $encryptedPass = $settings->get('WireGuard.sshPassword');
-        $password = '';
-        if (!empty($encryptedPass)) {
-            try {
-                $encrypter = \Config\Services::encrypter();
-                $password = $encrypter->decrypt(base64_decode($encryptedPass));
-            } catch (\Exception $e) {
-                // Si falla el desencriptado, devolvemos sudo normal
+        // Obtener contraseña: primero el override explícito, luego la BD
+        $password = $overridePassword;
+        if ($password === null) {
+            $encryptedPass = $settings->get('WireGuard.sshPassword');
+            if (!empty($encryptedPass)) {
+                try {
+                    $encrypter = \Config\Services::encrypter();
+                    $password  = $encrypter->decrypt(base64_decode($encryptedPass));
+                } catch (\Exception $e) {
+                    $password = '';
+                }
             }
         }
 
-        return !empty($password)
-            ? "echo " . escapeshellarg($password) . " | sudo -S -p '' " . $cmd
-            : "sudo " . $cmd;
+        if (!empty($password)) {
+            // Usamos printf '%s\n' en lugar de echo para evitar que caracteres especiales
+            // como '!', '$', '\' o '"' sean interpretados por Bash antes de pasar a sudo
+            $escapedPassword = escapeshellarg($password);
+            return "printf '%s\\n' {$escapedPassword} | sudo -S -p '' " . $cmd;
+        }
+
+        return "sudo " . $cmd;
     }
 }

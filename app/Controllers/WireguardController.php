@@ -27,9 +27,10 @@ class WireguardController extends BaseController
             'wg_restricted_cidrs' => $settings->get('WireGuard.restrictedCidrs'),
         ];
 
-        // Autodescubrir clave si está en blanco y tenemos datos SSH
+        // Autodescubrir clave si está en blanco y tenemos datos SSH.
+        // Se usa un timeout de 3s para no bloquear la carga de la página si el servidor está caído.
         if (empty($data['wg_public_key']) && !empty($data['wg_ssh_host']) && !empty($data['wg_ssh_user'])) {
-            $this->autoDiscoverPublicKey();
+            $this->autoDiscoverPublicKey(3);
             $data['wg_public_key'] = $settings->get('WireGuard.publicKey');
         }
 
@@ -104,101 +105,108 @@ class WireguardController extends BaseController
     // ---------------------------------------------------------------------
     public function wireguardTest()
     {
-        // Guardamos temporalmente los datos enviados en el POST para la prueba
-        $settings = service('settings');
-        
-        $tempHost = $this->request->getPost('wg_ssh_host');
-        $tempUser = $this->request->getPost('wg_ssh_user');
-        $tempPort = $this->request->getPost('wg_ssh_port');
-        $tempAuthType = $this->request->getPost('wg_ssh_auth_type');
+        $settings  = service('settings');
+        $encrypter = \Config\Services::encrypter();
+
+        // Leer parámetros del POST
+        $host     = $this->request->getPost('wg_ssh_host');
+        $user     = $this->request->getPost('wg_ssh_user');
+        $port     = (int)($this->request->getPost('wg_ssh_port') ?: 22);
+        $authType = $this->request->getPost('wg_ssh_auth_type') ?: 'password';
         $tempPass = $this->request->getPost('wg_ssh_password');
         $tempKey  = $this->request->getPost('wg_ssh_private_key');
 
-        // Salvaguardar configuraciones actuales para restaurarlas después
-        $origHost = $settings->get('WireGuard.sshHost');
-        $origUser = $settings->get('WireGuard.sshUser');
-        $origPort = $settings->get('WireGuard.sshPort');
-        $origAuthType = $settings->get('WireGuard.sshAuthType');
-        $origPass = $settings->get('WireGuard.sshPassword');
-        $origKey = $settings->get('WireGuard.sshPrivateKey');
-
-        // Asignar los temporales para la prueba
-        if (!empty($tempHost)) $settings->set('WireGuard.sshHost', $tempHost);
-        if (!empty($tempUser)) $settings->set('WireGuard.sshUser', $tempUser);
-        if (!empty($tempPort)) $settings->set('WireGuard.sshPort', (int)$tempPort);
-        if (!empty($tempAuthType)) $settings->set('WireGuard.sshAuthType', $tempAuthType);
-        
-        $encrypter = \Config\Services::encrypter();
-        if (!empty($tempPass) && $tempPass !== '********') {
-            $settings->set('WireGuard.sshPassword', base64_encode($encrypter->encrypt($tempPass)));
-        }
-        if (!empty($tempKey) && $tempKey !== '********') {
-            $settings->set('WireGuard.sshPrivateKey', base64_encode($encrypter->encrypt($tempKey)));
+        // Resolver credencial: si el campo es '********' usamos la que ya está guardada en la BD
+        if ($authType === 'key') {
+            if (!empty($tempKey) && $tempKey !== '********') {
+                $credential = $tempKey;
+            } else {
+                $encryptedKey = $settings->get('WireGuard.sshPrivateKey');
+                if (empty($encryptedKey)) {
+                    return redirect()->to(base_url('settings/wireguard'))
+                        ->with('error', 'No hay llave privada SSH configurada para realizar la prueba.');
+                }
+                try {
+                    $credential = $encrypter->decrypt(base64_decode($encryptedKey));
+                } catch (\Exception $e) {
+                    return redirect()->to(base_url('settings/wireguard'))
+                        ->with('error', 'Error al desencriptar la llave privada SSH guardada.');
+                }
+            }
+        } else {
+            if (!empty($tempPass) && $tempPass !== '********') {
+                $credential = $tempPass;
+            } else {
+                $encryptedPass = $settings->get('WireGuard.sshPassword');
+                if (empty($encryptedPass)) {
+                    return redirect()->to(base_url('settings/wireguard'))
+                        ->with('error', 'No hay contraseña SSH configurada para realizar la prueba.');
+                }
+                try {
+                    $credential = $encrypter->decrypt(base64_decode($encryptedPass));
+                } catch (\Exception $e) {
+                    return redirect()->to(base_url('settings/wireguard'))
+                        ->with('error', 'Error al desencriptar la contraseña SSH guardada.');
+                }
+            }
         }
 
         try {
-            // Aumentar tiempo de ejecución por si hay que instalar wireguard en un servidor nuevo
             set_time_limit(120);
 
-            // Obtenemos la sesión usando BaseController (10 segundos de timeout de conexión)
-            $ssh = $this->getSshSession(10);
-            
-            // Asegurar que los comandos largos (como apt install) no den timeout (120s)
+            // Conectar usando parámetros del POST sin tocar la BD
+            $ssh = $this->getSshSessionWithParams($host, $user, $port, $authType, $credential, 10);
             $ssh->setTimeout(120);
 
-            // Intentar inicializar y obtener la clave pública
+            // Intentar inicializar y obtener la clave pública usando los settings actuales de interfaz
             $pubkey = $this->runAutoDiscoveryCommand($ssh);
-            
+
             if (!empty($pubkey)) {
                 $settings->set('WireGuard.publicKey', $pubkey);
             }
 
-            // Si fue exitoso, dejamos las nuevas configuraciones en la BD y confirmamos
-            return redirect()->to(base_url('settings/wireguard'))->with('message', '¡Conexión exitosa con el servidor WireGuard!');
-        } catch (\Exception $e) {
-            // Restaurar configuraciones originales en caso de fallo
-            $settings->set('WireGuard.sshHost', $origHost);
-            $settings->set('WireGuard.sshUser', $origUser);
-            $settings->set('WireGuard.sshPort', $origPort);
-            $settings->set('WireGuard.sshAuthType', $origAuthType);
-            $settings->set('WireGuard.sshPassword', $origPass);
-            $settings->set('WireGuard.sshPrivateKey', $origKey);
+            return redirect()->to(base_url('settings/wireguard'))
+                ->with('message', '¡Conexión exitosa con el servidor WireGuard!');
 
-            return redirect()->to(base_url('settings/wireguard'))->with('error', "Fallo de conexión SSH<br><small class='text-danger'>No se pudo contactar al servidor: " . esc($e->getMessage()) . "</small>");
+        } catch (\Exception $e) {
+            // No hay nada que restaurar: nunca escribimos en la BD
+            return redirect()->to(base_url('settings/wireguard'))
+                ->with('error', "Fallo de conexión SSH<br><small class='text-danger'>No se pudo contactar al servidor: " . esc($e->getMessage()) . "</small>");
         }
     }
 
     // ---------------------------------------------------------------------
     // Helper: Intentar autodescubrir la clave pública de WireGuard
     // ---------------------------------------------------------------------
-    protected function autoDiscoverPublicKey()
+    protected function autoDiscoverPublicKey(int $connectionTimeout = 10)
     {
         try {
-            $ssh = $this->getSshSession(10);
+            $ssh = $this->getSshSession($connectionTimeout);
             $ssh->setTimeout(120);
             $pubkey = $this->runAutoDiscoveryCommand($ssh);
             if (!empty($pubkey)) {
                 service('settings')->set('WireGuard.publicKey', $pubkey);
             }
         } catch (\Exception $e) {
-            // Ignorar silenciosamente errores en el autoguardado rápido
+            // Ignorar silenciosamente: es una operación de conveniencia en el GET de la vista
+            log_message('debug', 'autoDiscoverPublicKey fallido (no bloqueante): ' . $e->getMessage());
         }
     }
 
     // ---------------------------------------------------------------------
     // Helper: Comandos SSH para instalar/generar/obtener claves WireGuard
-    // e inicializar la interfaz de red si no está configurada
+    // e inicializar la interfaz de red con reglas de NAT y Forwarding Full Tunnel.
     // ---------------------------------------------------------------------
     protected function runAutoDiscoveryCommand($ssh): ?string
     {
-        $settings = service('settings');
+        $settings  = service('settings');
         $interface = $settings->get('WireGuard.interface') ?: 'wg0';
 
         // Comprobar si wg está instalado
         $wgCheck = $ssh->exec("which wg");
         if (empty(trim($wgCheck))) {
             // Intentar instalar
-            $installCmd = $this->wrapSudoCommand("apt-get update") . " && " . $this->wrapSudoCommand("DEBIAN_FRONTEND=noninteractive apt-get install wireguard iptables -y");
+            $installCmd = $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get update") . " && " . $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get install wireguard iptables -y");
             $ssh->exec($installCmd);
             
             // Verificar si ahora sí está instalado
@@ -208,15 +216,15 @@ class WireguardController extends BaseController
             }
         }
 
-        // Habilitar IP Forwarding permanentemente en el servidor
-        $forwardCmd = "sysctl -w net.ipv4.ip_forward=1 && sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf";
+        // Habilitar IP Forwarding asegurando que persista correctamente en sysctl.conf
+        $forwardCmd = "sysctl -w net.ipv4.ip_forward=1 && (grep -q '^net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf)";
         $forwardCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($forwardCmd));
         $ssh->exec($forwardCmd);
 
         // 1. Verificar si existen las claves
         $checkKeysCmd = $this->wrapSudoCommand("ls -la /etc/wireguard/privatekey /etc/wireguard/publickey");
-        $checkOutput = $ssh->exec($checkKeysCmd);
-        $keysExist = (strpos($checkOutput, 'No such file or directory') === false && strpos($checkOutput, 'privatekey') !== false);
+        $checkOutput  = $ssh->exec($checkKeysCmd);
+        $keysExist    = (strpos($checkOutput, 'No such file or directory') === false && strpos($checkOutput, 'privatekey') !== false);
         
         if (!$keysExist) {
             // Generar llaves
@@ -224,22 +232,23 @@ class WireguardController extends BaseController
             $ssh->exec($genCmd);
         }
         
-        // 2. Leer la llave privada de forma limpia y verificar si existe {interface}.conf
+        // 2. Leer la llave privada
         $readPrivCmd = $this->wrapSudoCommand("cat /etc/wireguard/privatekey");
-        $privKeyRaw = trim($ssh->exec($readPrivCmd));
-        $privKey = '';
+        $privKeyRaw  = trim($ssh->exec($readPrivCmd));
+        $privKey     = '';
         if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $privKeyRaw, $matches)) {
             $privKey = $matches[1];
         }
 
         $confFile = "/etc/wireguard/{$interface}.conf";
         $checkConfCmd = $this->wrapSudoCommand("ls -la " . escapeshellarg($confFile));
-        $confOutput = $ssh->exec($checkConfCmd);
-        $confExists = (strpos($confOutput, 'No such file or directory') === false && strpos($confOutput, "{$interface}.conf") !== false);
+        $confOutput   = $ssh->exec($checkConfCmd);
+        $confExists   = (strpos($confOutput, 'No such file or directory') === false && strpos($confOutput, "{$interface}.conf") !== false);
 
-        // Obtener todas las redes para asignar una IP .1 por cada rango en el servidor
+        // Calcular la IP .1 del servidor para cada red configurada.
+        // Se omiten redes /31 y /32 porque no tienen host válido en .1.
         $networkModel = new \App\Models\NetworkModel();
-        $networks = $networkModel->findAll();
+        $networks     = $networkModel->findAll();
         
         $serverIps = [];
         if (empty($networks)) {
@@ -248,59 +257,83 @@ class WireguardController extends BaseController
             foreach ($networks as $net) {
                 $cidr = $net->cidr;
                 if (strpos($cidr, '/') !== false) {
-                    list($ip, $mask) = explode('/', $cidr);
-                    $ipLong = ip2long($ip);
+                    [$ip, $mask] = explode('/', $cidr);
+                    $mask = (int)$mask;
+
+                    // /31 tiene solo 2 IPs (punto a punto) y /32 es un host único: no aplica host .1
+                    if ($mask >= 31) {
+                        continue;
+                    }
+
+                    $ipLong      = ip2long($ip);
                     if ($ipLong !== false) {
-                        $mask = (int)$mask;
-                        $maskLong = ~((1 << (32 - $mask)) - 1);
+                        $maskLong    = ~((1 << (32 - $mask)) - 1) & 0xFFFFFFFF;
                         $networkLong = $ipLong & $maskLong;
                         $serverIps[] = long2ip($networkLong + 1) . '/' . $mask;
                     }
                 }
+            }
+            // Si todas las redes eran /31 o /32, usar fallback
+            if (empty($serverIps)) {
+                $serverIps[] = '10.10.10.1/24';
             }
         }
         $serverIpString = implode(', ', array_unique($serverIps));
 
         $needWriteConf = !$confExists;
         if ($confExists && !empty($privKey)) {
-            $readConfContentCmd = $this->wrapSudoCommand("cat " . escapeshellarg($confFile));
+            $readConfContentCmd  = $this->wrapSudoCommand("cat " . escapeshellarg($confFile));
             $existingConfContent = $ssh->exec($readConfContentCmd);
+
             if (strpos($existingConfContent, $privKey) === false || strpos($existingConfContent, '[sudo] password for') !== false) {
                 $needWriteConf = true;
             }
-            // VERIFICAR QUE LA IP DEL SERVIDOR SEA LA CORRECTA
             if (strpos($existingConfContent, "Address = {$serverIpString}") === false) {
                 $needWriteConf = true;
             }
-            // VERIFICAR QUE EL ARCHIVO TENGA LAS REGLAS DE FIREWALL ACTUALIZADAS
-            if (strpos($existingConfContent, "RELATED,ESTABLISHED") === false) {
+            // Verificar si SaveConfig=true está presente para desactivarlo
+            if (strpos($existingConfContent, "SaveConfig = true") !== false) {
+                $needWriteConf = true;
+            }
+            // Verificar que tenga las reglas de MASQUERADE necesarias
+            if (strpos($existingConfContent, "MASQUERADE") === false) {
                 $needWriteConf = true;
             }
         }
 
         if ($needWriteConf && !empty($privKey)) {
-            // Escribir el archivo de configuración con reglas de firewall para comunicación entre peers e internet
+            // Reglas de iptables bidireccionales y estáticas para soportar 0.0.0.0/0
+            $postUp = "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
+                      "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
+                      "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
+                      "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
+
+            $postDown = "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
+                        "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
+                        "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
+                        "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
+
             $confContent = "[Interface]\n" .
                            "Address = {$serverIpString}\n" .
-                           "SaveConfig = true\n" .
+                           "SaveConfig = false\n" .
                            "ListenPort = 51820\n" .
                            "PrivateKey = {$privKey}\n" .
-                           "PostUp = iptables -A FORWARD -i {$interface} -j ACCEPT; iptables -A FORWARD -o {$interface} -m state --state RELATED,ESTABLISHED -j ACCEPT; DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi\n" .
-                           "PostDown = iptables -D FORWARD -i {$interface} -j ACCEPT; iptables -D FORWARD -o {$interface} -m state --state RELATED,ESTABLISHED -j ACCEPT; DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi\n";
-            
-            $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)));
-            $ssh->exec($writeConfCmd);
+                           "PostUp = {$postUp}\n" .
+                           "PostDown = {$postDown}\n";
 
-            // Si el archivo ya existía pero con llave mala, apagamos la interfaz antes de volver a levantarla
+            // Si el archivo existía, bajamos la interfaz antes de sobreescribirlo
             if ($confExists) {
                 $downCmd = $this->wrapSudoCommand("wg-quick down " . escapeshellarg($interface));
                 $ssh->exec($downCmd);
             }
+
+            $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)));
+            $ssh->exec($writeConfCmd);
         }
 
         // 3. Verificar si la interfaz de red está activa
         $checkActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface));
-        $activeOutput = $ssh->exec($checkActiveCmd);
+        $activeOutput   = $ssh->exec($checkActiveCmd);
         
         // Si no está activa, intentamos levantarla
         if (empty(trim($activeOutput)) || strpos($activeOutput, 'Unable to modify interface') !== false || strpos($activeOutput, 'No such device') !== false) {
@@ -309,7 +342,7 @@ class WireguardController extends BaseController
 
             // Verificar si finalmente se levantó la interfaz
             $verifyActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface));
-            $verifyOutput = $ssh->exec($verifyActiveCmd);
+            $verifyOutput    = $ssh->exec($verifyActiveCmd);
             if (empty(trim($verifyOutput)) || strpos($verifyOutput, 'Unable to modify interface') !== false || strpos($verifyOutput, 'No such device') !== false) {
                 throw new \RuntimeException("No se pudo levantar la interfaz de WireGuard ({$interface}) en el servidor. Verifica los logs de red del servidor.");
             }
@@ -317,7 +350,7 @@ class WireguardController extends BaseController
         
         // 4. Leer y retornar la clave pública
         $readPubCmd = $this->wrapSudoCommand("cat /etc/wireguard/publickey");
-        $pubkey = trim($ssh->exec($readPubCmd));
+        $pubkey     = trim($ssh->exec($readPubCmd));
         
         if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $pubkey, $matches)) {
             return $matches[1];

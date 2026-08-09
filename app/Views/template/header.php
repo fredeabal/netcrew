@@ -49,6 +49,7 @@
   <link rel="stylesheet" href="<?= base_url('assets/') ?>css/styles.css?v=<?= filemtime(FCPATH . 'assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/') ?>css/custom.css?v=<?= filemtime(FCPATH . 'assets/css/custom.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/libs/sweetalert2/dist/sweetalert2.min.css') ?>" />
+  <link rel="stylesheet" href="<?= base_url('assets/libs/select2/dist/css/select2.min.css') ?>" />
 
   <title>NetCrew | VPN Manager</title>
 </head>

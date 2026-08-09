@@ -13,6 +13,11 @@
   <script src="<?= base_url('assets/') ?>js/theme/app.min.js"></script>
   <script src="<?= base_url('assets/') ?>js/theme/sidebarmenu.js"></script>
 
+  <!-- Select2 -->
+  <script src="<?= base_url('assets/') ?>libs/select2/dist/js/select2.full.min.js"></script>
+  <script src="<?= base_url('assets/') ?>libs/select2/dist/js/select2.min.js"></script>
+  <script src="<?= base_url('assets/') ?>js/forms/select2.init.js"></script>
+
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
 

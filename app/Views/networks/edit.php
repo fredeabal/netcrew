@@ -45,10 +45,10 @@
             ?>
             <div class="input-group">
               <input type="text" class="form-control" id="cidr" name="cidr" value="<?= $current_ip ?>" placeholder="Ej: 10.50.0.0">
-              <span class="input-group-text bg-light text-muted">/24</span>
+              <span class="input-group-text bg-transparent text-muted border">/24</span>
             </div>
             <div class="mt-2">
-              <span class="badge bg-warning-subtle text-warning text-wrap text-start fw-normal lh-base fs-2"><i class="ti ti-alert-circle"></i> <strong>Importante:</strong> Asegúrate de que el rango no coincida con la red local de tu servidor u oficina para evitar conflictos de enrutamiento.</span>
+              <span class="text-primary fs-2"><i class="ti ti-alert-circle"></i> <strong>Importante:</strong> Asegúrate de que el rango no coincida con la red local de tu servidor u oficina para evitar conflictos de enrutamiento.</span>
             </div>
           </div>
 
@@ -63,7 +63,7 @@
           <?php if (auth()->user()->inGroup('superadmin', 'supervisor') && !empty($users)): ?>
             <div class="mb-3">
               <label for="owner_id" class="form-label">Propietario</label>
-              <select class="form-select" id="owner_id" name="owner_id" required>
+              <select class="select2 form-control custom-select" id="owner_id" name="owner_id" required>
                 <option value="">Seleccione un propietario</option>
                 <?php foreach ($users as $user): ?>
                   <option value="<?= esc($user->id) ?>" <?= old('owner_id', $network->owner_id) == $user->id ? 'selected' : '' ?>>
@@ -95,4 +95,3 @@
     </div>
   </div>
 </div>
-

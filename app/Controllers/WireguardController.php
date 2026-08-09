@@ -158,8 +158,12 @@ class WireguardController extends BaseController
             $ssh = $this->getSshSessionWithParams($host, $user, $port, $authType, $credential, 10);
             $ssh->setTimeout(120);
 
+            // Propagar la credencial temporal solo si es autenticación por contraseña,
+            // para que wrapSudoCommand no intente leer una contraseña no guardada en la BD.
+            $sudoPassword = ($authType === 'password') ? $credential : null;
+
             // Intentar inicializar y obtener la clave pública usando los settings actuales de interfaz
-            $pubkey = $this->runAutoDiscoveryCommand($ssh);
+            $pubkey = $this->runAutoDiscoveryCommand($ssh, $sudoPassword);
 
             if (!empty($pubkey)) {
                 $settings->set('WireGuard.publicKey', $pubkey);
@@ -183,7 +187,8 @@ class WireguardController extends BaseController
         try {
             $ssh = $this->getSshSession($connectionTimeout);
             $ssh->setTimeout(120);
-            $pubkey = $this->runAutoDiscoveryCommand($ssh);
+            // Sin override: autoDescubrimiento usa la contraseña guardada en la BD
+            $pubkey = $this->runAutoDiscoveryCommand($ssh, null);
             if (!empty($pubkey)) {
                 service('settings')->set('WireGuard.publicKey', $pubkey);
             }
@@ -197,7 +202,7 @@ class WireguardController extends BaseController
     // Helper: Comandos SSH para instalar/generar/obtener claves WireGuard
     // e inicializar la interfaz de red con reglas de NAT y Forwarding Full Tunnel.
     // ---------------------------------------------------------------------
-    protected function runAutoDiscoveryCommand($ssh): ?string
+    protected function runAutoDiscoveryCommand($ssh, ?string $sudoPassword = null): ?string
     {
         $settings  = service('settings');
         $interface = $settings->get('WireGuard.interface') ?: 'wg0';
@@ -206,7 +211,7 @@ class WireguardController extends BaseController
         $wgCheck = $ssh->exec("which wg");
         if (empty(trim($wgCheck))) {
             // Intentar instalar
-            $installCmd = $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get update") . " && " . $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get install wireguard iptables -y");
+            $installCmd = $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get update", $sudoPassword) . " && " . $this->wrapSudoCommand("env DEBIAN_FRONTEND=noninteractive apt-get install wireguard iptables -y", $sudoPassword);
             $ssh->exec($installCmd);
             
             // Verificar si ahora sí está instalado
@@ -218,22 +223,22 @@ class WireguardController extends BaseController
 
         // Habilitar IP Forwarding asegurando que persista correctamente en sysctl.conf
         $forwardCmd = "sysctl -w net.ipv4.ip_forward=1 && (grep -q '^net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf)";
-        $forwardCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($forwardCmd));
+        $forwardCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($forwardCmd), $sudoPassword);
         $ssh->exec($forwardCmd);
 
         // 1. Verificar si existen las claves
-        $checkKeysCmd = $this->wrapSudoCommand("ls -la /etc/wireguard/privatekey /etc/wireguard/publickey");
+        $checkKeysCmd = $this->wrapSudoCommand("ls -la /etc/wireguard/privatekey /etc/wireguard/publickey", $sudoPassword);
         $checkOutput  = $ssh->exec($checkKeysCmd);
         $keysExist    = (strpos($checkOutput, 'No such file or directory') === false && strpos($checkOutput, 'privatekey') !== false);
-        
+
         if (!$keysExist) {
             // Generar llaves
-            $genCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey && chmod 600 /etc/wireguard/privatekey /etc/wireguard/publickey"));
+            $genCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey && chmod 600 /etc/wireguard/privatekey /etc/wireguard/publickey"), $sudoPassword);
             $ssh->exec($genCmd);
         }
         
         // 2. Leer la llave privada
-        $readPrivCmd = $this->wrapSudoCommand("cat /etc/wireguard/privatekey");
+        $readPrivCmd = $this->wrapSudoCommand("cat /etc/wireguard/privatekey", $sudoPassword);
         $privKeyRaw  = trim($ssh->exec($readPrivCmd));
         $privKey     = '';
         if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $privKeyRaw, $matches)) {
@@ -241,18 +246,21 @@ class WireguardController extends BaseController
         }
 
         $confFile = "/etc/wireguard/{$interface}.conf";
-        $checkConfCmd = $this->wrapSudoCommand("ls -la " . escapeshellarg($confFile));
+        $checkConfCmd = $this->wrapSudoCommand("ls -la " . escapeshellarg($confFile), $sudoPassword);
         $confOutput   = $ssh->exec($checkConfCmd);
         $confExists   = (strpos($confOutput, 'No such file or directory') === false && strpos($confOutput, "{$interface}.conf") !== false);
 
-        // Calcular la IP .1 del servidor para cada red configurada.
+        // Calcular la IP .1 del servidor y el CIDR base para cada red configurada.
         // Se omiten redes /31 y /32 porque no tienen host válido en .1.
         $networkModel = new \App\Models\NetworkModel();
         $networks     = $networkModel->findAll();
-        
-        $serverIps = [];
+
+        $serverIps  = [];
+        $validCidrs = [];
+
         if (empty($networks)) {
-            $serverIps[] = '10.10.10.1/24';
+            $serverIps[]  = '10.10.10.1/24';
+            $validCidrs[] = '10.10.10.0/24';
         } else {
             foreach ($networks as $net) {
                 $cidr = $net->cidr;
@@ -265,24 +273,53 @@ class WireguardController extends BaseController
                         continue;
                     }
 
-                    $ipLong      = ip2long($ip);
+                    $ipLong = ip2long($ip);
                     if ($ipLong !== false) {
                         $maskLong    = ~((1 << (32 - $mask)) - 1) & 0xFFFFFFFF;
                         $networkLong = $ipLong & $maskLong;
-                        $serverIps[] = long2ip($networkLong + 1) . '/' . $mask;
+
+                        $serverIps[]  = long2ip($networkLong + 1) . '/' . $mask;
+                        $validCidrs[] = long2ip($networkLong) . '/' . $mask;
                     }
                 }
             }
             // Si todas las redes eran /31 o /32, usar fallback
             if (empty($serverIps)) {
-                $serverIps[] = '10.10.10.1/24';
+                $serverIps[]  = '10.10.10.1/24';
+                $validCidrs[] = '10.10.10.0/24';
             }
         }
+
         $serverIpString = implode(', ', array_unique($serverIps));
+        $validCidrs     = array_unique($validCidrs);
+
+        // Generar reglas iptables para aislar subredes entre sí (DROP bidireccional)
+        $isolationUp   = [];
+        $isolationDown = [];
+        $cidrCount     = count($validCidrs);
+
+        if ($cidrCount > 1) {
+            for ($i = 0; $i < $cidrCount; $i++) {
+                for ($j = $i + 1; $j < $cidrCount; $j++) {
+                    $netA = $validCidrs[$i];
+                    $netB = $validCidrs[$j];
+
+                    // Denegar tráfico en ambas direcciones entre subredes locales VPN
+                    $isolationUp[]   = "iptables -I FORWARD -s {$netA} -d {$netB} -j DROP";
+                    $isolationUp[]   = "iptables -I FORWARD -s {$netB} -d {$netA} -j DROP";
+
+                    $isolationDown[] = "iptables -D FORWARD -s {$netA} -d {$netB} -j DROP";
+                    $isolationDown[] = "iptables -D FORWARD -s {$netB} -d {$netA} -j DROP";
+                }
+            }
+        }
+
+        $isolationUpStr   = !empty($isolationUp)   ? implode('; ', $isolationUp)   . '; ' : '';
+        $isolationDownStr = !empty($isolationDown) ? implode('; ', $isolationDown) . '; ' : '';
 
         $needWriteConf = !$confExists;
         if ($confExists && !empty($privKey)) {
-            $readConfContentCmd  = $this->wrapSudoCommand("cat " . escapeshellarg($confFile));
+            $readConfContentCmd  = $this->wrapSudoCommand("cat " . escapeshellarg($confFile), $sudoPassword);
             $existingConfContent = $ssh->exec($readConfContentCmd);
 
             if (strpos($existingConfContent, $privKey) === false || strpos($existingConfContent, '[sudo] password for') !== false) {
@@ -299,16 +336,23 @@ class WireguardController extends BaseController
             if (strpos($existingConfContent, "MASQUERADE") === false) {
                 $needWriteConf = true;
             }
+            // Si hay múltiples subredes, asegurar que las reglas DROP de aislamiento estén presentes
+            if ($cidrCount > 1 && strpos($existingConfContent, "-j DROP") === false) {
+                $needWriteConf = true;
+            }
         }
 
         if ($needWriteConf && !empty($privKey)) {
-            // Reglas de iptables bidireccionales y estáticas para soportar 0.0.0.0/0
-            $postUp = "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
+            // PostUp: primero DROP entre subredes (prioridad alta), luego ACCEPT general y NAT WAN
+            $postUp = "{$isolationUpStr}" .
+                      "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
                       "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
                       "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
                       "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
 
-            $postDown = "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
+            // PostDown: eliminar DROP entre subredes, ACCEPT general y NAT WAN
+            $postDown = "{$isolationDownStr}" .
+                        "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
                         "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
                         "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
                         "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
@@ -323,25 +367,25 @@ class WireguardController extends BaseController
 
             // Si el archivo existía, bajamos la interfaz antes de sobreescribirlo
             if ($confExists) {
-                $downCmd = $this->wrapSudoCommand("wg-quick down " . escapeshellarg($interface));
+                $downCmd = $this->wrapSudoCommand("wg-quick down " . escapeshellarg($interface), $sudoPassword);
                 $ssh->exec($downCmd);
             }
 
-            $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)));
+            $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)), $sudoPassword);
             $ssh->exec($writeConfCmd);
         }
 
         // 3. Verificar si la interfaz de red está activa
-        $checkActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface));
+        $checkActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface), $sudoPassword);
         $activeOutput   = $ssh->exec($checkActiveCmd);
-        
+
         // Si no está activa, intentamos levantarla
         if (empty(trim($activeOutput)) || strpos($activeOutput, 'Unable to modify interface') !== false || strpos($activeOutput, 'No such device') !== false) {
-            $startCmd = $this->wrapSudoCommand("wg-quick up " . escapeshellarg($interface)) . " && " . $this->wrapSudoCommand("systemctl enable wg-quick@" . escapeshellarg($interface));
+            $startCmd = $this->wrapSudoCommand("wg-quick up " . escapeshellarg($interface), $sudoPassword) . " && " . $this->wrapSudoCommand("systemctl enable wg-quick@" . escapeshellarg($interface), $sudoPassword);
             $ssh->exec($startCmd);
 
             // Verificar si finalmente se levantó la interfaz
-            $verifyActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface));
+            $verifyActiveCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface), $sudoPassword);
             $verifyOutput    = $ssh->exec($verifyActiveCmd);
             if (empty(trim($verifyOutput)) || strpos($verifyOutput, 'Unable to modify interface') !== false || strpos($verifyOutput, 'No such device') !== false) {
                 throw new \RuntimeException("No se pudo levantar la interfaz de WireGuard ({$interface}) en el servidor. Verifica los logs de red del servidor.");
@@ -349,7 +393,7 @@ class WireguardController extends BaseController
         }
         
         // 4. Leer y retornar la clave pública
-        $readPubCmd = $this->wrapSudoCommand("cat /etc/wireguard/publickey");
+        $readPubCmd = $this->wrapSudoCommand("cat /etc/wireguard/publickey", $sudoPassword);
         $pubkey     = trim($ssh->exec($readPubCmd));
         
         if (preg_match('/([A-Za-z0-9+\/]{43}=)$/', $pubkey, $matches)) {

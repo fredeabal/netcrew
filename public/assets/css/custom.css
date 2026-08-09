@@ -835,3 +835,26 @@ body .select2-container {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(var(--bs-primary-rgb), 0.4) !important;
 }
+
+/* =============================================
+   ESTILOS DEL LOGIN DIVIDIDO (MODERNIZE STYLE)
+   ============================================= */
+.auth-max-width {
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.bg-primary-gradient {
+    background: linear-gradient(-45deg, #d35400, #F38020, #e67e22, #f39c12);
+    background-size: 400% 400%;
+    animation: gradientBG 12s ease infinite;
+    overflow: hidden;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+

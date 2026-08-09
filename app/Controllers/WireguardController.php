@@ -266,6 +266,10 @@ class WireguardController extends BaseController
             if (strpos($existingConfContent, "Address = {$serverIpString}") === false) {
                 $needWriteConf = true;
             }
+            // VERIFICAR QUE EL ARCHIVO TENGA LAS REGLAS DE FIREWALL ACTUALIZADAS
+            if (strpos($existingConfContent, "RELATED,ESTABLISHED") === false) {
+                $needWriteConf = true;
+            }
         }
 
         if ($needWriteConf && !empty($privKey)) {
@@ -275,8 +279,8 @@ class WireguardController extends BaseController
                            "SaveConfig = true\n" .
                            "ListenPort = 51820\n" .
                            "PrivateKey = {$privKey}\n" .
-                           "PostUp = iptables -A FORWARD -i {$interface} -o {$interface} -j ACCEPT; DEFAULT_DEV=\$(ip route show | grep default | awk '{print \$5}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -A FORWARD -i {$interface} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi\n" .
-                           "PostDown = iptables -D FORWARD -i {$interface} -o {$interface} -j ACCEPT; DEFAULT_DEV=\$(ip route show | grep default | awk '{print \$5}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -D FORWARD -i {$interface} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi\n";
+                           "PostUp = iptables -A FORWARD -i {$interface} -j ACCEPT; iptables -A FORWARD -o {$interface} -m state --state RELATED,ESTABLISHED -j ACCEPT; DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi\n" .
+                           "PostDown = iptables -D FORWARD -i {$interface} -j ACCEPT; iptables -D FORWARD -o {$interface} -m state --state RELATED,ESTABLISHED -j ACCEPT; DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi\n";
             
             $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)));
             $ssh->exec($writeConfCmd);

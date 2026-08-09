@@ -293,7 +293,7 @@ class NetworkController extends BaseController
         $intf = escapeshellarg($interface);
         $iptablesScript .= "iptables -A FORWARD -i {$intf} -o {$intf} -j DROP; ";
         $iptablesScript .= "iptables -A FORWARD -i {$intf} -o wg+ -j DROP; ";
-        $iptablesScript .= "DEFAULT_DEV=\$(ip route show | grep default | awk '{print \$5}' | head -n1); ";
+        $iptablesScript .= "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); ";
         // Enrutar tráfico a Internet (NAT/Masquerade y FORWARD ACCEPT)
         $iptablesScript .= "while iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE 2>/dev/null; do true; done; ";
         $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j DROP 2>/dev/null; do true; done; ";

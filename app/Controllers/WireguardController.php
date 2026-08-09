@@ -318,15 +318,16 @@ class WireguardController extends BaseController
         $isolationDownStr = !empty($isolationDown) ? implode('; ', $isolationDown) . '; ' : '';
 
         // 1. Construir reglas PostUp/PostDown: NAT sobre la interfaz WAN detectada dinámicamente
-        $postUp = "{$isolationUpStr}" .
-                  "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
-                  "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
+        // CORRECCIÓN APLICADA: Uso de -I para FORWARD y reordenamiento de reglas
+        $postUp = "iptables -I FORWARD -i {$interface} -j ACCEPT; " .
+                  "iptables -I FORWARD -o {$interface} -j ACCEPT; " .
+                  "{$isolationUpStr}" .
                   "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
                   "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
 
-        $postDown = "{$isolationDownStr}" .
-                    "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
+        $postDown = "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
                     "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
+                    "{$isolationDownStr}" .
                     "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
                     "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
 

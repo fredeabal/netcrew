@@ -317,6 +317,18 @@ class WireguardController extends BaseController
         $isolationUpStr   = !empty($isolationUp)   ? implode('; ', $isolationUp)   . '; ' : '';
         $isolationDownStr = !empty($isolationDown) ? implode('; ', $isolationDown) . '; ' : '';
 
+        // 1. Construir reglas PostUp/PostDown: NAT universal para tráfico que salga fuera de la interfaz VPN
+        $postUp = "{$isolationUpStr}" .
+                  "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
+                  "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
+                  "iptables -t nat -A POSTROUTING ! -o {$interface} -j MASQUERADE";
+
+        $postDown = "{$isolationDownStr}" .
+                    "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
+                    "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
+                    "iptables -t nat -D POSTROUTING ! -o {$interface} -j MASQUERADE";
+
+        // 2. Determinar si hay que reescribir el archivo de configuración
         $needWriteConf = !$confExists;
         if ($confExists && !empty($privKey)) {
             $readConfContentCmd  = $this->wrapSudoCommand("cat " . escapeshellarg($confFile), $sudoPassword);
@@ -332,8 +344,8 @@ class WireguardController extends BaseController
             if (strpos($existingConfContent, "SaveConfig = true") !== false) {
                 $needWriteConf = true;
             }
-            // Verificar que tenga las reglas de MASQUERADE necesarias
-            if (strpos($existingConfContent, "MASQUERADE") === false) {
+            // Verificar que tenga regla de NAT POSTROUTING y MASQUERADE
+            if (strpos($existingConfContent, "POSTROUTING") === false || strpos($existingConfContent, "MASQUERADE") === false) {
                 $needWriteConf = true;
             }
             // Si hay múltiples subredes, asegurar que las reglas DROP de aislamiento estén presentes
@@ -343,20 +355,6 @@ class WireguardController extends BaseController
         }
 
         if ($needWriteConf && !empty($privKey)) {
-            // PostUp: primero DROP entre subredes (prioridad alta), luego ACCEPT general y NAT WAN
-            $postUp = "{$isolationUpStr}" .
-                      "iptables -A FORWARD -i {$interface} -j ACCEPT; " .
-                      "iptables -A FORWARD -o {$interface} -j ACCEPT; " .
-                      "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
-                      "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
-
-            // PostDown: eliminar DROP entre subredes, ACCEPT general y NAT WAN
-            $postDown = "{$isolationDownStr}" .
-                        "iptables -D FORWARD -i {$interface} -j ACCEPT; " .
-                        "iptables -D FORWARD -o {$interface} -j ACCEPT; " .
-                        "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); " .
-                        "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; fi";
-
             $confContent = "[Interface]\n" .
                            "Address = {$serverIpString}\n" .
                            "SaveConfig = false\n" .
@@ -365,7 +363,7 @@ class WireguardController extends BaseController
                            "PostUp = {$postUp}\n" .
                            "PostDown = {$postDown}\n";
 
-            // Si el archivo existía, bajamos la interfaz antes de sobreescribirlo
+            // Bajar la interfaz si estaba activa antes de sobreescribir el conf
             if ($confExists) {
                 $downCmd = $this->wrapSudoCommand("wg-quick down " . escapeshellarg($interface), $sudoPassword);
                 $ssh->exec($downCmd);
@@ -373,6 +371,11 @@ class WireguardController extends BaseController
 
             $writeConfCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg("echo " . escapeshellarg($confContent) . " | tee " . escapeshellarg($confFile) . " > /dev/null && chmod 600 " . escapeshellarg($confFile)), $sudoPassword);
             $ssh->exec($writeConfCmd);
+
+            // Reiniciar la interfaz inmediatamente para aplicar las nuevas reglas iptables
+            $restartCmd = $this->wrapSudoCommand("wg-quick down " . escapeshellarg($interface), $sudoPassword) . " ; " .
+                          $this->wrapSudoCommand("wg-quick up " . escapeshellarg($interface), $sudoPassword);
+            $ssh->exec($restartCmd);
         }
 
         // 3. Verificar si la interfaz de red está activa

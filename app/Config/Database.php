@@ -43,7 +43,7 @@ class Database extends Config
         'failover'     => [],
         'port'         => 3306,
         'foreignKeys'  => true,
-        'busyTimeout'  => 1000,
+        'busyTimeout'  => 5000,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [

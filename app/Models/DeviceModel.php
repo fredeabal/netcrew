@@ -29,7 +29,7 @@ class DeviceModel extends Model
         'network_id'  => 'required|integer',
         'name'        => 'required|min_length[2]|max_length[100]',
         'ip_address'  => 'required|valid_ip',
-        'public_key'  => 'required',
+        'public_key'  => 'required|is_unique[devices.public_key,id,{id}]',
         'private_key' => 'required',
         'os'          => 'permit_empty|in_list[linux,windows,osx,ios,android]',
         'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
@@ -50,7 +50,8 @@ class DeviceModel extends Model
             'valid_ip' => 'La dirección IP no es válida.',
         ],
         'public_key' => [
-            'required' => 'La llave pública es obligatoria.',
+            'required'  => 'La llave pública es obligatoria.',
+            'is_unique' => 'Esta clave pública ya está registrada en el sistema.',
         ],
         'private_key' => [
             'required' => 'La llave privada es obligatoria.',
@@ -80,7 +81,7 @@ class DeviceModel extends Model
         try {
             $encrypter = \Config\Services::encrypter();
             return $encrypter->decrypt(base64_decode($encryptedKey));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             log_message('error', 'Error al desencriptar llave privada de WireGuard: ' . $e->getMessage());
             return '';
         }

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\WireguardService;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 
@@ -71,51 +72,9 @@ class DeviceController extends BaseController
         }
 
         // Intentar obtener datos WireGuard en tiempo real
-        $wg = null;
-        $globalSettings = service('settings');
-        $interface = $globalSettings->get('WireGuard.interface') ?: 'wg0';
-
-        try {
-            $ssh = $this->getSshSession(5);
-            $wgCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface) . " dump");
-            $cmd = $wgCmd . " && echo '---TIME---' && date +%s";
-
-            $output      = $ssh->exec($cmd);
-            $outputParts = explode('---TIME---', $output);
-            $wgOutput    = $outputParts[0] ?? '';
-            $remoteTime  = isset($outputParts[1]) ? (int)trim($outputParts[1]) : time();
-
-            $lines = explode("\n", $wgOutput);
-            for ($i = 1; $i < count($lines); $i++) {
-                $line = trim($lines[$i]);
-                if (empty($line)) continue;
-                $parts = preg_split('/\s+/', $line);
-                if (count($parts) >= 7 && $parts[0] === $device->public_key) {
-                    $handshake = (int)$parts[4];
-                    $rx        = (int)$parts[5];
-                    $tx        = (int)$parts[6];
-                    $endpoint  = $parts[2] !== '(none)' ? $parts[2] : null;
-
-                    $wg = [
-                        'connected'        => ($handshake > 0 && ($remoteTime - $handshake) < 180),
-                        'endpoint'         => $endpoint,
-                        'public_ip'        => $endpoint ? explode(':', $endpoint)[0] : null,
-                        'port'             => $endpoint ? (explode(':', $endpoint)[1] ?? null) : null,
-                        'latest_handshake' => $handshake ?: null,
-                        'remote_time'      => $remoteTime,
-                        'rx_bytes'         => $rx,
-                        'tx_bytes'         => $tx,
-                    ];
-
-                    $lastSeen = $this->updateLastSeenFromHandshake($device, $handshake);
-                    if ($lastSeen) {
-                        $device->last_seen = $lastSeen;
-                    }
-                    break;
-                }
-            }
-        } catch (\Exception $e) {
-            log_message('notice', 'No se pudo obtener estado WireGuard en tiempo real para nodo ' . $id . ': ' . $e->getMessage());
+        $wg = $this->fetchPeerStatus($device);
+        if ($wg && !empty($wg['last_seen'])) {
+            $device->last_seen = $wg['last_seen'];
         }
 
         $data = [
@@ -178,22 +137,26 @@ class DeviceController extends BaseController
             ])->setStatusCode(405);
         }
 
-        $networkId = $this->request->getPost('network_id');
-        $name = $this->request->getPost('name');
+        $rules = [
+            'network_id'  => 'required|is_natural_no_zero',
+            'name'        => 'required|min_length[2]|max_length[100]',
+            'device_type' => 'permit_empty|in_list[pc,server,mobile,tablet,router]',
+        ];
 
-        if (empty($networkId) || empty($name)) {
+        if (!$this->validate($rules)) {
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'El nombre del dispositivo es obligatorio.'
+                'message' => implode(' ', $this->validator->getErrors()),
+                'errors'  => $this->validator->getErrors()
             ])->setStatusCode(400);
         }
 
-        // Validar que SSH esté configurado a nivel global antes de crear nodos
-        $globalSettings = service('settings');
-        $host = $globalSettings->get('WireGuard.sshHost');
-        $user = $globalSettings->get('WireGuard.sshUser');
+        $networkId  = (int) $this->request->getPost('network_id');
+        $name       = trim((string) $this->request->getPost('name'));
+        $deviceType = (string) ($this->request->getPost('device_type') ?: 'pc');
 
-        if (empty($host) || empty($user)) {
+        // Validar que SSH esté configurado a nivel global antes de crear nodos
+        if (!WireguardService::isConfigured()) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'No se pueden crear nodos: El Administrador no ha configurado la conexión SSH del servidor VPN.'
@@ -208,6 +171,14 @@ class DeviceController extends BaseController
             ])->setStatusCode(404);
         }
 
+        // Validar que la red esté activa
+        if (!$network->active) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No se pueden agregar nodos a una red desactivada.'
+            ])->setStatusCode(400);
+        }
+
         // Validar propiedad de la red
         if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
             return $this->response->setJSON([
@@ -216,7 +187,14 @@ class DeviceController extends BaseController
             ])->setStatusCode(403);
         }
 
-
+        // Validar capacidad de la red (/24 = máx 253 nodos)
+        $currentNodesCount = $this->deviceModel->where('network_id', $networkId)->countAllResults();
+        if ($currentNodesCount >= 253) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'La red ha alcanzado su capacidad máxima (253 nodos).'
+            ])->setStatusCode(400);
+        }
 
         // Obtener IPs existentes en esta red para evitar colisiones
         $existingDevices = $this->deviceModel->where('network_id', $networkId)->findAll();
@@ -246,15 +224,10 @@ class DeviceController extends BaseController
         $privateKey = base64_encode(sodium_crypto_box_secretkey($keypair));
         $publicKey = base64_encode(sodium_crypto_box_publickey($keypair));
 
-        $deviceType = $this->request->getPost('device_type') ?? 'pc';
-        if (!in_array($deviceType, ['pc', 'server', 'mobile', 'tablet', 'router'])) {
-            $deviceType = 'pc';
-        }
-
         // Registrar dispositivo
         $data = [
-            'network_id'  => (int)$networkId,
-            'name'        => trim($name),
+            'network_id'  => $networkId,
+            'name'        => $name,
             'ip_address'  => $ipAddress,
             'public_key'  => $publicKey,
             'private_key' => $privateKey,
@@ -263,10 +236,21 @@ class DeviceController extends BaseController
         ];
 
         if ($this->deviceModel->save($data)) {
-            $insertId = $this->deviceModel->getInsertID();
+            $insertId  = $this->deviceModel->getInsertID();
             $deviceObj = $this->deviceModel->find($insertId);
-            if ($deviceObj) {
-                $this->syncNodeWithLxc($network, $deviceObj, 'add');
+
+            // Registrar el peer en el servidor. Si falla, se revierte el alta en la BD.
+            try {
+                $this->pushPeer($deviceObj, true);
+            } catch (\Throwable $e) {
+                log_message('error', 'No se pudo registrar el nodo ' . $insertId . ' en WireGuard: ' . $e->getMessage());
+                $this->deviceModel->delete($insertId);
+                $this->bestEffort(fn () => $this->pushPeer($deviceObj, false), 'revertir alta del nodo ' . $insertId);
+
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage(),
+                ])->setStatusCode(502);
             }
 
             return $this->response->setJSON([
@@ -323,22 +307,21 @@ class DeviceController extends BaseController
             ])->setStatusCode(403);
         }
 
-        $name = trim($this->request->getPost('name') ?? '');
-        $deviceType = $this->request->getPost('device_type') ?? 'pc';
+        $rules = [
+            'name'        => 'required|min_length[2]|max_length[100]',
+            'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
+        ];
 
-        if (empty($name)) {
+        if (!$this->validate($rules)) {
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'El nombre es obligatorio.'
+                'message' => implode(' ', $this->validator->getErrors()),
+                'errors'  => $this->validator->getErrors(),
             ])->setStatusCode(400);
         }
 
-        if (!in_array($deviceType, ['pc', 'server', 'mobile', 'tablet', 'router'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Tipo de dispositivo no válido.'
-            ])->setStatusCode(400);
-        }
+        $name       = trim((string) $this->request->getPost('name'));
+        $deviceType = (string) $this->request->getPost('device_type');
 
         if ($this->deviceModel->update($id, ['name' => $name, 'device_type' => $deviceType])) {
             return $this->response->setJSON([
@@ -380,9 +363,24 @@ class DeviceController extends BaseController
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
+        // Quitar primero el peer del servidor (si estaba activo). Si falla, no se borra de la BD.
+        if ($device->active) {
+            try {
+                $this->pushPeer($device, false);
+            } catch (\Throwable $e) {
+                log_message('error', 'No se pudo quitar el nodo ' . $id . ' de WireGuard: ' . $e->getMessage());
+                return redirect()->to("networks/{$networkId}/devices")
+                    ->with('error', 'No se pudo quitar el nodo del servidor VPN. No se ha eliminado. Detalle: ' . esc($e->getMessage()));
+            }
+        }
+
         if ($this->deviceModel->delete($id)) {
-            $this->syncNodeWithLxc($network, $device, 'remove');
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
+        }
+
+        // Revertir: volver a registrar el peer en el servidor
+        if ($device->active) {
+            $this->bestEffort(fn () => $this->pushPeer($device, true), 'revertir baja del nodo ' . $id);
         }
 
         return redirect()->to("networks/{$networkId}/devices")->with('error', 'Error al eliminar.');
@@ -415,12 +413,22 @@ class DeviceController extends BaseController
 
         $newActiveStatus = !$device->active;
 
-        if ($this->deviceModel->update($id, ['active' => $newActiveStatus])) {
-            $device->active = $newActiveStatus;
-            $this->syncNodeWithLxc($network, $device, $newActiveStatus ? 'add' : 'remove');
+        // Aplicar primero en el servidor. Si falla, no se cambia el estado en la BD.
+        try {
+            $this->pushPeer($device, $newActiveStatus);
+        } catch (\Throwable $e) {
+            log_message('error', 'No se pudo cambiar el estado del nodo ' . $id . ' en WireGuard: ' . $e->getMessage());
+            return redirect()->to("networks/{$networkId}/devices")
+                ->with('error', 'No se pudo aplicar el cambio en el servidor VPN. Detalle: ' . esc($e->getMessage()));
+        }
+
+        if ($this->deviceModel->update($id, ['active' => $newActiveStatus ? 1 : 0])) {
             $status = $newActiveStatus ? 'activado' : 'desactivado';
             return redirect()->to("networks/{$networkId}/devices")->with('message', "Nodo {$status}.");
         }
+
+        // Revertir el cambio en el servidor
+        $this->bestEffort(fn () => $this->pushPeer($device, !$newActiveStatus), 'revertir estado del nodo ' . $id);
 
         return redirect()->to("networks/{$networkId}/devices")->with('error', 'Error al cambiar estado.');
     }
@@ -455,7 +463,21 @@ class DeviceController extends BaseController
         }
 
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey') ?: 'lQ7kfC0if1tK0M91yaShyj13swsGNE/W+v7wg7LX6VE=';
+        if (empty($decryptedPrivateKey)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No se pudo desencriptar la llave privada del nodo.'
+            ])->setStatusCode(500);
+        }
+
+        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
+        if (empty($serverPublicKey)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'La clave pública del servidor WireGuard no está configurada. Por favor, ve a Ajustes > WireGuard y prueba la conexión para autodescubrirla.'
+            ])->setStatusCode(400);
+        }
+
         $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
             (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
 
@@ -493,7 +515,15 @@ class DeviceController extends BaseController
         }
 
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey') ?: 'lQ7kfC0if1tK0M91yaShyj13swsGNE/W+v7wg7LX6VE=';
+        if (empty($decryptedPrivateKey)) {
+            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se pudo desencriptar la llave privada del nodo.');
+        }
+
+        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
+        if (empty($serverPublicKey)) {
+            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'La clave pública del servidor WireGuard no está configurada. Ve a Ajustes > WireGuard.');
+        }
+
         $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
             (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
 
@@ -629,50 +659,9 @@ class DeviceController extends BaseController
         ];
 
         // Intentar obtener datos de WireGuard en tiempo real vía SSH
-        $globalSettings = service('settings');
-        $interface = $globalSettings->get('WireGuard.interface') ?: 'wg0';
-
-        try {
-            $ssh = $this->getSshSession(5);
-            $wgCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface) . " dump");
-            $cmd = $wgCmd . " && echo '---TIME---' && date +%s";
-
-            $output      = $ssh->exec($cmd);
-            $outputParts = explode('---TIME---', $output);
-            $wgOutput    = $outputParts[0] ?? '';
-            $remoteTime  = isset($outputParts[1]) ? (int)trim($outputParts[1]) : time();
-
-            $lines = explode("\n", $wgOutput);
-            for ($i = 1; $i < count($lines); $i++) {
-                $line = trim($lines[$i]);
-                if (empty($line)) continue;
-                $parts = preg_split('/\s+/', $line);
-                if (count($parts) >= 7 && $parts[0] === $device->public_key) {
-                    $handshake = (int)$parts[4];
-                    $rx        = (int)$parts[5];
-                    $tx        = (int)$parts[6];
-                    $endpoint  = $parts[2] !== '(none)' ? $parts[2] : null;
-                    $connected = ($handshake > 0 && ($remoteTime - $handshake) < 180);
-
-                    $result['wg'] = [
-                        'connected'        => $connected,
-                        'endpoint'         => $endpoint,
-                        'public_ip'        => $endpoint ? explode(':', $endpoint)[0] : null,
-                        'port'             => $endpoint ? (explode(':', $endpoint)[1] ?? null) : null,
-                        'latest_handshake' => $handshake ?: null,
-                        'rx_bytes'         => $rx,
-                        'tx_bytes'         => $tx,
-                    ];
-
-                    $lastSeen = $this->updateLastSeenFromHandshake($device, $handshake);
-                    if ($lastSeen) {
-                        $result['last_seen'] = $lastSeen;
-                    }
-                    break;
-                }
-            }
-        } catch (\Exception $e) {
-            log_message('notice', 'No se pudo obtener estado WireGuard en tiempo real para nodo ' . $id . ': ' . $e->getMessage());
+        $result['wg'] = $this->fetchPeerStatus($device);
+        if ($result['wg'] && !empty($result['wg']['last_seen'])) {
+            $result['last_seen'] = $result['wg']['last_seen'];
         }
 
         return $this->response->setJSON([
@@ -681,78 +670,75 @@ class DeviceController extends BaseController
         ]);
     }
 
-    /**
-     * Sincroniza un peer (dispositivo) con el LXC de WireGuard vía SSH en tiempo real.
-     */
-    protected function syncNodeWithLxc($network, $device, string $action): bool
+    // ---------------------------------------------------------------------
+    // Helper: Registrar o quitar un peer en el servidor WireGuard.
+    // Lanza excepción si el servidor no confirma el cambio.
+    // ---------------------------------------------------------------------
+    protected function pushPeer(object $device, bool $add): void
     {
-        $globalSettings = service('settings');
-        $interface = $globalSettings->get('WireGuard.interface') ?: 'wg0';
-        $pubkey = $device->public_key;
-        $ip = $device->ip_address . '/32';
+        $wg = WireguardService::fromSettings(5);
+        $wg->setTimeout(30);
 
-        if ($action === 'add') {
-            $cmd1 = "wg set " . escapeshellarg($interface) . " peer " . escapeshellarg($pubkey) . " allowed-ips " . escapeshellarg($ip);
+        if ($add) {
+            // Regenerar firewall/direcciones por si la red del nodo es nueva
+            $wg->syncFirewall();
+            $wg->addPeer($device->public_key, $device->ip_address);
         } else {
-            $cmd1 = "wg set " . escapeshellarg($interface) . " peer " . escapeshellarg($pubkey) . " remove";
+            $wg->removePeer($device->public_key);
         }
-        $cmd2 = "wg-quick save " . escapeshellarg($interface);
-        // Construir script dinámico de iptables para aislar subredes
-        $networkModel = new \App\Models\NetworkModel();
-        $networks = $networkModel->findAll();
-        
-        $iptablesScript = "sysctl -w net.ipv4.ip_forward=1; ";
-        
-        // 1. Limpiar TODAS las reglas FORWARD genéricas e inseguras de wg0
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o " . escapeshellarg($interface) . " -j ACCEPT 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o " . escapeshellarg($interface) . " -j DROP 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o wg+ -j DROP 2>/dev/null; do true; done; ";
-        
-        // 2. Limpiar las reglas específicas de subredes para evitar duplicados, y luego añadirlas
-        foreach ($networks as $net) {
-            $cidr = escapeshellarg($net->cidr);
-            $intf = escapeshellarg($interface);
-            $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o {$intf} -s {$cidr} -d {$cidr} -j ACCEPT 2>/dev/null; do true; done; ";
-            $iptablesScript .= "iptables -A FORWARD -i {$intf} -o {$intf} -s {$cidr} -d {$cidr} -j ACCEPT; ";
-        }
-        
-        // 3. Regla final: DROP todo el tráfico cruzado entre diferentes subredes en wg0
-        $intf = escapeshellarg($interface);
-        $iptablesScript .= "iptables -A FORWARD -i {$intf} -o {$intf} -j DROP; ";
-        
-        // 4. Reglas de NAT y Drop hacia wg+ (otras interfaces de wireguard)
-        $iptablesScript .= "iptables -A FORWARD -i {$intf} -o wg+ -j DROP; ";
-        $iptablesScript .= "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); ";
-        
-        // 5. Enrutar tráfico a Internet (NAT/Masquerade y FORWARD ACCEPT)
-        $iptablesScript .= "while iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j DROP 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j ACCEPT 2>/dev/null; do true; done; ";
-        $iptablesScript .= "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -A FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi";
 
-        $cmd3 = $iptablesScript;
+        $wg->saveConfig();
+    }
 
-        // Construir la ejecución concatenando comandos con sudo envuelto
-        $cmd = $this->wrapSudoCommand($cmd1) . " && " .
-               $this->wrapSudoCommand($cmd2) . " && " .
-               $this->wrapSudoCommand("bash -c " . escapeshellarg($cmd3));
-
+    // ---------------------------------------------------------------------
+    // Helper: Ejecutar una acción de reversión sin interrumpir el flujo
+    // ---------------------------------------------------------------------
+    protected function bestEffort(callable $action, string $context): void
+    {
         try {
-            // Obtener sesión SSH usando BaseController
-            $ssh = $this->getSshSession(5);
+            $action();
+        } catch (\Throwable $e) {
+            log_message('critical', "Fallo al {$context}. Ejecuta la sincronización desde Mantenimiento: " . $e->getMessage());
+        }
+    }
 
-            $output = $ssh->exec($cmd);
-            
-            // wg set usualmente no produce salida si tiene éxito, pero podemos loguear si hay algún mensaje
-            if (!empty($output)) {
-                log_message('notice', "Salida del comando de sincronización WireGuard: " . $output);
-            }
-        } catch (\Exception $e) {
-            log_message('error', "Excepción al sincronizar nodo con LXC WireGuard vía SSH: " . $e->getMessage());
-            return false;
+    // ---------------------------------------------------------------------
+    // Helper: Estado en tiempo real de un peer (null si no hay conexión)
+    // ---------------------------------------------------------------------
+    protected function fetchPeerStatus(object $device): ?array
+    {
+        try {
+            $dump = WireguardService::fromSettings(5)->dump();
+        } catch (\Throwable $e) {
+            log_message('notice', 'No se pudo obtener estado WireGuard en tiempo real para nodo ' . $device->id . ': ' . $e->getMessage());
+            return null;
         }
 
-        return true;
+        $peer = $dump['peers'][$device->public_key] ?? null;
+        if (!$peer) {
+            return null;
+        }
+
+        // Separar IP y puerto del endpoint (compatible con IPv6 entre corchetes)
+        $endpoint = $peer['endpoint'];
+        $publicIp = null;
+        $port     = null;
+        if ($endpoint && ($pos = strrpos($endpoint, ':')) !== false) {
+            $publicIp = trim(substr($endpoint, 0, $pos), '[]');
+            $port     = substr($endpoint, $pos + 1);
+        }
+
+        return [
+            'connected'        => $peer['connected'],
+            'endpoint'         => $endpoint,
+            'public_ip'        => $publicIp,
+            'port'             => $port,
+            'latest_handshake' => $peer['latest_handshake'] ?: null,
+            'remote_time'      => $dump['remote_time'],
+            'rx_bytes'         => $peer['rx_bytes'],
+            'tx_bytes'         => $peer['tx_bytes'],
+            'last_seen'        => $this->updateLastSeenFromHandshake($device, $peer['latest_handshake']),
+        ];
     }
 
     // ---------------------------------------------------------------------
@@ -771,18 +757,19 @@ class DeviceController extends BaseController
 
         // Obtener red para comprobar permisos
         $network = $this->networkModel->find($device->network_id);
+        if (!$network) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Red no encontrada'])->setStatusCode(404);
+        }
         if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'No tienes permisos para esta red'])->setStatusCode(403);
         }
 
         try {
-            $ssh = $this->getSshSession(10);
-            
+            $wg = WireguardService::fromSettings(10);
+
             // Ejecutar ping enviando 4 paquetes, timeout 2 segundos por paquete
-            $ip = escapeshellarg($device->ip_address);
-            $cmd = $this->wrapSudoCommand("ping -c 4 -W 2 {$ip} 2>&1");
-            $output = $ssh->exec($cmd);
-            $exitStatus = $ssh->getExitStatus();
+            $output     = $wg->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
+            $exitStatus = $wg->lastExitStatus();
 
             if ($exitStatus === 0) {
                 return $this->response->setJSON([
@@ -796,7 +783,7 @@ class DeviceController extends BaseController
                     'output' => $output
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON([
                 'status' => 'error',
                 'message' => 'Error de conexión SSH con el servidor VPN.',
@@ -819,64 +806,33 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado.'])->setStatusCode(403);
         }
 
-        $globalSettings = service('settings');
-        $interface = $globalSettings->get('WireGuard.interface') ?: 'wg0';
-
         $peers = [];
-        $remoteTime = time();
         try {
-            // Obtener sesión SSH usando BaseController
-            $ssh = $this->getSshSession(5);
+            $dump       = WireguardService::fromSettings(5)->dump();
+            $remoteTime = $dump['remote_time'];
 
-            $wgCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface) . " dump");
-            $cmd = $wgCmd . " && echo '---TIME---' && date +%s";
-
+            // Solo se devuelven los peers de esta red (no exponer datos de otras redes)
             $devices = $this->deviceModel->where('network_id', $networkId)->findAll();
-            $devicesByPublicKey = [];
             foreach ($devices as $device) {
-                $devicesByPublicKey[$device->public_key] = $device;
-            }
-
-            $output = $ssh->exec($cmd);
-            $outputParts = explode('---TIME---', $output);
-            $wgOutput = $outputParts[0] ?? '';
-            if (isset($outputParts[1])) {
-                $remoteTime = (int)trim($outputParts[1]);
-            }
-
-            $lines = explode("\n", $wgOutput);
-            // Saltar la primera línea (info de la interfaz)
-            for ($i = 1; $i < count($lines); $i++) {
-                $line = trim($lines[$i]);
-                if (empty($line)) continue;
-                $parts = preg_split('/\s+/', $line);
-                if (count($parts) >= 7) {
-                    $pubKey = $parts[0];
-                    $endpoint = $parts[2];
-                    $handshake = (int)$parts[4];
-                    $rx = (int)$parts[5];
-                    $tx = (int)$parts[6];
-
-                    $connected = ($handshake > 0 && ($remoteTime - $handshake) < 180);
-                    $lastSeen = null;
-
-                    if (isset($devicesByPublicKey[$pubKey])) {
-                        $lastSeen = $this->updateLastSeenFromHandshake($devicesByPublicKey[$pubKey], $handshake);
-                    }
-
-                    $peers[$pubKey] = [
-                        'connected' => $connected,
-                        'endpoint' => $endpoint !== '(none)' ? $endpoint : null,
-                        'latest_handshake' => $handshake,
-                        'last_seen' => $lastSeen,
-                        'last_seen_date' => $lastSeen ? date('d/m/Y', strtotime($lastSeen)) : null,
-                        'last_seen_time' => $lastSeen ? date('H:i', strtotime($lastSeen)) : null,
-                        'rx' => $rx,
-                        'tx' => $tx,
-                    ];
+                $peer = $dump['peers'][$device->public_key] ?? null;
+                if (!$peer) {
+                    continue;
                 }
+
+                $lastSeen = $this->updateLastSeenFromHandshake($device, $peer['latest_handshake']);
+
+                $peers[$device->public_key] = [
+                    'connected' => $peer['connected'],
+                    'endpoint' => $peer['endpoint'],
+                    'latest_handshake' => $peer['latest_handshake'],
+                    'last_seen' => $lastSeen,
+                    'last_seen_date' => $lastSeen ? date('d/m/Y', strtotime($lastSeen)) : null,
+                    'last_seen_time' => $lastSeen ? date('H:i', strtotime($lastSeen)) : null,
+                    'rx' => $peer['rx_bytes'],
+                    'tx' => $peer['tx_bytes'],
+                ];
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
         }
 
@@ -899,7 +855,8 @@ class DeviceController extends BaseController
         $lastSeen = date('Y-m-d H:i:s', $handshake);
         $currentLastSeen = !empty($device->last_seen) ? strtotime($device->last_seen) : 0;
 
-        if ($handshake !== $currentLastSeen) {
+        // Limitar escrituras en SQLite: solo actualizar si han pasado al menos 60 segundos
+        if (abs($handshake - $currentLastSeen) >= 60) {
             $this->deviceModel->update($device->id, ['last_seen' => $lastSeen]);
             $device->last_seen = $lastSeen;
         }

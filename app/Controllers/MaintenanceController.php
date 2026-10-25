@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Libraries\WireguardService;
 use App\Models\DeviceModel;
 
 class MaintenanceController extends BaseController
@@ -35,31 +36,20 @@ class MaintenanceController extends BaseController
         }
     }
 
-
-
     // ---------------------------------------------------------------------
     // Reiniciar servicio WireGuard
     // ---------------------------------------------------------------------
     public function restartWireguard()
     {
-        $settings = service('settings');
-        $interface = $settings->get('WireGuard.interface') ?: 'wg0';
-
         try {
-            $ssh = $this->getSshSession(10);
-            
-            // Usamos wg-quick down y luego wg-quick up, o systemctl restart
-            // systemctl restart wg-quick@wg0 es el estándar en las distribuciones con systemd
-            $cmd = $this->wrapSudoCommand("systemctl restart wg-quick@" . escapeshellarg($interface));
-            $output = $ssh->exec($cmd);
+            $wg = WireguardService::fromSettings(10);
+            $interface = $wg->getInterface();
 
-            if ($ssh->getExitStatus() !== 0) {
-                 return redirect()->to(base_url('settings/maintenance'))->with('error', "Error al reiniciar WireGuard: " . $output);
-            }
+            $wg->run('systemctl restart ' . escapeshellarg('wg-quick@' . $interface));
 
             return redirect()->to(base_url('settings/maintenance'))->with('message', "El servicio WireGuard ({$interface}) ha sido reiniciado correctamente.");
-        } catch (\Exception $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', "Error de conexión al reiniciar WireGuard: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            return redirect()->to(base_url('settings/maintenance'))->with('error', "Error al reiniciar WireGuard: " . esc($e->getMessage()));
         }
     }
 
@@ -99,93 +89,30 @@ class MaintenanceController extends BaseController
     // ---------------------------------------------------------------------
     private function syncWireguardPeers(): array
     {
-        $settings = service('settings');
-        $interface = $settings->get('WireGuard.interface') ?: 'wg0';
+        if (!WireguardService::isConfigured()) {
+            return ['success' => false, 'message' => 'El servidor SSH de WireGuard no está configurado.'];
+        }
 
         try {
-            // Obtener sesión SSH usando BaseController
-            $ssh = $this->getSshSession(10);
-
-            // 1. Obtener peers actuales del servidor WireGuard
-            $wgCmd = $this->wrapSudoCommand("wg show " . escapeshellarg($interface) . " dump");
-            $wgOutput = $ssh->exec($wgCmd);
-            $lines = explode("\n", trim($wgOutput));
-
-            // Obtener todos los dispositivos activos en la BD
-            $deviceModel = new DeviceModel();
-            $activeDevices = $deviceModel->where('active', 1)->findAll();
-            
-            // Mapear claves públicas activas
-            $activePubKeys = [];
-            foreach ($activeDevices as $device) {
-                $activePubKeys[] = trim($device->public_key);
-            }
-
-            // Detectar peers actuales en el servidor
-            $serverPeers = [];
-            // La primera línea del dump es la interfaz, las siguientes son los peers
-            for ($i = 1; $i < count($lines); $i++) {
-                $line = trim($lines[$i]);
-                if (empty($line)) continue;
-                $parts = preg_split('/\s+/', $line);
-                if (count($parts) >= 1) {
-                    $serverPeers[] = trim($parts[0]);
-                }
-            }
-
-            $cmds = [];
-            $deletedCount = 0;
-            $restoredCount = 0;
-
-            // A. Eliminar peers del servidor que NO estén activos en la BD (Peers fantasmas)
-            foreach ($serverPeers as $peerPubKey) {
-                if (!in_array($peerPubKey, $activePubKeys)) {
-                    $cmds[] = "wg set " . escapeshellarg($interface) . " peer " . escapeshellarg($peerPubKey) . " remove";
-                    $deletedCount++;
-                }
-            }
-
-            // B. Agregar o actualizar peers activos de la BD en el servidor (Restaurar perdidos)
-            foreach ($activeDevices as $device) {
-                $pubKey = trim($device->public_key);
-                $ip = trim($device->ip_address);
-                
-                // Si el peer no está en el servidor, lo marcamos como restaurado
-                if (!in_array($pubKey, $serverPeers)) {
-                    $restoredCount++;
-                }
-                $cmds[] = "wg set " . escapeshellarg($interface) . " peer " . escapeshellarg($pubKey) . " allowed-ips " . escapeshellarg($ip . '/32');
-            }
-
-            if (empty($cmds)) {
-                return ['success' => true, 'message' => 'El servidor VPN ya está sincronizado'];
-            }
-
-            // Guardar configuración permanentemente
-            $cmds[] = "wg-quick save " . escapeshellarg($interface);
-
-            $execCmd = implode(" && ", $cmds);
-            $execCmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($execCmd));
-
-            $ssh->exec($execCmd);
+            $wg = WireguardService::fromSettings(10);
+            $res = $wg->syncPeers();
 
             $msgParts = [];
-            if ($deletedCount > 0) {
-                $msgParts[] = "{$deletedCount} fantasmas eliminados";
+            if ($res['removed'] > 0) {
+                $msgParts[] = "{$res['removed']} fantasmas eliminados";
             }
-            if ($restoredCount > 0) {
-                $msgParts[] = "{$restoredCount} activos restaurados";
+            if ($res['restored'] > 0) {
+                $msgParts[] = "{$res['restored']} activos restaurados";
             }
             if (empty($msgParts)) {
-                $msgParts[] = "configuración verificada";
+                $msgParts[] = "servidor ya estaba sincronizado";
             }
 
             $finalMsg = "Sincronización VPN completada (" . implode(", ", $msgParts) . ")";
 
             return ['success' => true, 'message' => $finalMsg];
-
-        } catch (\Exception $e) {
-            return ['success' => false, 'message' => 'Error SSH: ' . $e->getMessage()];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => 'Error WireGuard: ' . $e->getMessage()];
         }
     }
 
@@ -267,6 +194,8 @@ class MaintenanceController extends BaseController
         // 3. Proceder con el reemplazo de la BD actual
         $dbPath = config('Database')->default['database'];
         $backupPath = $dbPath . '.bak';
+        $walPath    = $dbPath . '-wal';
+        $shmPath    = $dbPath . '-shm';
 
         // Cerrar la conexión actual de CodeIgniter para liberar el archivo sqlite
         $db = \Config\Database::connect();
@@ -283,6 +212,23 @@ class MaintenanceController extends BaseController
         try {
             if (!copy($tempPath, $dbPath)) {
                 throw new \Exception('Fallo al copiar el nuevo archivo de base de datos.');
+            }
+
+            // Eliminar archivos WAL y SHM antiguos para evitar inconsistencias con la nueva BD
+            if (file_exists($walPath)) {
+                @unlink($walPath);
+            }
+            if (file_exists($shmPath)) {
+                @unlink($shmPath);
+            }
+
+            // Asegurar que la nueva base de datos mantenga el modo WAL
+            try {
+                $sq = new \SQLite3($dbPath);
+                $sq->exec('PRAGMA journal_mode=WAL;');
+                $sq->close();
+            } catch (\Throwable $t) {
+                // No crítico si ya estaba configurado
             }
 
             // Eliminar copia de seguridad temporal tras éxito

@@ -49,6 +49,9 @@ Vagrantfile
 /writable/*.db
 /writable/*.db2
 /writable/*.sqlite
+/writable/*.db-wal
+/writable/*.db-shm
+/writable/*.db-*
 
 
 #-------------------------

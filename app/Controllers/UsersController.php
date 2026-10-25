@@ -306,9 +306,18 @@ class UsersController extends BaseController
     {
         $user = $this->usersModel->findById($id);
         if ($user) {
+            // No permitir eliminarse a sí mismo
+            if ($user->id === auth()->id()) {
+                return redirect()->to('users')->with('error', 'No puedes eliminar tu propia cuenta.');
+            }
+
             if ($user->inGroup('superadmin') && !auth()->user()->inGroup('superadmin')) {
                 return redirect()->to('users')->with('error', 'Sin permisos para eliminar a un superadmin.');
             }
+
+            $db = \Config\Database::connect();
+            $db->transStart();
+
             try {
                 // Eliminar foto de perfil si la tiene (Cumplimiento de Regla 3: Limpieza de Servidor)
                 if (!empty($user->profile_pic) && file_exists(FCPATH . 'uploads/profile/' . $user->profile_pic)) {
@@ -320,9 +329,27 @@ class UsersController extends BaseController
                 $deviceModel  = model(\App\Models\DeviceModel::class);
                 
                 $userNetworks = $networkModel->where('owner_id', $user->id)->findAll();
+                $keysToRemove = [];
+
                 foreach ($userNetworks as $network) {
+                    $devices = $deviceModel->where('network_id', $network->id)->findAll();
+                    foreach ($devices as $d) {
+                        if (!empty($d->public_key)) {
+                            $keysToRemove[] = $d->public_key;
+                        }
+                    }
                     // Borrar los dispositivos (nodos) de la red
                     $deviceModel->where('network_id', $network->id)->delete();
+                }
+
+                // Borrar peers en Wireguard si hay dispositivos asociados
+                if (!empty($keysToRemove)) {
+                    $wg = \App\Libraries\WireguardService::createFromSettings();
+                    if ($wg) {
+                        $wg->removePeers($keysToRemove);
+                        $wg->saveConfig();
+                        $wg->syncFirewall();
+                    }
                 }
 
                 // Borrar las redes del usuario
@@ -334,8 +361,16 @@ class UsersController extends BaseController
 
                 // Borrar usuario
                 $this->usersModel->delete($user->id, true);
-                return redirect()->to('users')->with('message', 'Usuario eliminado.');
+
+                $db->transComplete();
+
+                if ($db->transStatus() === false) {
+                    return redirect()->to('users')->with('error', 'Error en la transacción al eliminar usuario.');
+                }
+
+                return redirect()->to('users')->with('message', 'Usuario eliminado correctamente.');
             } catch (\Throwable $e) {
+                $db->transRollback();
                 return redirect()->to('users')->with('error', 'Error al eliminar usuario: ' . $e->getMessage());
             }
         }

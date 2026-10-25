@@ -22,9 +22,10 @@ class SmtpController extends BaseController
             'smtp_port'   => $settings->get('Email.SMTPPort') ?: 587,
             'smtp_crypto' => $settings->get('Email.SMTPCrypto') ?: 'tls',
             'mailType'    => $settings->get('Email.mailType') ?: 'html',
+            'title'       => 'Configuración SMTP',
         ];
 
-        echo view('template/header');
+        echo view('template/header', $data);
         echo view('settings/smtp', $data);
         echo view('template/footer');
     }

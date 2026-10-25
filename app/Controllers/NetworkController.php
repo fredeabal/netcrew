@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\WireguardService;
 use App\Models\NetworkModel;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -106,6 +107,15 @@ class NetworkController extends BaseController
 
 
         if ($this->networkModel->save($data)) {
+            // Sincronizar firewall de WireGuard si el servidor está configurado
+            if (WireguardService::isConfigured()) {
+                try {
+                    WireguardService::fromSettings(5)->syncFirewall();
+                } catch (\Throwable $e) {
+                    log_message('notice', 'No se pudo sincronizar el firewall de WireGuard tras crear la red: ' . $e->getMessage());
+                }
+            }
+
             return redirect()->to('/networks')->with('message', 'Red creada.');
         }
 
@@ -204,16 +214,32 @@ class NetworkController extends BaseController
             }
         }
 
-        // Capacidad /24 = 253 nodos
-        $maxNodes = 253;
+        // Si el CIDR cambió y la red ya tiene dispositivos registrados, no permitir el cambio
         $deviceModel = new \App\Models\DeviceModel();
         $currentNodesCount = $deviceModel->where('network_id', $id)->countAllResults();
-        
+
+        if ($data['cidr'] !== $network->cidr && $currentNodesCount > 0) {
+            return redirect()->back()->withInput()->with('error', 'No puedes cambiar el rango CIDR de una red que ya contiene dispositivos asignados. Elimina o mueve los nodos primero.');
+        }
+
+        // Capacidad /24 = 253 nodos
+        $maxNodes = 253;
         if ($currentNodesCount > $maxNodes) {
             return redirect()->back()->withInput()->with('error', "Capacidad excedida<br><small class='text-muted'>Esta red admite un máximo de {$maxNodes} nodos (actualmente tienes {$currentNodesCount}).</small>");
         }
 
+        $cidrChanged = ($data['cidr'] !== $network->cidr);
+
         if ($this->networkModel->update($id, $data)) {
+            // Si el CIDR cambió en una red vacía, regenerar el script y reglas de firewall
+            if ($cidrChanged && WireguardService::isConfigured()) {
+                try {
+                    WireguardService::fromSettings(5)->syncFirewall();
+                } catch (\Throwable $e) {
+                    log_message('notice', 'No se pudo actualizar el firewall tras modificar la red: ' . $e->getMessage());
+                }
+            }
+
             return redirect()->to('/networks')->with('message', 'Red actualizada.');
         }
 
@@ -238,84 +264,40 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Sin permisos.');
         }
 
-        // Limpiar WireGuard en el servidor Debian
-        $this->cleanupWireguardOnServer($id);
+        // 1. Limpiar peers en el servidor WireGuard y regenerar firewall
+        if (WireguardService::isConfigured()) {
+            try {
+                $deviceModel = new \App\Models\DeviceModel();
+                $devices     = $deviceModel->where('network_id', $id)->findAll();
+                $keys        = array_filter(array_column($devices, 'public_key'));
 
-        // Eliminar dispositivos asociados
-        $deviceModel = new \App\Models\DeviceModel();
-        $deviceModel->where('network_id', $id)->delete();
-
-        if ($this->networkModel->delete($id)) {
-            return redirect()->to('/networks')->with('message', 'Red eliminada y servidor sincronizado.');
-        }
-
-        return redirect()->to('/networks')->with('error', 'Error al eliminar.');
-    }
-
-    // ---------------------------------------------------------------------
-    // Limpiar interfaz de WireGuard en el servidor Debian vía SSH
-    // ---------------------------------------------------------------------
-    protected function cleanupWireguardOnServer($networkId): bool
-    {
-        $globalSettings = service('settings');
-        $interface = $globalSettings->get('WireGuard.interface') ?: 'wg0';
-
-        // Obtener todos los dispositivos de la red para quitar sus peers
-        $deviceModel = new \App\Models\DeviceModel();
-        $devices = $deviceModel->where('network_id', $networkId)->findAll();
-        
-        $cmds = [];
-        foreach ($devices as $device) {
-            if (!empty($device->public_key)) {
-                $cmds[] = "wg set " . escapeshellarg($interface) . " peer " . escapeshellarg($device->public_key) . " remove";
+                $wg = WireguardService::fromSettings(5);
+                if (!empty($keys)) {
+                    $wg->removePeers($keys);
+                    $wg->saveConfig();
+                }
+                // Actualizar firewall y direcciones en la interfaz excluyendo la red a borrar
+                $wg->syncFirewall(WireguardService::networkCidrs((int)$id));
+            } catch (\Throwable $e) {
+                log_message('error', 'Excepción al desasociar red de WireGuard: ' . $e->getMessage());
             }
         }
-        
-        $cmd1 = empty($cmds) ? "true" : implode(" ; ", $cmds);
-        $cmd2 = "wg-quick save " . escapeshellarg($interface);
 
-        // Reconstruir reglas de iptables excluyendo esta red
-        $networkModel = new \App\Models\NetworkModel();
-        $networks = $networkModel->where('id !=', $networkId)->findAll();
-        
-        $iptablesScript = "sysctl -w net.ipv4.ip_forward=1; ";
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o " . escapeshellarg($interface) . " -j ACCEPT 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o " . escapeshellarg($interface) . " -j DROP 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i " . escapeshellarg($interface) . " -o wg+ -j DROP 2>/dev/null; do true; done; ";
-        
-        foreach ($networks as $net) {
-            $cidr = escapeshellarg($net->cidr);
-            $intf = escapeshellarg($interface);
-            $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o {$intf} -s {$cidr} -d {$cidr} -j ACCEPT 2>/dev/null; do true; done; ";
-            $iptablesScript .= "iptables -A FORWARD -i {$intf} -o {$intf} -s {$cidr} -d {$cidr} -j ACCEPT; ";
-        }
-        
-        $intf = escapeshellarg($interface);
-        $iptablesScript .= "iptables -A FORWARD -i {$intf} -o {$intf} -j DROP; ";
-        $iptablesScript .= "iptables -A FORWARD -i {$intf} -o wg+ -j DROP; ";
-        $iptablesScript .= "DEFAULT_DEV=\$(ip route show default | awk '{for(i=1;i<=NF;i++) if(\$i==\"dev\") print \$(i+1)}' | head -n1); ";
-        // Enrutar tráfico a Internet (NAT/Masquerade y FORWARD ACCEPT)
-        $iptablesScript .= "while iptables -t nat -D POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j DROP 2>/dev/null; do true; done; ";
-        $iptablesScript .= "while iptables -D FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j ACCEPT 2>/dev/null; do true; done; ";
-        $iptablesScript .= "if [ ! -z \"\$DEFAULT_DEV\" ]; then iptables -t nat -A POSTROUTING -o \"\$DEFAULT_DEV\" -j MASQUERADE; iptables -A FORWARD -i {$intf} -o \"\$DEFAULT_DEV\" -j ACCEPT; fi";
+        // 2. Transacción de base de datos para eliminar dispositivos y la red
+        $db = \Config\Database::connect();
+        $db->transStart();
 
-        $cmd3 = $iptablesScript;
+        $deviceModel = new \App\Models\DeviceModel();
+        $deviceModel->where('network_id', $id)->delete();
+        $this->networkModel->delete($id);
 
-        $cmd = $this->wrapSudoCommand("bash -c " . escapeshellarg($cmd1)) . " && " .
-               $this->wrapSudoCommand($cmd2) . " && " .
-               $this->wrapSudoCommand("bash -c " . escapeshellarg($cmd3));
+        $db->transComplete();
 
-        try {
-            // Obtener sesión SSH usando BaseController
-            $ssh = $this->getSshSession(5);
-            $ssh->exec($cmd);
-        } catch (\Exception $e) {
-            log_message('error', "Excepción al limpiar WireGuard vía SSH: " . $e->getMessage());
-            return false;
+        if ($db->transStatus() === false) {
+            return redirect()->to('/networks')->with('error', 'Error al eliminar la red de la base de datos.');
         }
 
-        return true;
+        return redirect()->to('/networks')->with('message', 'Red eliminada y servidor sincronizado.');
     }
 
     // ---------------------------------------------------------------------
@@ -341,6 +323,29 @@ class NetworkController extends BaseController
         $network->active = !$network->active;
 
         if ($this->networkModel->save($network)) {
+            // Sincronizar peers si el servidor está configurado
+            if (WireguardService::isConfigured()) {
+                try {
+                    $deviceModel = new \App\Models\DeviceModel();
+                    $devices     = $deviceModel->where('network_id', $id)->findAll();
+                    $wg          = WireguardService::fromSettings(5);
+
+                    if (!$network->active) {
+                        // Remover peers de la red desactivada
+                        $keys = array_filter(array_column($devices, 'public_key'));
+                        if (!empty($keys)) {
+                            $wg->removePeers($keys);
+                            $wg->saveConfig();
+                        }
+                    } else {
+                        // Restaurar los nodos activos de la BD
+                        $wg->syncPeers();
+                    }
+                } catch (\Throwable $e) {
+                    log_message('notice', 'No se pudo sincronizar WireGuard tras cambiar estado de red: ' . $e->getMessage());
+                }
+            }
+
             $status = $network->active ? 'activada' : 'desactivada';
             return redirect()->to('/networks')->with('message', "Red {$status}.");
         }

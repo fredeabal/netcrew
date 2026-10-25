@@ -205,13 +205,13 @@
         </div>
     </div>
 
-    <!-- Reparar Firewall y Enrutamiento (NUEVO) -->
+    <!-- Reparar Firewall y Enrutamiento -->
     <div class="col-md-4 mb-4">
         <div class="card h-100 shadow-none border">
             <div class="card-body d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="p-2 rounded bg-success-subtle text-success d-flex align-items-center justify-content-center">
+                        <div class="p-2 rounded bg-light-primary text-primary d-flex align-items-center justify-content-center">
                             <i class="ti ti-shield-check fs-7"></i>
                         </div>
                         <h5 class="fw-bold mb-0">Reparar Firewall</h5>
@@ -221,8 +221,8 @@
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/sync-firewall') ?>" method="POST" data-confirm="¿Deseas reconstruir y reaplicar las reglas de firewall y reenvío de paquetes en el servidor WireGuard?">
                         <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-success w-100 shadow-none">
-                            <i class="ti ti-shield-check me-1"></i> Reparar Firewall / Forward
+                        <button type="submit" class="btn btn-primary w-100 shadow-none">
+                            <i class="ti ti-shield-check me-1"></i> Reparar Firewall
                         </button>
                     </form>
                 </div>

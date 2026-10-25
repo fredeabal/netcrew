@@ -1,3 +1,11 @@
+<?php
+$currentUser      = auth()->user();
+$canNetworksView  = (bool) ($currentUser?->can('networks.view'));
+$canAdminUsers    = (bool) ($currentUser?->can('admin.users') || $currentUser?->can('users.create'));
+$canAdminSettings = (bool) ($currentUser?->can('admin.settings') || $currentUser?->can('admin.roles'));
+$canAdminRoles    = (bool) ($currentUser?->can('admin.roles'));
+$canSettings      = (bool) ($currentUser?->can('admin.settings'));
+?>
     <!-- =====================================================================
          BARRA LATERAL DE NAVEGACIÓN (ASIDE / SIDEBAR)
          ===================================================================== -->
@@ -30,7 +38,7 @@
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
-            <?php if (auth()->user()->can('networks.view')): ?>
+            <?php if ($canNetworksView): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('networks') ?>" aria-expanded="false">
                 <span>
@@ -40,12 +48,12 @@
               </a>
             </li>
             <?php endif; ?>
-            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create') || auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
+            <?php if ($canAdminUsers || $canAdminSettings): ?>
             <li class="nav-small-cap mt-4">
               <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
               <span class="hide-menu">Administración</span>
             </li>
-            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create')): ?>
+            <?php if ($canAdminUsers): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('users') ?>" aria-expanded="false">
                 <span>
@@ -55,7 +63,7 @@
               </a>
             </li>
             <?php endif; ?>
-            <?php if (auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
+            <?php if ($canAdminSettings): ?>
             <li class="sidebar-item">
               <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <span class="d-flex">
@@ -64,7 +72,7 @@
                 <span class="hide-menu">Configuración</span>
               </a>
               <ul aria-expanded="false" class="collapse first-level">
-                <?php if (auth()->user()->can('admin.roles')): ?>
+                <?php if ($canAdminRoles): ?>
                 <li class="sidebar-item">
                   <a href="<?= base_url('roles') ?>" class="sidebar-link">
                     <div class="round-16 d-flex align-items-center justify-content-center">
@@ -74,7 +82,7 @@
                   </a>
                 </li>
                 <?php endif; ?>
-                 <?php if (auth()->user()->can('admin.settings')): ?>
+                 <?php if ($canSettings): ?>
                  <li class="sidebar-item">
                    <a href="<?= base_url('settings/smtp') ?>" class="sidebar-link">
                      <div class="round-16 d-flex align-items-center justify-content-center">
@@ -102,6 +110,7 @@
                  <?php endif; ?>
               </ul>
             </li>
+            <?php endif; ?>
             <?php endif; ?>
           </ul>
         </nav>

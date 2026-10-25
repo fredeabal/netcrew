@@ -19,9 +19,8 @@
         </nav>
       </div>
       <div class="col-4 d-flex justify-content-end align-items-center">
-        <a href="<?= base_url('users') ?>" class="btn btn-outline-secondary d-flex align-items-center gap-1">
-          <i class="ti ti-arrow-left"></i>
-          <span class="d-none d-sm-inline">Volver</span>
+        <a href="<?= base_url('users') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none">
+          <i class="ti ti-arrow-left fs-5"></i>
         </a>
       </div>
     </div>
@@ -58,15 +57,25 @@
                     <div class="row mb-4">
                         <div class="col-md-6 mb-3 mb-md-0">
                             <label for="group" class="form-label fw-semibold">Rol / Grupo</label>
-                            <select class="form-select" id="group" name="group">
-                                <option value="">Selecciona un rol...</option>
-                                <?php 
-                                    $userGroup = !empty($user->getGroups()) ? $user->getGroups()[0] : '';
-                                ?>
-                                <?php foreach ($groups as $key => $group): ?>
-                                    <option value="<?= esc($key) ?>" <?= old('group', $userGroup) == $key ? 'selected' : '' ?>><?= esc($group['title']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <?php 
+                                $userGroup = !empty($user->getGroups()) ? $user->getGroups()[0] : '';
+                            ?>
+                            <?php if (!empty($isSelf)): ?>
+                                <select class="form-select" id="group" disabled>
+                                    <?php foreach ($groups as $key => $group): ?>
+                                        <option value="<?= esc($key) ?>" selected><?= esc($group['title']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <input type="hidden" name="group" value="<?= esc($userGroup) ?>">
+                                <small class="text-muted fs-2">Tu propio rol no puede ser modificado.</small>
+                            <?php else: ?>
+                                <select class="form-select" id="group" name="group">
+                                    <option value="">Selecciona un rol...</option>
+                                    <?php foreach ($groups as $key => $group): ?>
+                                        <option value="<?= esc($key) ?>" <?= old('group', $userGroup) == $key ? 'selected' : '' ?>><?= esc($group['title']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-6">
                             <label for="phone" class="form-label fw-semibold">Teléfono</label>
@@ -99,11 +108,20 @@
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="form-check form-switch p-0 d-flex align-items-center gap-2">
-                                <input class="form-check-input switch-custom-size ms-0" type="checkbox" role="switch" id="active" name="active" value="1" <?= old('active', !$user->isBanned()) ? 'checked' : '' ?>>
-                                <label class="form-check-label fw-semibold cursor-pointer mb-0" for="active">
-                                    Cuenta Activa
-                                </label>
-                                <span class="text-muted small ms-2 d-none d-sm-inline">(Desactivar la cuenta impedirá que el usuario inicie sesión)</span>
+                                <?php if (!empty($isSelf)): ?>
+                                    <input class="form-check-input switch-custom-size ms-0" type="checkbox" role="switch" id="active" checked disabled>
+                                    <input type="hidden" name="active" value="1">
+                                    <label class="form-check-label fw-semibold mb-0" for="active">
+                                        Cuenta Activa
+                                    </label>
+                                    <span class="text-muted small ms-2 d-none d-sm-inline">(No puedes desactivar tu propia cuenta activa)</span>
+                                <?php else: ?>
+                                    <input class="form-check-input switch-custom-size ms-0" type="checkbox" role="switch" id="active" name="active" value="1" <?= old('active', !$user->isBanned()) ? 'checked' : '' ?>>
+                                    <label class="form-check-label fw-semibold cursor-pointer mb-0" for="active">
+                                        Cuenta Activa
+                                    </label>
+                                    <span class="text-muted small ms-2 d-none d-sm-inline">(Desactivar la cuenta impedirá que el usuario inicie sesión)</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

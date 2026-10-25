@@ -28,8 +28,8 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso / propiedad de la red
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return redirect()->to('/networks')->with('error', 'No tienes permisos para administrar los nodos de esta red.');
         }
 
@@ -66,8 +66,8 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso / propiedad de la red
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return redirect()->to('/networks')->with('error', 'Acceso denegado.');
         }
 
@@ -103,8 +103,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(404);
         }
 
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso / propiedad
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'No tienes permisos para ver los nodos de esta red.'
@@ -179,8 +179,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar permisos para crear nodos en esta red
+        if (!$this->hasNetworkAccess($network, 'create')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'No tienes permisos para agregar nodos a esta red.'
@@ -212,17 +212,17 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        // Generar par de llaves WireGuard (X25519 Curve25519) usando libsodium
-        if (!extension_loaded('sodium')) {
+        // Generar par de llaves WireGuard (Curve25519) con clamping estándar RFC 7748
+        try {
+            $keypair = WireguardService::generateKeyPair();
+            $privateKey = $keypair['privateKey'];
+            $publicKey  = $keypair['publicKey'];
+        } catch (\Throwable $e) {
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'La extensión PHP libsodium es requerida para generar las llaves criptográficas.'
+                'message' => 'Error al generar llaves criptográficas: ' . $e->getMessage()
             ])->setStatusCode(500);
         }
-
-        $keypair = sodium_crypto_box_keypair();
-        $privateKey = base64_encode(sodium_crypto_box_secretkey($keypair));
-        $publicKey = base64_encode(sodium_crypto_box_publickey($keypair));
 
         // Registrar dispositivo
         $data = [
@@ -235,40 +235,48 @@ class DeviceController extends BaseController
             'device_type' => $deviceType
         ];
 
-        if ($this->deviceModel->save($data)) {
-            $insertId  = $this->deviceModel->getInsertID();
-            $deviceObj = $this->deviceModel->find($insertId);
-
-            // Registrar el peer en el servidor. Si falla, se revierte el alta en la BD.
-            try {
-                $this->pushPeer($deviceObj, true);
-            } catch (\Throwable $e) {
-                log_message('error', 'No se pudo registrar el nodo ' . $insertId . ' en WireGuard: ' . $e->getMessage());
-                $this->deviceModel->delete($insertId);
-                $this->bestEffort(fn () => $this->pushPeer($deviceObj, false), 'revertir alta del nodo ' . $insertId);
-
+        try {
+            if (!$this->deviceModel->save($data)) {
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage(),
-                ])->setStatusCode(502);
+                    'message' => 'Error al registrar el dispositivo.',
+                    'errors'  => $this->deviceModel->errors()
+                ])->setStatusCode(400);
             }
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al guardar dispositivo en BD: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Conflicto de asignación: la dirección IP o la clave ya existen en la red. Intenta nuevamente.',
+            ])->setStatusCode(409);
+        }
+
+        $insertId  = $this->deviceModel->getInsertID();
+        $deviceObj = $this->deviceModel->find($insertId);
+
+        // Registrar el peer en el servidor. Si falla, se revierte el alta en la BD.
+        try {
+            $this->pushPeer($deviceObj, true);
+        } catch (\Throwable $e) {
+            log_message('error', 'No se pudo registrar el nodo ' . $insertId . ' en WireGuard: ' . $e->getMessage());
+            $this->deviceModel->delete($insertId);
+            $this->bestEffort(fn () => $this->pushPeer($deviceObj, false), 'revertir alta del nodo ' . $insertId);
 
             return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Dispositivo agregado correctamente.',
-                'device'  => [
-                    'id'         => $insertId,
-                    'name'       => $data['name'],
-                    'ip_address' => $data['ip_address'],
-                ]
-            ]);
+                'success' => false,
+                'message' => 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage(),
+            ])->setStatusCode(502);
         }
 
         return $this->response->setJSON([
-            'success' => false,
-            'message' => 'Error al registrar el dispositivo.',
-            'errors'  => $this->deviceModel->errors()
-        ])->setStatusCode(400);
+            'success' => true,
+            'message' => 'Dispositivo agregado correctamente.',
+            'device'  => [
+                'id'         => $insertId,
+                'name'       => $data['name'],
+                'ip_address' => $data['ip_address'],
+            ]
+        ]);
     }
 
     // ---------------------------------------------------------------------
@@ -299,8 +307,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(404);
         }
 
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso / propiedad
+        if (!$this->hasNetworkAccess($network, 'edit')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'No tienes permisos para editar este nodo.'
@@ -358,8 +366,8 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar permisos para eliminar
+        if (!$this->hasNetworkAccess($network, 'delete')) {
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
@@ -406,8 +414,8 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar permisos para activar/desactivar
+        if (!$this->hasNetworkAccess($network, 'edit')) {
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
@@ -454,8 +462,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(404);
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso a la red
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Acceso denegado.'
@@ -478,8 +486,7 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
-            (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
+        $serverEndpoint = $this->resolveServerEndpoint();
 
         $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
 
@@ -509,8 +516,8 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso a la red
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return redirect()->to('/networks')->with('error', 'Acceso denegado.');
         }
 
@@ -524,8 +531,7 @@ class DeviceController extends BaseController
             return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'La clave pública del servidor WireGuard no está configurada. Ve a Ajustes > WireGuard.');
         }
 
-        $serverEndpoint = service('settings')->get('WireGuard.endpoint') ?: 
-            (isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] . ':51820' : 'vpn.tudominio.com:51820');
+        $serverEndpoint = $this->resolveServerEndpoint();
 
         $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
 
@@ -632,8 +638,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(404);
         }
 
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        // Validar acceso
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Acceso denegado.'
@@ -760,7 +766,7 @@ class DeviceController extends BaseController
         if (!$network) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Red no encontrada'])->setStatusCode(404);
         }
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'No tienes permisos para esta red'])->setStatusCode(403);
         }
 
@@ -802,7 +808,7 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Red no encontrada.'])->setStatusCode(404);
         }
 
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        if (!$this->hasNetworkAccess($network, 'view')) {
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado.'])->setStatusCode(403);
         }
 
@@ -855,12 +861,59 @@ class DeviceController extends BaseController
         $lastSeen = date('Y-m-d H:i:s', $handshake);
         $currentLastSeen = !empty($device->last_seen) ? strtotime($device->last_seen) : 0;
 
-        // Limitar escrituras en SQLite: solo actualizar si han pasado al menos 60 segundos
-        if (abs($handshake - $currentLastSeen) >= 60) {
-            $this->deviceModel->update($device->id, ['last_seen' => $lastSeen]);
-            $device->last_seen = $lastSeen;
+        // Limitar escrituras en SQLite: actualizar solo cada 5 minutos (300s) y capturar excepciones
+        if (abs($handshake - $currentLastSeen) >= 300) {
+            try {
+                $this->deviceModel->update($device->id, ['last_seen' => $lastSeen]);
+                $device->last_seen = $lastSeen;
+            } catch (\Throwable $e) {
+                log_message('warning', 'Aviso no bloqueante: no se pudo persistir last_seen del nodo ' . $device->id . ' en SQLite: ' . $e->getMessage());
+            }
         }
 
         return $device->last_seen ?? $lastSeen;
+    }
+
+    /**
+     * Valida permisos para operar sobre dispositivos de una red según RBAC y propiedad.
+     */
+    protected function hasNetworkAccess(object $network, string $action = 'view'): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->inGroup('superadmin', 'supervisor') || $user->can('devices.*') || $user->can("devices.{$action}")) {
+            return true;
+        }
+
+        return (int) $network->owner_id === (int) $user->id;
+    }
+
+    /**
+     * Resuelve de forma segura el endpoint del servidor WireGuard (evitando inyecciones HTTP Host).
+     */
+    protected function resolveServerEndpoint(): string
+    {
+        $settings = service('settings');
+        $endpoint = trim((string) $settings->get('WireGuard.endpoint'));
+        if (!empty($endpoint)) {
+            return $endpoint;
+        }
+
+        // Si no está configurado explícitamente, usar el Host SSH del servidor VPN
+        $sshHost = trim((string) $settings->get('WireGuard.sshHost'));
+        if (!empty($sshHost)) {
+            return $sshHost . ':51820';
+        }
+
+        // Fallback al hostname seguro configurado en la app (baseURL)
+        $baseHost = parse_url(config('App')->baseURL, PHP_URL_HOST);
+        if (!empty($baseHost) && $baseHost !== 'localhost' && $baseHost !== '127.0.0.1') {
+            return $baseHost . ':51820';
+        }
+
+        return 'vpn.tudominio.com:51820';
     }
 }

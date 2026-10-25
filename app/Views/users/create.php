@@ -19,9 +19,8 @@
         </nav>
       </div>
       <div class="col-4 d-flex justify-content-end align-items-center">
-        <a href="<?= base_url('users') ?>" class="btn btn-outline-secondary d-flex align-items-center gap-1">
-          <i class="ti ti-arrow-left"></i>
-          <span class="d-none d-sm-inline">Volver</span>
+        <a href="<?= base_url('users') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none">
+          <i class="ti ti-arrow-left fs-5"></i>
         </a>
       </div>
     </div>

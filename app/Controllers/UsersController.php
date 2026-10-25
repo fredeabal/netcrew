@@ -3,10 +3,18 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Libraries\WireguardService;
+use App\Models\DeviceModel;
+use App\Models\NetworkModel;
 use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserIdentityModel;
+use CodeIgniter\Shield\Models\UserModel;
 
 class UsersController extends BaseController
 {
+    /**
+     * @var UserModel
+     */
     protected $usersModel;
     protected $perPage = 50;
 
@@ -72,12 +80,11 @@ class UsersController extends BaseController
         echo view('users/list', $data);
         echo view('template/footer');
     }
-
     public function create()
     {
-        $groups = config('AuthGroups')->groups;
-        if (! auth()->user()->inGroup('superadmin')) {
-            unset($groups['superadmin']);
+        $groups = $this->getAssignableGroups();
+        if (empty($groups)) {
+            return redirect()->to('users')->with('error', 'No tienes permisos para crear usuarios con ningún rol.');
         }
 
         $data = [
@@ -92,9 +99,11 @@ class UsersController extends BaseController
 
     public function store()
     {
-        $allowedGroups = array_keys(config('AuthGroups')->groups);
-        if (! auth()->user()->inGroup('superadmin')) {
-            $allowedGroups = array_filter($allowedGroups, fn($g) => $g !== 'superadmin');
+        $assignableGroups = $this->getAssignableGroups();
+        $allowedGroups = array_keys($assignableGroups);
+
+        if (empty($allowedGroups)) {
+            return redirect()->to('users')->with('error', 'No tienes permisos para asignar roles en el sistema.');
         }
 
         $rules = [
@@ -166,20 +175,26 @@ class UsersController extends BaseController
             return redirect()->to('users')->with('error', 'Usuario no encontrado.');
         }
 
-
-        if ($user->inGroup('superadmin') && !auth()->user()->inGroup('superadmin')) {
-            return redirect()->to('users')->with('error', 'Sin permisos para editar a un superadmin.');
+        // Validación de jerarquía: no se puede editar a usuarios de nivel superior o igual (salvo uno mismo o superadmin)
+        if (! $this->canManageUser($user)) {
+            return redirect()->to('users')->with('error', 'Sin permisos para editar a este usuario.');
         }
 
-        $groups = config('AuthGroups')->groups;
-        if (! auth()->user()->inGroup('superadmin')) {
-            unset($groups['superadmin']);
+        // Si se edita a sí mismo, el rol no puede ser modificado (solo se muestra su rol actual)
+        $isSelf = ((int)$user->id === (int)auth()->id());
+        if ($isSelf) {
+            $userGroup = !empty($user->getGroups()) ? $user->getGroups()[0] : 'user';
+            $allGroups = config('AuthGroups')->groups;
+            $groups = isset($allGroups[$userGroup]) ? [$userGroup => $allGroups[$userGroup]] : [];
+        } else {
+            $groups = $this->getAssignableGroups();
         }
 
         $data = [
             'title'  => 'Editar Usuario',
             'user'   => $user,
-            'groups' => $groups
+            'groups' => $groups,
+            'isSelf' => $isSelf,
         ];
 
         echo view('template/header', $data);
@@ -194,14 +209,20 @@ class UsersController extends BaseController
             return redirect()->to('users')->with('error', 'Usuario no encontrado.');
         }
 
-
-        if ($user->inGroup('superadmin') && !auth()->user()->inGroup('superadmin')) {
-            return redirect()->to('users')->with('error', 'Sin permisos para editar a un superadmin.');
+        // Validación de jerarquía
+        if (! $this->canManageUser($user)) {
+            return redirect()->to('users')->with('error', 'Sin permisos para editar a este usuario.');
         }
 
-        $allowedGroups = array_keys(config('AuthGroups')->groups);
-        if (! auth()->user()->inGroup('superadmin')) {
-            $allowedGroups = array_filter($allowedGroups, fn($g) => $g !== 'superadmin');
+        $isSelf = ((int)$user->id === (int)auth()->id());
+        $assignableGroups = $this->getAssignableGroups();
+        $allowedGroups = array_keys($assignableGroups);
+
+        // Si se edita a sí mismo, su propio grupo actual es válido aunque no esté en assignableGroups
+        if ($isSelf) {
+            $currentUserGroup = !empty($user->getGroups()) ? $user->getGroups()[0] : 'user';
+            $allowedGroups[] = $currentUserGroup;
+            $allowedGroups = array_values(array_unique($allowedGroups));
         }
 
         $rules = [
@@ -240,7 +261,7 @@ class UsersController extends BaseController
         }
 
         // Validación para evitar que el usuario se desactive a sí mismo
-        if (!$this->request->getPost('active') && $user->id === auth()->id()) {
+        if (!$this->request->getPost('active') && $isSelf) {
             return redirect()->back()->withInput()->with('error', 'No puedes desactivar tu propia cuenta.');
         }
 
@@ -256,8 +277,10 @@ class UsersController extends BaseController
 
         $this->usersModel->save($user);
 
-        // Update group
-        $user->syncGroups($this->request->getPost('group'));
+        // Actualizar grupo SOLO si no es uno mismo (previene auto-escalada de privilegios)
+        if (! $isSelf) {
+            $user->syncGroups($this->request->getPost('group'));
+        }
 
         // Gestor de estado activo/inactivo mediante baneo
         if ($this->request->getPost('active')) {
@@ -283,9 +306,9 @@ class UsersController extends BaseController
                 return redirect()->to('users')->with('error', 'No puedes desactivar tu cuenta.');
             }
 
-            // No permitir a un admin normal desactivar a un superadmin
-            if ($user->inGroup('superadmin') && !auth()->user()->inGroup('superadmin')) {
-                return redirect()->to('users')->with('error', 'Sin permisos para desactivar superadmin.');
+            // Validación de jerarquía
+            if (! $this->canManageUser($user)) {
+                return redirect()->to('users')->with('error', 'Sin permisos para cambiar el estado de este usuario.');
             }
 
             if ($user->isBanned()) {
@@ -311,8 +334,9 @@ class UsersController extends BaseController
                 return redirect()->to('users')->with('error', 'No puedes eliminar tu propia cuenta.');
             }
 
-            if ($user->inGroup('superadmin') && !auth()->user()->inGroup('superadmin')) {
-                return redirect()->to('users')->with('error', 'Sin permisos para eliminar a un superadmin.');
+            // Validación de jerarquía
+            if (! $this->canManageUser($user)) {
+                return redirect()->to('users')->with('error', 'Sin permisos para eliminar a este usuario.');
             }
 
             $db = \Config\Database::connect();
@@ -342,13 +366,15 @@ class UsersController extends BaseController
                     $deviceModel->where('network_id', $network->id)->delete();
                 }
 
-                // Borrar peers en Wireguard si hay dispositivos asociados
-                if (!empty($keysToRemove)) {
-                    $wg = \App\Libraries\WireguardService::createFromSettings();
-                    if ($wg) {
+                // Borrar peers en Wireguard si hay dispositivos asociados y SSH está configurado
+                if (!empty($keysToRemove) && \App\Libraries\WireguardService::isConfigured()) {
+                    try {
+                        $wg = \App\Libraries\WireguardService::fromSettings();
                         $wg->removePeers($keysToRemove);
                         $wg->saveConfig();
                         $wg->syncFirewall();
+                    } catch (\Throwable $e) {
+                        log_message('warning', 'Aviso no bloqueante: no se pudieron retirar peers en WireGuard al borrar usuario: ' . $e->getMessage());
                     }
                 }
 
@@ -378,4 +404,116 @@ class UsersController extends BaseController
         return redirect()->to('users')->with('error', 'Usuario no encontrado.');
     }
 
+    // ---------------------------------------------------------------------
+    // Helpers de Control Jerárquico y Prevención de Escalada de Privilegios
+    // ---------------------------------------------------------------------
+
+    /**
+     * Nivel jerárquico numérico de cada grupo (mayor = mayor privilegio).
+     */
+    protected function getGroupLevel(string $group): int
+    {
+        return match ($group) {
+            'superadmin' => 100,
+            'supervisor' => 50,
+            default      => 10,
+        };
+    }
+
+    /**
+     * Nivel jerárquico máximo del usuario según sus grupos asignados.
+     *
+     * @param User|object|null $user
+     */
+    protected function getUserLevel($user): int
+    {
+        if (! $user || ! method_exists($user, 'getGroups')) {
+            return 0;
+        }
+
+        $groups = $user->getGroups();
+        if (empty($groups)) {
+            return 10;
+        }
+
+        $max = 0;
+        foreach ($groups as $g) {
+            $level = $this->getGroupLevel((string) $g);
+            if ($level > $max) {
+                $max = $level;
+            }
+        }
+
+        return $max;
+    }
+
+    /**
+     * Devuelve los grupos que el usuario autenticado tiene permitido asignar a otros.
+     * - superadmin: puede asignar cualquier grupo.
+     * - supervisor: solo puede asignar roles inferiores ('user' / roles base).
+     * - user: solo puede asignar roles de su mismo nivel base ('user').
+     * En NINGÚN caso un no-superadmin puede asignar 'superadmin' ni 'supervisor'.
+     */
+    protected function getAssignableGroups(): array
+    {
+        $currentUser = auth()->user();
+        if (! $currentUser) {
+            return [];
+        }
+
+        $allGroups = config('AuthGroups')->groups;
+
+        if ($currentUser->inGroup('superadmin')) {
+            return $allGroups;
+        }
+
+        $myLevel = $this->getUserLevel($currentUser);
+        $assignable = [];
+
+        foreach ($allGroups as $key => $data) {
+            $groupLevel = $this->getGroupLevel($key);
+            // Solo se permiten roles de nivel menor que el supervisor, o nivel base user
+            if ($myLevel >= 50 ? ($groupLevel < $myLevel) : ($groupLevel <= $myLevel)) {
+                $assignable[$key] = $data;
+            }
+        }
+
+        return $assignable;
+    }
+
+    /**
+     * Comprueba si el usuario autenticado tiene jerarquía suficiente para gestionar a otro usuario.
+     *
+     * @param User|object|null $targetUser
+     */
+    protected function canManageUser($targetUser): bool
+    {
+        $currentUser = auth()->user();
+        if (! $currentUser || ! $targetUser) {
+            return false;
+        }
+
+        // El superadmin puede gestionar a cualquier cuenta
+        if (method_exists($currentUser, 'inGroup') && $currentUser->inGroup('superadmin')) {
+            return true;
+        }
+
+        $myLevel     = $this->getUserLevel($currentUser);
+        $targetLevel = $this->getUserLevel($targetUser);
+
+        // Nadie que no sea superadmin puede gestionar a un superadmin o a alguien de mayor nivel
+        if ($targetLevel >= 100 || $targetLevel > $myLevel) {
+            return false;
+        }
+
+        // Si tienen el mismo nivel y no es uno mismo, un no-superadmin no puede gestionar a su par
+        $targetId  = is_object($targetUser) ? ($targetUser->id ?? null) : null;
+        $currentId = is_object($currentUser) ? ($currentUser->id ?? null) : null;
+
+        if ($targetLevel === $myLevel && (int) $targetId !== (int) $currentId) {
+            return false;
+        }
+
+        return true;
+    }
 }

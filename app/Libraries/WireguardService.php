@@ -690,6 +690,32 @@ BASH;
         return preg_match('/^[A-Za-z0-9+\/]{43}=$/', $key) === 1;
     }
 
+    /**
+     * Genera un par de llaves WireGuard (Curve25519) con clamping según RFC 7748.
+     * Garantiza compatibilidad al 100% con clientes oficiales de WireGuard.
+     *
+     * @return array{privateKey: string, publicKey: string}
+     */
+    public static function generateKeyPair(): array
+    {
+        if (! extension_loaded('sodium')) {
+            throw new RuntimeException('La extensión PHP libsodium es requerida para generar llaves WireGuard.');
+        }
+
+        $secret = random_bytes(32);
+        // Clamping según RFC 7748 / WireGuard:
+        // Borrar bits 0, 1, 2 del primer byte; borrar bit 7 y activar bit 6 del último byte.
+        $secret[0]  = chr(ord($secret[0]) & 248);
+        $secret[31] = chr((ord($secret[31]) & 127) | 64);
+
+        $public = sodium_crypto_scalarmult_base($secret);
+
+        return [
+            'privateKey' => base64_encode($secret),
+            'publicKey'  => base64_encode($public),
+        ];
+    }
+
     protected static function extractKey(string $output): ?string
     {
         return preg_match('/([A-Za-z0-9+\/]{43}=)\s*$/', $output, $m) ? $m[1] : null;

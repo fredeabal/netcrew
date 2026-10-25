@@ -44,9 +44,11 @@ class DashboardController extends BaseController
             $data['totalNetworks'] = $networkModel->countAllResults();
             $data['totalDevices']  = count($devices);
 
-            // Últimas 5 redes registradas
-            $data['recentNetworks'] = $networkModel->select('networks.*, users.username as owner_username')
+            // Últimas 5 redes registradas con conteo de nodos
+            $data['recentNetworks'] = $networkModel->select('networks.*, users.username as owner_username, COUNT(devices.id) as device_count')
                                                   ->join('users', 'users.id = networks.owner_id', 'left')
+                                                  ->join('devices', 'devices.network_id = networks.id', 'left')
+                                                  ->groupBy('networks.id')
                                                   ->orderBy('networks.created_at', 'DESC')
                                                   ->limit(5)
                                                   ->find();
@@ -54,10 +56,15 @@ class DashboardController extends BaseController
             $telemetry = $this->buildTelemetryData($devices, $telemetry);
         } else {
             // Usuario estándar
-            $data['networks'] = $networkModel->where('owner_id', $user->id)
-                                             ->orderBy('created_at', 'DESC')
-                                             ->find();
-            $data['networksCount'] = count($data['networks']);
+            $data['networksCount'] = $networkModel->where('owner_id', $user->id)->countAllResults();
+            $data['networks']      = $networkModel->select('networks.*, users.username as owner_username, COUNT(devices.id) as device_count')
+                                                 ->join('users', 'users.id = networks.owner_id', 'left')
+                                                 ->join('devices', 'devices.network_id = networks.id', 'left')
+                                                 ->where('networks.owner_id', $user->id)
+                                                 ->groupBy('networks.id')
+                                                 ->orderBy('networks.created_at', 'DESC')
+                                                 ->limit(5)
+                                                 ->find();
 
             $networkIds           = array_column($data['networks'], 'id');
             $devices              = empty($networkIds) ? [] : $deviceModel->whereIn('network_id', $networkIds)->findAll();

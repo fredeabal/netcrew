@@ -131,7 +131,7 @@
                 <div>
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <h5 class="card-title fw-semibold mb-0">Salud de la Red</h5>
-                        <span class="badge bg-light text-muted fs-2 border">En Vivo</span>
+                        <span class="status-indicator-dot status-online" style="width: 10px; height: 10px;" title="En vivo"></span>
                     </div>
                     <p class="card-subtitle text-muted fs-2 mb-3">Dispositivos conectados en tiempo real</p>
                 </div>
@@ -181,67 +181,186 @@
     <div class="col-12 mb-4">
         <div class="card border shadow-none">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                         <h5 class="card-title fw-semibold mb-1">Últimas Redes Creadas</h5>
                         <p class="card-subtitle text-muted fs-2 mb-0">Últimas redes VPN desplegadas en el sistema</p>
                     </div>
-                    <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary">
-                        Ver todas <i class="ti ti-arrow-right ms-1"></i>
-                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        <?php if (auth()->user()->can('networks.create') || auth()->user()->inGroup('superadmin')): ?>
+                            <a href="<?= site_url('networks/create') ?>" class="btn btn-sm btn-primary border-0 d-flex align-items-center gap-1 shadow-none">
+                                <i class="ti ti-plus fs-4"></i>
+                                <span class="d-none d-sm-inline">Nueva Red</span>
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary">
+                            Ver todas <i class="ti ti-arrow-right ms-1"></i>
+                        </a>
+                    </div>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table align-middle text-nowrap mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="fs-2 text-muted fw-semibold">Nombre de Red</th>
-                                <th class="fs-2 text-muted fw-semibold">Propietario</th>
-                                <th class="fs-2 text-muted fw-semibold">Rango CIDR</th>
-                                <th class="fs-2 text-muted fw-semibold text-center">Estado</th>
-                                <th class="fs-2 text-muted fw-semibold text-center">Fecha</th>
-                                <th class="fs-2 text-muted fw-semibold text-end">Acción</th>
+                <!-- VISTA ESCRITORIO: TABLA (d-none d-md-block) -->
+                <div class="table-responsive overflow-visible d-none d-md-block">
+                    <table class="table table-hover align-middle text-nowrap text-center mb-0" id="networks-table">
+                        <thead>
+                            <tr class="text-muted fw-semibold">
+                                <th scope="col" class="text-start">Nombre</th>
+                                <th scope="col" class="text-center">Rango CIDR</th>
+                                <th scope="col" class="text-center">Propietario</th>
+                                <th scope="col" class="text-center">Nodos</th>
+                                <th scope="col" class="text-center">Fecha de Creación</th>
+                                <th scope="col" class="text-end">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="border-top">
                             <?php foreach ($recentNetworks as $net): ?>
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="bg-primary-subtle text-primary rounded p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                            <i class="ti ti-network fs-5"></i>
+                                <?php $canViewDevices = auth()->user()->can('devices.view') || auth()->user()->inGroup('superadmin'); ?>
+                                <tr <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'" class="cursor-pointer"' : '' ?>>
+                                    <td class="text-start">
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle me-3 network-icon-circle">
+                                                <i class="ti ti-network fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-semibold mb-1">
+                                                    <?php if ($canViewDevices): ?>
+                                                        <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="text-reset text-primary-hover text-decoration-none">
+                                                            <?= esc($net->name) ?>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span class="text-reset">
+                                                            <?= esc($net->name) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </h6>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h6 class="fw-semibold mb-0 fs-3"><?= esc($net->name) ?></h6>
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        <code class="text-primary"><?= esc($net->cidr) ?></code>
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        <?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light-primary text-primary fw-semibold fs-3 rounded-pill px-3 py-1">
+                                            <?= esc($net->device_count ?? 0) ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <h6 class="fs-3 fw-semibold mb-0"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
+                                        <span class="fw-normal text-muted text-login-time"><?= date('H:i', strtotime($net->created_at)) ?></span>
+                                    </td>
+                                    <td class="text-end" onclick="event.stopPropagation();">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
+                                                <i class="ti ti-dots-vertical fs-5"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <?php if ($canViewDevices): ?>
+                                                <li>
+                                                    <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                                        <i class="ti ti-devices"></i> Administrar Nodos
+                                                    </a>
+                                                </li>
+                                                <?php endif; ?>
+                                                <?php if (auth()->user()->can('networks.edit') || auth()->user()->inGroup('superadmin')): ?>
+                                                <li>
+                                                    <a href="<?= site_url('networks/edit/' . $net->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                                        <i class="ti ti-pencil"></i> Editar
+                                                    </a>
+                                                </li>
+                                                <?php endif; ?>
+                                                <?php if (auth()->user()->can('networks.delete') || auth()->user()->inGroup('superadmin')): ?>
+                                                <li>
+                                                    <form action="<?= site_url('networks/delete/' . $net->id) ?>" method="post" data-confirm="¿Estás seguro de que deseas eliminar esta red?">
+                                                        <?= csrf_field() ?>
+                                                        <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger w-100 border-0 bg-transparent text-start">
+                                                            <i class="ti ti-trash"></i> Eliminar
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <?php endif; ?>
+                                            </ul>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="text-muted fs-3"><?= esc($net->owner_username ?? '—') ?></span>
-                                </td>
-                                <td>
-                                    <code class="text-dark fs-3 bg-light px-2 py-1 rounded"><?= esc($net->cidr) ?></code>
-                                </td>
-                                <td class="text-center">
-                                    <?php if ($net->active): ?>
-                                        <span class="badge bg-success-subtle text-success fs-2">Activa</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger-subtle text-danger fs-2">Inactiva</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-center text-muted fs-2">
-                                    <?= date('d/m/Y', strtotime($net->created_at)) ?>
-                                </td>
-                                <td class="text-end">
-                                    <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="btn btn-sm bg-primary-subtle text-primary shadow-none">
-                                        <i class="ti ti-devices me-1"></i> Ver Nodos
-                                    </a>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
+
+                <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
+                <div class="d-block d-md-none" id="recentNetworksCardsContainer">
+                    <?php foreach ($recentNetworks as $net): ?>
+                        <?php $canViewDevices = auth()->user()->can('devices.view') || auth()->user()->inGroup('superadmin'); ?>
+                        <div class="mobile-card-item network-card-item" <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'"' : '' ?>>
+                            <div class="mobile-card-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle network-icon-circle flex-shrink-0">
+                                        <i class="ti ti-network fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mobile-card-title"><?= esc($net->name) ?></h6>
+                                        <code class="text-primary fs-2"><?= esc($net->cidr) ?></code>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center" onclick="event.stopPropagation();">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
+                                            <i class="ti ti-dots-vertical fs-5"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <?php if ($canViewDevices): ?>
+                                            <li>
+                                                <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                                    <i class="ti ti-devices"></i> Administrar Nodos
+                                                </a>
+                                            </li>
+                                            <?php endif; ?>
+                                            <?php if (auth()->user()->can('networks.edit') || auth()->user()->inGroup('superadmin')): ?>
+                                            <li>
+                                                <a href="<?= site_url('networks/edit/' . $net->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                                    <i class="ti ti-pencil"></i> Editar
+                                                </a>
+                                            </li>
+                                            <?php endif; ?>
+                                            <?php if (auth()->user()->can('networks.delete') || auth()->user()->inGroup('superadmin')): ?>
+                                            <li>
+                                                <form action="<?= site_url('networks/delete/' . $net->id) ?>" method="post" data-confirm="¿Estás seguro de que deseas eliminar esta red?">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger w-100 border-0 bg-transparent text-start">
+                                                        <i class="ti ti-trash"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mobile-card-body">
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label"><i class="ti ti-user"></i> Propietario:</span>
+                                    <span class="mobile-card-value text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label"><i class="ti ti-devices"></i> Nodos:</span>
+                                    <span class="mobile-card-value">
+                                        <span class="badge bg-light-primary text-primary fw-semibold rounded-pill px-2 py-1">
+                                            <?= esc($net->device_count ?? 0) ?>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label"><i class="ti ti-calendar"></i> Creado:</span>
+                                    <span class="mobile-card-value text-muted"><?= date('d/m/Y H:i', strtotime($net->created_at)) ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
             </div>
         </div>
     </div>

@@ -44,6 +44,7 @@ $routes->group('settings', ['filter' => ['session', 'permission:admin.settings']
     $routes->post('wireguard/test', 'WireguardController::wireguardTest');
     $routes->get('maintenance', 'MaintenanceController::maintenance');
     $routes->post('maintenance/clear-ghost-peers', 'MaintenanceController::clearGhostPeers');
+    $routes->post('maintenance/sync-firewall', 'MaintenanceController::syncFirewall');
     $routes->post('maintenance/restart-wireguard', 'MaintenanceController::restartWireguard');
     $routes->post('maintenance/clear-all', 'MaintenanceController::clearAll');
     $routes->get('maintenance/backup/download', 'MaintenanceController::downloadBackup');

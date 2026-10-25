@@ -13,8 +13,37 @@ class MaintenanceController extends BaseController
     // ---------------------------------------------------------------------
     public function maintenance()
     {
+        $dbPath = config('Database')->default['database'];
+        $dbSize = file_exists($dbPath) ? (int) filesize($dbPath) : 0;
+
+        $sessionStats = $this->getDirStats(WRITEPATH . 'session');
+        $logsStats    = $this->getDirStats(WRITEPATH . 'logs');
+        $cacheStats   = $this->getDirStats(WRITEPATH . 'cache');
+
+        $isWgConfigured = WireguardService::isConfigured();
+        $isWgUp         = false;
+
+        if ($isWgConfigured) {
+            try {
+                $isWgUp = WireguardService::fromSettings(2)->isInterfaceUp();
+            } catch (\Throwable $e) {
+                $isWgUp = false;
+            }
+        }
+
         $data = [
             'title' => 'Mantenimiento del Sistema',
+            'stats' => [
+                'dbSize'          => $this->formatBytes($dbSize),
+                'sessionCount'   => $sessionStats['count'],
+                'sessionSize'    => $this->formatBytes($sessionStats['size']),
+                'logsCount'      => $logsStats['count'],
+                'logsSize'       => $this->formatBytes($logsStats['size']),
+                'cacheCount'     => $cacheStats['count'],
+                'cacheSize'      => $this->formatBytes($cacheStats['size']),
+                'isWgConfigured' => $isWgConfigured,
+                'isWgUp'         => $isWgUp,
+            ],
         ];
 
         echo view('template/header', $data);
@@ -31,8 +60,30 @@ class MaintenanceController extends BaseController
 
         if ($syncResult['success']) {
             return redirect()->to(base_url('settings/maintenance'))->with('message', $syncResult['message']);
-        } else {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', $syncResult['message']);
+        }
+
+        return redirect()->to(base_url('settings/maintenance'))->with('error', $syncResult['message']);
+    }
+
+    // ---------------------------------------------------------------------
+    // Sincronizar y reparar reglas de firewall y reenvío de paquetes (ip_forward)
+    // ---------------------------------------------------------------------
+    public function syncFirewall()
+    {
+        if (! WireguardService::isConfigured()) {
+            return redirect()->to(base_url('settings/maintenance'))->with('error', 'El servidor SSH de WireGuard no está configurado.');
+        }
+
+        try {
+            $wg = WireguardService::fromSettings(10);
+            $wg->syncFirewall();
+
+            return redirect()->to(base_url('settings/maintenance'))->with(
+                'message',
+                'Reglas de firewall y reenvío de paquetes (ip_forward) sincronizadas y aplicadas correctamente en el servidor.'
+            );
+        } catch (\Throwable $e) {
+            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al sincronizar firewall: ' . esc($e->getMessage()));
         }
     }
 
@@ -42,14 +93,14 @@ class MaintenanceController extends BaseController
     public function restartWireguard()
     {
         try {
-            $wg = WireguardService::fromSettings(10);
+            $wg        = WireguardService::fromSettings(10);
             $interface = $wg->getInterface();
 
             $wg->run('systemctl restart ' . escapeshellarg('wg-quick@' . $interface));
 
             return redirect()->to(base_url('settings/maintenance'))->with('message', "El servicio WireGuard ({$interface}) ha sido reiniciado correctamente.");
         } catch (\Throwable $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', "Error al reiniciar WireGuard: " . esc($e->getMessage()));
+            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al reiniciar WireGuard: ' . esc($e->getMessage()));
         }
     }
 
@@ -59,43 +110,52 @@ class MaintenanceController extends BaseController
     public function clearAll()
     {
         $sessionsCount = $this->cleanDirectory(WRITEPATH . 'session');
-        $debugCount = $this->cleanDirectory(WRITEPATH . 'debugbar');
-        $logsCount = $this->cleanDirectory(WRITEPATH . 'logs');
+        $debugCount    = $this->cleanDirectory(WRITEPATH . 'debugbar');
+        $logsCount     = $this->cleanDirectory(WRITEPATH . 'logs');
+        $cacheCount    = $this->cleanDirectory(WRITEPATH . 'cache');
 
-        // Optimizar Base de Datos
-        $dbMsg = "";
+        // Optimizar Base de Datos SQLite
+        $dbMsg = '';
         try {
             $db = \Config\Database::connect();
             $db->query('VACUUM;');
             $dbMsg = "<br><small class='text-muted'>Base de datos SQLite optimizada (VACUUM).</small>";
         } catch (\Exception $e) {
-            $dbMsg = "<br><small class='text-danger'>Error al optimizar BD: " . $e->getMessage() . "</small>";
+            $dbMsg = "<br><small class='text-danger'>Error al optimizar BD: " . esc($e->getMessage()) . '</small>';
         }
 
-        // Ejecutar la sincronización de WireGuard
+        // Ejecutar la sincronización de WireGuard (peers y firewall)
         $syncResult = $this->syncWireguardPeers();
-        $ghostMsg = "";
+        $ghostMsg   = '';
         if ($syncResult['success']) {
-            $ghostMsg = "<br><small class='text-muted'>" . $syncResult['message'] . "</small>";
+            $ghostMsg = "<br><small class='text-muted'>" . $syncResult['message'] . '</small>';
         } else {
-            $ghostMsg = "<br><small class='text-danger'>Error de sincronización: " . $syncResult['message'] . "</small>";
+            $ghostMsg = "<br><small class='text-danger'>Aviso WireGuard: " . $syncResult['message'] . '</small>';
         }
 
-        return redirect()->to(base_url('settings/maintenance'))->with('message', "Mantenimiento general completado.<br><small class='text-muted'>{$sessionsCount} sesiones, {$debugCount} debugs y {$logsCount} logs eliminados.</small>{$dbMsg}{$ghostMsg}");
+        $totalCleaned = $sessionsCount + $debugCount + $logsCount + $cacheCount;
+
+        return redirect()->to(base_url('settings/maintenance'))->with(
+            'message',
+            "Mantenimiento general completado.<br><small class='text-muted'>{$totalCleaned} archivos eliminados ({$sessionsCount} sesiones, {$debugCount} debugs, {$logsCount} logs, {$cacheCount} caché).</small>{$dbMsg}{$ghostMsg}"
+        );
     }
 
     // ---------------------------------------------------------------------
-    // Helper: Sincroniza y reconcilia los peers entre la BD y el servidor
+    // Helper: Sincroniza y reconcilia los peers y el firewall entre la BD y el servidor
     // ---------------------------------------------------------------------
     private function syncWireguardPeers(): array
     {
-        if (!WireguardService::isConfigured()) {
+        if (! WireguardService::isConfigured()) {
             return ['success' => false, 'message' => 'El servidor SSH de WireGuard no está configurado.'];
         }
 
         try {
-            $wg = WireguardService::fromSettings(10);
+            $wg  = WireguardService::fromSettings(10);
             $res = $wg->syncPeers();
+
+            // Sincronizar también las reglas de firewall y reenvío ip_forward
+            $wg->syncFirewall();
 
             $msgParts = [];
             if ($res['removed'] > 0) {
@@ -105,10 +165,10 @@ class MaintenanceController extends BaseController
                 $msgParts[] = "{$res['restored']} activos restaurados";
             }
             if (empty($msgParts)) {
-                $msgParts[] = "servidor ya estaba sincronizado";
+                $msgParts[] = 'peers y firewall sincronizados';
             }
 
-            $finalMsg = "Sincronización VPN completada (" . implode(", ", $msgParts) . ")";
+            $finalMsg = 'Sincronización VPN completada (' . implode(', ', $msgParts) . ')';
 
             return ['success' => true, 'message' => $finalMsg];
         } catch (\Throwable $e) {
@@ -123,11 +183,11 @@ class MaintenanceController extends BaseController
     {
         $dbPath = config('Database')->default['database'];
 
-        if (!file_exists($dbPath)) {
+        if (! file_exists($dbPath)) {
             return redirect()->to(base_url('settings/maintenance'))->with('error', 'El archivo de base de datos no existe.');
         }
 
-        $filename = 'backup-netcrew-' . date('Y-m-d_H-i-s') . '.db';
+        $filename       = 'backup-netcrew-' . date('Y-m-d_H-i-s') . '.db';
         $tempBackupPath = sys_get_temp_dir() . '/' . $filename;
 
         // Crear una copia segura usando VACUUM INTO para evitar corrupción si hay escrituras concurrentes
@@ -156,7 +216,7 @@ class MaintenanceController extends BaseController
 
         $file = $this->request->getFile('backup_file');
 
-        if (!$file || !$file->isValid()) {
+        if (! $file || ! $file->isValid()) {
             return redirect()->back()->with('error', 'Por favor, selecciona un archivo de respaldo válido.');
         }
 
@@ -164,7 +224,7 @@ class MaintenanceController extends BaseController
 
         // 1. Validar firma de cabecera de SQLite3
         $handle = fopen($tempPath, 'rb');
-        if (!$handle) {
+        if (! $handle) {
             return redirect()->back()->with('error', 'No se pudo leer el archivo temporal.');
         }
         $header = fread($handle, 15);
@@ -181,8 +241,9 @@ class MaintenanceController extends BaseController
             $tables = ['users', 'networks', 'devices', 'settings'];
             foreach ($tables as $table) {
                 $check = $sqlite->querySingle("SELECT name FROM sqlite_master WHERE type='table' AND name='{$table}'");
-                if (!$check) {
+                if (! $check) {
                     $sqlite->close();
+
                     return redirect()->back()->with('error', "La base de datos cargada no es compatible (falta la tabla '{$table}').");
                 }
             }
@@ -192,7 +253,7 @@ class MaintenanceController extends BaseController
         }
 
         // 3. Proceder con el reemplazo de la BD actual
-        $dbPath = config('Database')->default['database'];
+        $dbPath     = config('Database')->default['database'];
         $backupPath = $dbPath . '.bak';
         $walPath    = $dbPath . '-wal';
         $shmPath    = $dbPath . '-shm';
@@ -203,14 +264,14 @@ class MaintenanceController extends BaseController
 
         // Crear respaldo temporal del archivo actual
         if (file_exists($dbPath)) {
-            if (!copy($dbPath, $backupPath)) {
+            if (! copy($dbPath, $backupPath)) {
                 return redirect()->back()->with('error', 'No se pudo crear una copia de seguridad temporal antes del reemplazo.');
             }
         }
 
         // Reemplazar la base de datos activa
         try {
-            if (!copy($tempPath, $dbPath)) {
+            if (! copy($tempPath, $dbPath)) {
                 throw new \Exception('Fallo al copiar el nuevo archivo de base de datos.');
             }
 
@@ -235,7 +296,7 @@ class MaintenanceController extends BaseController
             if (file_exists($backupPath)) {
                 unlink($backupPath);
             }
-            
+
             // Cerrar sesión para evitar inconsistencias de usuarios/permisos borrados
             auth()->logout();
 
@@ -246,8 +307,37 @@ class MaintenanceController extends BaseController
                 copy($backupPath, $dbPath);
                 unlink($backupPath);
             }
+
             return redirect()->back()->with('error', 'Error al restaurar la base de datos: ' . $e->getMessage());
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Helper privado para contar y medir archivos de un directorio
+    // ---------------------------------------------------------------------
+    private function getDirStats($path): array
+    {
+        $path = rtrim($path, '/') . '/';
+        if (! is_dir($path)) {
+            return ['count' => 0, 'size' => 0];
+        }
+
+        $count = 0;
+        $size  = 0;
+        $files = glob($path . '*');
+
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $basename = basename($file);
+                if ($basename === 'index.html' || $basename === '.gitignore' || $basename === '.htaccess') {
+                    continue;
+                }
+                $count++;
+                $size += (int) filesize($file);
+            }
+        }
+
+        return ['count' => $count, 'size' => $size];
     }
 
     // ---------------------------------------------------------------------
@@ -256,12 +346,12 @@ class MaintenanceController extends BaseController
     private function cleanDirectory($path)
     {
         $path = rtrim($path, '/') . '/';
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return 0;
         }
 
-        $count = 0;
-        $files = glob($path . '*');
+        $count            = 0;
+        $files            = glob($path . '*');
         $currentSessionId = session_id();
 
         foreach ($files as $file) {
@@ -278,6 +368,22 @@ class MaintenanceController extends BaseController
                 }
             }
         }
+
         return $count;
+    }
+
+    // ---------------------------------------------------------------------
+    // Helper privado para formatear bytes a formato legible
+    // ---------------------------------------------------------------------
+    private function formatBytes(int $bytes, int $precision = 1): string
+    {
+        if ($bytes <= 0) {
+            return '0 B';
+        }
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $pow   = (int) floor(log($bytes, 1024));
+        $pow   = min($pow, count($units) - 1);
+
+        return round($bytes / pow(1024, $pow), $precision) . ' ' . $units[$pow];
     }
 }

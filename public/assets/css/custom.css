@@ -857,4 +857,151 @@ body .select2-container {
     100% { background-position: 0% 50%; }
 }
 
+/* =============================================
+   VISTA MÓVIL: TARJETAS RESPONSIVAS (MOBILE CARDS)
+   ============================================= */
+.mobile-card-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1rem;
+    margin-bottom: 0.875rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+[data-bs-theme="dark"] .mobile-card-item,
+body.dark-theme .mobile-card-item {
+    background: #18222c;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-card-item:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--bs-primary-rgb), 0.4);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-card-item:active {
+    transform: translateY(0);
+}
+
+.mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mobile-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0;
+    color: var(--bs-body-color);
+}
+
+.mobile-card-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0;
+}
+
+.mobile-card-label {
+    color: var(--bs-secondary-color, #8c98a4);
+    font-size: 0.83rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.mobile-card-value {
+    font-weight: 500;
+    text-align: left;
+    word-break: break-word;
+}
+
+/* =============================================
+   RESPONSIVIDAD Y APROVECHAMIENTO DE BORDES MÓVIL
+   (Estilo Deca: márgenes optimizados en smartphones y tablets)
+   ============================================= */
+@media (max-width: 767.98px) {
+    .body-wrapper > .container-fluid {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .body-wrapper > .container-fluid > .row {
+        margin-left: -5px !important;
+        margin-right: -5px !important;
+    }
+
+    .body-wrapper > .container-fluid > .row > [class*="col-"] {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+    }
+
+    .card > .card-body {
+        padding: 0.85rem 0.65rem !important;
+    }
+
+    .card > .card-header {
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
+
+    .mobile-card-item {
+        padding: 0.85rem 0.75rem !important;
+        margin-bottom: 0.65rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .body-wrapper > .container-fluid {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .body-wrapper > .container-fluid > .row {
+        margin-left: -3px !important;
+        margin-right: -3px !important;
+    }
+
+    .body-wrapper > .container-fluid > .row > [class*="col-"] {
+        padding-left: 3px !important;
+        padding-right: 3px !important;
+    }
+
+    .card {
+        border-radius: 10px !important;
+        margin-bottom: 0.65rem !important;
+    }
+
+    .card > .card-body {
+        padding: 0.65rem 0.4rem !important;
+    }
+
+    .card > .card-header {
+        padding-left: 0.4rem !important;
+        padding-right: 0.4rem !important;
+    }
+
+    .mobile-card-item {
+        padding: 0.75rem 0.65rem !important;
+        margin-bottom: 0.5rem !important;
+        border-radius: 10px !important;
+    }
+
+    .mobile-card-row {
+        gap: 0.35rem !important;
+        font-size: 0.82rem !important;
+    }
+}
+
 

@@ -28,12 +28,12 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive d-none d-md-block">
                     <table class="table align-middle text-nowrap" id="roles-table">
                         <thead>
                             <tr>
                                 <th class="text-start">Rol</th>
-                                <th class="text-start d-none d-md-table-cell">Descripción</th>
+                                <th class="text-start">Descripción</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
@@ -43,7 +43,7 @@
                                 <td class="text-start">
                                     <div class="fw-bold text-start text-primary-hover"><?= esc($group['title']) ?></div>
                                 </td>
-                                <td class="text-start d-none d-md-table-cell">
+                                <td class="text-start">
                                     <?= esc($group['description']) ?>
                                 </td>
                                 <td class="text-end" onclick="event.stopPropagation();">
@@ -64,6 +64,45 @@
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
+                <div class="d-block d-md-none" id="rolesCardsContainer">
+                  <?php foreach($groups as $key => $group): ?>
+                    <div class="mobile-card-item role-card-item" onclick="window.location='<?= base_url('roles/edit/' . esc($key)) ?>'">
+                      <div class="mobile-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary flex-shrink-0">
+                            <i class="ti ti-shield fs-5"></i>
+                          </div>
+                          <div>
+                            <h6 class="mobile-card-title"><?= esc($group['title']) ?></h6>
+                            <code class="text-primary fs-2"><?= esc($key) ?></code>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                          <div class="dropdown">
+                            <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              <i class="ti ti-dots-vertical fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              <li>
+                                <a href="<?= base_url('roles/edit/' . esc($key)) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                  <i class="ti ti-edit"></i> Gestionar Permisos
+                                </a>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mobile-card-body">
+                        <div class="mobile-card-row">
+                          <span class="mobile-card-label"><i class="ti ti-notes"></i> Descripción:</span>
+                          <span class="mobile-card-value text-muted"><?= esc($group['description']) ?></span>
+                        </div>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
                 </div>
             </div>
         </div>

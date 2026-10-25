@@ -46,15 +46,15 @@
                         <?= !empty($search) ? 'No se encontraron usuarios para tu búsqueda.' : 'No hay otros usuarios registrados en el sistema.' ?>
                     </div>
                 <?php else: ?>
-                <div class="table-responsive-lg">
+                <div class="table-responsive d-none d-md-block">
                     <table class="table table-hover align-middle text-nowrap text-center" id="users-table">
                         <thead>
                             <tr>
                                 <th class="text-start">Usuario</th>
-                                <th class="text-start d-none d-md-table-cell">Email</th>
-                                <th class="text-center d-none d-md-table-cell">Rol</th>
-                                <th class="text-center d-none d-lg-table-cell">Último Acceso</th>
-                                <th class="text-center d-none d-md-table-cell">Estado</th>
+                                <th class="text-start">Email</th>
+                                <th class="text-center">Rol</th>
+                                <th class="text-center">Último Acceso</th>
+                                <th class="text-center">Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
@@ -70,23 +70,22 @@
                                                      <?= esc($user->username) ?>
                                                  </a>
                                              </div>
-                                             <div class="text-muted d-md-none text-login-time"><?= esc($user->email) ?></div>
                                          </div>
                                      </div>
                                  </td>
-                                <td class="text-start d-none d-md-table-cell">
+                                <td class="text-start">
                                     <?= esc($user->email) ?>
                                 </td>
-                                <td class="text-muted text-center d-none d-md-table-cell">
+                                <td class="text-muted text-center">
                                     <?= esc($user->groupTitle) ?>
                                 </td>
-                                <td class="text-center d-none d-lg-table-cell">
+                                <td class="text-center">
                                     <h6 class="fs-3 fw-semibold mb-0"><?= esc($user->lastLoginDate) ?></h6>
                                     <?php if (!empty($user->lastLoginTime)): ?>
                                         <span class="fw-normal text-muted text-login-time"><?= esc($user->lastLoginTime) ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center d-none d-md-table-cell">
+                                <td class="text-center">
                                     <?php if ($user->active): ?>
                                         <span class="badge bg-primary badge-status">Activo</span>
                                     <?php else: ?>
@@ -123,6 +122,66 @@
                     </table>
                 </div>
 
+                <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
+                <div class="d-block d-md-none" id="usersCardsContainer">
+                  <?php foreach ($users as $user): ?>
+                    <div class="mobile-card-item user-card-item" onclick="window.location='<?= site_url('users/edit/' . $user->id) ?>'">
+                      <div class="mobile-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                          <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle object-fit-cover flex-shrink-0" width="36" height="36" />
+                          <div>
+                            <h6 class="mobile-card-title"><?= esc($user->username) ?></h6>
+                            <span class="text-muted fs-2"><?= esc($user->email) ?></span>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                          <span class="badge <?= $user->active ? 'bg-primary' : 'bg-danger' ?>">
+                            <?= $user->active ? 'Activo' : 'Suspendido' ?>
+                          </span>
+                          <div class="dropdown">
+                            <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
+                              <i class="ti ti-dots-vertical fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              <li>
+                                <a href="<?= site_url('users/edit/' . $user->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                                  <i class="ti ti-pencil"></i> Editar
+                                </a>
+                              </li>
+                              <?php if (auth()->user()->can('users.delete') || auth()->user()->inGroup('superadmin')): ?>
+                              <li>
+                                <form action="<?= site_url('users/delete/' . $user->id) ?>" method="post" data-confirm="¿Estás seguro de que deseas eliminar al usuario <?= esc($user->username) ?>?">
+                                  <?= csrf_field() ?>
+                                  <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger w-100 border-0 bg-transparent text-start">
+                                    <i class="ti ti-trash"></i> Eliminar
+                                  </button>
+                                </form>
+                              </li>
+                              <?php endif; ?>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mobile-card-body">
+                        <div class="mobile-card-row">
+                          <span class="mobile-card-label"><i class="ti ti-shield"></i> Rol:</span>
+                          <span class="mobile-card-value text-muted"><?= esc($user->groupTitle) ?></span>
+                        </div>
+                        <div class="mobile-card-row">
+                          <span class="mobile-card-label"><i class="ti ti-mail"></i> Email:</span>
+                          <span class="mobile-card-value text-muted"><?= esc($user->email) ?></span>
+                        </div>
+                        <div class="mobile-card-row">
+                          <span class="mobile-card-label"><i class="ti ti-login"></i> Último Acceso:</span>
+                          <span class="mobile-card-value text-muted">
+                            <?= esc($user->lastLoginDate) ?> <?= !empty($user->lastLoginTime) ? esc($user->lastLoginTime) : '' ?>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+
                 <?php if (isset($pager) && $pager->getPageCount('users') > 1): ?>
                 <div class="mt-4 d-flex justify-content-center">
                     <?= $pager->links('users', 'premium') ?>
@@ -143,21 +202,17 @@ document.addEventListener('DOMContentLoaded', function() {
   if (searchInput) {
     searchInput.addEventListener('input', function() {
       const filter = this.value.toLowerCase().trim();
-      const rows = document.querySelectorAll('table tbody tr');
+      const rows = document.querySelectorAll('#users-table tbody tr');
+      const cards = document.querySelectorAll('.user-card-item');
       
       rows.forEach(row => {
-        // En users/list.php, el nombre de usuario está en el div del primer td
-        const usernameEl = row.querySelector('td:first-child h6');
-        const emailEl = row.querySelector('td:nth-child(2)');
-        
-        const usernameText = usernameEl ? usernameEl.textContent.toLowerCase() : '';
-        const emailText = emailEl ? emailEl.textContent.toLowerCase() : '';
-        
-        if (usernameText.includes(filter) || emailText.includes(filter)) {
-          row.classList.remove('d-none');
-        } else {
-          row.classList.add('d-none');
-        }
+        const text = row.textContent.toLowerCase();
+        row.classList.toggle('d-none', !text.includes(filter));
+      });
+
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.classList.toggle('d-none', !text.includes(filter));
       });
     });
   }

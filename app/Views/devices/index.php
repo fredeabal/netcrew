@@ -94,15 +94,15 @@
               <p class="text-muted mb-0 small">Registra tu primer dispositivo para empezar a generar archivos de configuración de WireGuard.</p>
             </div>
           <?php else: ?>
-            <div class="table-responsive">
+            <div class="table-responsive d-none d-md-block">
               <table class="table table-hover align-middle text-nowrap text-center" id="devices-table">
                 <thead>
                   <tr class="text-muted fw-semibold">
                     <th scope="col" class="text-start">Nombre del Dispositivo</th>
-                    <th scope="col" class="text-center d-none d-md-table-cell">IP Red</th>
-                    <th scope="col" class="text-center d-none d-md-table-cell">IP Física</th>
-                    <th scope="col" class="text-center d-none d-md-table-cell">Última Conexión</th>
-                    <th scope="col" class="text-center d-none d-md-table-cell">Tráfico (↑/↓)</th>
+                    <th scope="col" class="text-center">IP Red</th>
+                    <th scope="col" class="text-center">IP Física</th>
+                    <th scope="col" class="text-center">Última Conexión</th>
+                    <th scope="col" class="text-center">Tráfico (↑/↓)</th>
                     <th scope="col" class="text-end">Acciones</th>
                   </tr>
                 </thead>
@@ -135,13 +135,13 @@
                           </div>
                         </div>
                       </td>
-                      <td class="text-center d-none d-md-table-cell">
+                      <td class="text-center">
                         <code class="fs-3 text-muted"><?= esc($dev->ip_address) ?></code>
                       </td>
-                      <td class="text-center d-none d-md-table-cell device-status-cell bg-danger-subtle text-danger fs-3" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">
+                      <td class="text-center device-status-cell bg-danger-subtle text-danger fs-3" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">
                         -
                       </td>
-                      <td class="text-center d-none d-md-table-cell text-muted device-last-seen-cell" data-pubkey="<?= esc($dev->public_key) ?>">
+                      <td class="text-center text-muted device-last-seen-cell" data-pubkey="<?= esc($dev->public_key) ?>">
                         <?php if ($dev->last_seen): ?>
                           <div><?= date('d/m/Y', strtotime($dev->last_seen)) ?></div>
                           <small class="text-muted d-block"><?= date('H:i', strtotime($dev->last_seen)) ?></small>
@@ -149,7 +149,7 @@
                           <span class="text-muted">—</span>
                         <?php endif; ?>
                       </td>
-                      <td class="text-center d-none d-md-table-cell device-traffic-cell" data-pubkey="<?= esc($dev->public_key) ?>">
+                      <td class="text-center device-traffic-cell" data-pubkey="<?= esc($dev->public_key) ?>">
                         <span class="text-muted fs-3">—</span>
                       </td>
                       <td class="text-end" onclick="event.stopPropagation();">
@@ -204,6 +204,108 @@
                   <?php endforeach; ?>
                 </tbody>
               </table>
+            </div>
+
+            <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
+            <div class="d-block d-md-none" id="devicesCardsContainer">
+              <?php foreach ($devices as $dev): ?>
+                <?php
+                  $typeIconsMap = [
+                    'pc'     => 'ti-device-laptop',
+                    'server' => 'ti-server',
+                    'mobile' => 'ti-device-mobile',
+                    'tablet' => 'ti-device-tablet',
+                    'router' => 'ti-router'
+                  ];
+                  $iconClass = $typeIconsMap[$dev->device_type ?? 'pc'] ?? 'ti-device-laptop';
+                ?>
+                <div class="mobile-card-item device-card-item" onclick="window.location='<?= site_url('devices/show/' . $dev->id) ?>'">
+                  <div class="mobile-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper flex-shrink-0 <?= $dev->active ? 'bg-danger-subtle text-danger' : 'bg-light text-muted' ?>"
+                           data-pubkey="<?= esc($dev->public_key) ?>"
+                           data-active="<?= $dev->active ? '1' : '0' ?>">
+                        <i class="ti <?= $iconClass ?> fs-5"></i>
+                      </div>
+                      <div>
+                        <h6 class="mobile-card-title"><?= esc($dev->name) ?></h6>
+                        <code class="text-primary fs-2"><?= esc($dev->ip_address) ?></code>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                      <span class="badge <?= $dev->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>">
+                        <?= $dev->active ? 'Activo' : 'Inactivo' ?>
+                      </span>
+                      <div class="dropdown">
+                        <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
+                          <i class="ti ti-dots-vertical fs-5"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                          <li>
+                            <a href="<?= site_url('devices/show/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                              <i class="ti ti-info-circle"></i> Detalles
+                            </a>
+                          </li>
+                          <li>
+                            <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-view-config" data-id="<?= $dev->id ?>">
+                              <i class="ti ti-eye"></i> Ver Conf / QR
+                            </a>
+                          </li>
+                          <li>
+                            <a href="<?= site_url('devices/download/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
+                              <i class="ti ti-download"></i> Descargar .conf
+                            </a>
+                          </li>
+                          <li>
+                            <hr class="dropdown-divider">
+                          </li>
+                          <li>
+                            <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-edit-device" data-id="<?= $dev->id ?>" data-name="<?= esc($dev->name) ?>" data-type="<?= esc($dev->device_type ?? 'pc') ?>">
+                              <i class="ti ti-pencil"></i> Editar
+                            </a>
+                          </li>
+                          <li>
+                            <form action="<?= site_url('devices/toggle-active/' . $dev->id) ?>" method="post" data-confirm="<?= $dev->active ? '¿Desactivar este nodo? Perderá acceso a la VPN.' : '¿Activar este nodo?' ?>">
+                              <?= csrf_field() ?>
+                              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 w-100 border-0 text-start">
+                                <i class="ti <?= $dev->active ? 'ti-power' : 'ti-circle-check' ?>"></i> <?= $dev->active ? 'Desactivar Nodo' : 'Activar Nodo' ?>
+                              </button>
+                            </form>
+                          </li>
+                          <li>
+                            <form action="<?= site_url('devices/delete/' . $dev->id) ?>" method="post" data-confirm="¿Estás seguro de que deseas eliminar este nodo? Esto invalidará su clave de acceso.">
+                              <?= csrf_field() ?>
+                              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 w-100 border-0 text-start">
+                                <i class="ti ti-trash"></i> Eliminar Nodo
+                              </button>
+                            </form>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mobile-card-body">
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label"><i class="ti ti-world"></i> IP Pública:</span>
+                      <span class="device-status-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">-</span>
+                    </div>
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label"><i class="ti ti-arrows-sort"></i> Tráfico (↑/↓):</span>
+                      <span class="device-traffic-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">—</span>
+                    </div>
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label"><i class="ti ti-clock"></i> Última Conexión:</span>
+                      <span class="device-last-seen-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">
+                        <?= $dev->last_seen ? date('d/m/Y H:i', strtotime($dev->last_seen)) : '—' ?>
+                      </span>
+                    </div>
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label"><i class="ti ti-devices"></i> Tipo:</span>
+                      <span class="mobile-card-value text-muted text-uppercase"><?= esc($dev->device_type ?? 'pc') ?> (<?= esc($dev->os ?? 'linux') ?>)</span>
+                    </div>
+                  </div>
+                </div>
+              <?php endforeach; ?>
             </div>
           <?php endif; ?>
         </div>
@@ -553,19 +655,16 @@ document.addEventListener("DOMContentLoaded", function () {
     searchInput.addEventListener('input', function() {
       const filter = this.value.toLowerCase().trim();
       const rows = document.querySelectorAll('#devices-table tbody tr');
+      const cards = document.querySelectorAll('.device-card-item');
       
       rows.forEach(row => {
-        const nameEl = row.querySelector('.text-start h6');
-        const ipEl = row.querySelector('.text-center code');
-        
-        const nameText = nameEl ? nameEl.textContent.toLowerCase() : '';
-        const ipText = ipEl ? ipEl.textContent.toLowerCase() : '';
-        
-        if (nameText.includes(filter) || ipText.includes(filter)) {
-          row.classList.remove('d-none');
-        } else {
-          row.classList.add('d-none');
-        }
+        const text = row.textContent.toLowerCase();
+        row.classList.toggle('d-none', !text.includes(filter));
+      });
+
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.classList.toggle('d-none', !text.includes(filter));
       });
     });
   }
@@ -599,20 +698,21 @@ document.addEventListener("DOMContentLoaded", function () {
           cells.forEach(cell => {
             const pubkey = cell.dataset.pubkey;
             const active = cell.dataset.active;
+            const isTd = cell.tagName === 'TD';
             
             if (active === '1') {
               const peer = peers[pubkey];
               if (peer && peer.connected) {
                 const publicIp = peer.endpoint ? peer.endpoint.split(':')[0] : 'IP desconocida';
                 cell.innerHTML = `<code class="fs-3 text-dark">${publicIp}</code>`;
-                cell.className = "text-center d-none d-md-table-cell device-status-cell";
+                cell.className = isTd ? "text-center device-status-cell" : "device-status-cell mobile-card-value";
               } else {
                 cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-                cell.className = "text-center d-none d-md-table-cell device-status-cell text-muted fs-3";
+                cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
               }
             } else {
               cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-              cell.className = "text-center d-none d-md-table-cell device-status-cell text-muted fs-3";
+              cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
             }
           });
 
@@ -646,27 +746,28 @@ document.addEventListener("DOMContentLoaded", function () {
             if (active === '1') {
               const peer = peers[pubkey];
               if (peer && peer.connected) {
-                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-success-subtle text-success";
+                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-success-subtle text-success";
               } else {
-                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-danger-subtle text-danger";
+                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
               }
             } else {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-light text-muted";
+              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
             }
           });
         } else {
           cells.forEach(cell => {
+            const isTd = cell.tagName === 'TD';
             cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-            cell.className = "text-center d-none d-md-table-cell device-status-cell text-muted fs-3";
+            cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
           });
           trafficCells.forEach(cell => {
             cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
           });
           iconWrappers.forEach(wrapper => {
             if (wrapper.dataset.active === '1') {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-danger-subtle text-danger";
+              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
             } else {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-light text-muted";
+              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
             }
           });
         }
@@ -674,17 +775,18 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(err => {
         console.error(err);
         cells.forEach(cell => {
+          const isTd = cell.tagName === 'TD';
           cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-          cell.className = "text-center d-none d-md-table-cell device-status-cell text-muted fs-3";
+          cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
         });
         trafficCells.forEach(cell => {
           cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
         });
         iconWrappers.forEach(wrapper => {
           if (wrapper.dataset.active === '1') {
-            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-danger-subtle text-danger";
+            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
           } else {
-            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper bg-light text-muted";
+            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
           }
         });
       })

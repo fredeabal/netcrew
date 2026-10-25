@@ -232,10 +232,7 @@
                         <code class="text-primary fs-2"><?= esc($dev->ip_address) ?></code>
                       </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
-                      <span class="badge <?= $dev->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>">
-                        <?= $dev->active ? 'Activo' : 'Inactivo' ?>
-                      </span>
+                    <div class="d-flex align-items-center" onclick="event.stopPropagation();">
                       <div class="dropdown">
                         <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                           <i class="ti ti-dots-vertical fs-5"></i>
@@ -721,7 +718,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const peer = peers[pubkey];
 
             if (peer && peer.last_seen_date && peer.last_seen_time) {
-              cell.innerHTML = `<div>${peer.last_seen_date}</div><small class="text-muted d-block">${peer.last_seen_time}</small>`;
+              if (cell.tagName === 'TD') {
+                cell.innerHTML = `<div>${peer.last_seen_date}</div><small class="text-muted d-block">${peer.last_seen_time}</small>`;
+              } else {
+                cell.innerHTML = `<span>${peer.last_seen_date} <span class="text-muted ms-1">${peer.last_seen_time}</span></span>`;
+              }
             }
           });
 
@@ -730,12 +731,21 @@ document.addEventListener("DOMContentLoaded", function () {
             const peer = peers[pubkey];
 
             if (peer && (peer.rx > 0 || peer.tx > 0)) {
-              cell.innerHTML = `
-                <div class="text-info small fw-semibold" title="Subida (Enviado)"><i class="ti ti-arrow-up"></i> ${formatBytes(peer.rx)}</div>
-                <div class="text-success small fw-semibold mt-1" title="Descarga (Recibido)"><i class="ti ti-arrow-down"></i> ${formatBytes(peer.tx)}</div>
-              `;
+              if (cell.tagName === 'TD') {
+                cell.innerHTML = `
+                  <div class="text-info small fw-semibold" title="Subida (Enviado)"><i class="ti ti-arrow-up"></i> ${formatBytes(peer.rx)}</div>
+                  <div class="text-success small fw-semibold mt-1" title="Descarga (Recibido)"><i class="ti ti-arrow-down"></i> ${formatBytes(peer.tx)}</div>
+                `;
+              } else {
+                cell.innerHTML = `
+                  <span class="d-inline-flex align-items-center gap-2">
+                    <span class="text-info fw-semibold" title="Subida (Enviado)"><i class="ti ti-arrow-up"></i> ${formatBytes(peer.rx)}</span>
+                    <span class="text-success fw-semibold" title="Descarga (Recibido)"><i class="ti ti-arrow-down"></i> ${formatBytes(peer.tx)}</span>
+                  </span>
+                `;
+              }
             } else {
-              cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
+              cell.innerHTML = `<span class="text-muted">—</span>`;
             }
           });
 

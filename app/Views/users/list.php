@@ -128,16 +128,13 @@
                     <div class="mobile-card-item user-card-item" onclick="window.location='<?= site_url('users/edit/' . $user->id) ?>'">
                       <div class="mobile-card-header">
                         <div class="d-flex align-items-center gap-2">
-                          <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle object-fit-cover flex-shrink-0" width="36" height="36" />
+                          <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle object-fit-cover flex-shrink-0 border border-2 <?= $user->active ? 'border-primary' : 'border-danger' ?>" width="36" height="36" />
                           <div>
                             <h6 class="mobile-card-title"><?= esc($user->username) ?></h6>
                             <span class="text-muted fs-2"><?= esc($user->email) ?></span>
                           </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
-                          <span class="badge <?= $user->active ? 'bg-primary' : 'bg-danger' ?>">
-                            <?= $user->active ? 'Activo' : 'Suspendido' ?>
-                          </span>
+                        <div class="d-flex align-items-center" onclick="event.stopPropagation();">
                           <div class="dropdown">
                             <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                               <i class="ti ti-dots-vertical fs-5"></i>

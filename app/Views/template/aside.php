@@ -30,16 +30,6 @@
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
-            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create')): ?>
-            <li class="sidebar-item">
-              <a class="sidebar-link" href="<?= base_url('users') ?>" aria-expanded="false">
-                <span>
-                  <i class="ti ti-users"></i>
-                </span>
-                <span class="hide-menu">Usuarios</span>
-              </a>
-            </li>
-            <?php endif; ?>
             <?php if (auth()->user()->can('networks.view')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('networks') ?>" aria-expanded="false">
@@ -50,11 +40,22 @@
               </a>
             </li>
             <?php endif; ?>
-            <?php if (auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
+            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create') || auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
             <li class="nav-small-cap mt-4">
               <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
               <span class="hide-menu">Administración</span>
             </li>
+            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create')): ?>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="<?= base_url('users') ?>" aria-expanded="false">
+                <span>
+                  <i class="ti ti-users"></i>
+                </span>
+                <span class="hide-menu">Usuarios</span>
+              </a>
+            </li>
+            <?php endif; ?>
+            <?php if (auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <span class="d-flex">

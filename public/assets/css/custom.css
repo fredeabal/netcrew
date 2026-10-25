@@ -861,30 +861,29 @@ body .select2-container {
    VISTA MÓVIL: TARJETAS RESPONSIVAS (MOBILE CARDS)
    ============================================= */
 .mobile-card-item {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
+    background: transparent;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 0.875rem;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
     cursor: pointer;
     position: relative;
+    -webkit-tap-highlight-color: transparent;
+    outline: none !important;
 }
 
-[data-bs-theme="dark"] .mobile-card-item,
-body.dark-theme .mobile-card-item {
-    background: #18222c;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.mobile-card-item:hover {
-    transform: translateY(-2px);
-    border-color: rgba(var(--bs-primary-rgb), 0.4);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+@media (hover: hover) and (pointer: fine) {
+    .mobile-card-item:hover {
+        transform: translateY(-2px);
+        background-color: var(--bs-tertiary-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
 }
 
 .mobile-card-item:active {
     transform: translateY(0);
+    background-color: var(--bs-tertiary-bg);
 }
 
 .mobile-card-header {

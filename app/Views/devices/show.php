@@ -75,10 +75,17 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           </ol>
         </nav>
       </div>
-      <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end mt-3 mt-md-0">
-        <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none">
-          <i class="ti ti-arrow-left fs-5"></i>
-        </a>
+      <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center mt-3 mt-md-0">
+        <div class="d-flex align-items-center gap-2">
+          <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a la red">
+            <i class="ti ti-arrow-left fs-5"></i>
+          </a>
+          <?php if (auth()->user()->can('devices.edit') || auth()->user()->inGroup('superadmin')): ?>
+            <a href="<?= site_url('devices/edit/' . $device->id) ?>" class="btn btn-primary border-0 d-flex align-items-center gap-2 px-4 shadow-none">
+              <i class="ti ti-pencil fs-5"></i> Editar Nodo
+            </a>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -92,21 +99,27 @@ $timeAgoView = static function (?int $ts, int $ref): string {
     <div class="card mb-4">
       <div class="card-body">
 
-        <div class="row g-3 mb-4">
-          <div class="col-12 col-md-3">
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP en la Red</span>
               <code class="fw-semibold text-primary"><?= esc($device->ip_address) ?></code>
             </div>
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">CIDR</span>
               <code class="fw-semibold text-primary"><?= esc($network->cidr) ?></code>
             </div>
           </div>
+          <div class="col-12 col-md-4">
+            <div class="border p-3 rounded h-100">
+              <span class="text-muted d-block small mb-1">Red</span>
+              <span class="fw-semibold small text-primary"><?= esc($network->name) ?></span>
+            </div>
+          </div>
 
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Tipo</span>
               <span class="fw-semibold small text-primary">
@@ -115,7 +128,23 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
+            <div class="border p-3 rounded h-100">
+              <span class="text-muted d-block small mb-1">Enrutamiento</span>
+              <span class="fw-semibold small <?= ($device->routing_mode ?? 'split') === 'full' ? 'text-danger' : 'text-primary' ?>">
+                <i class="ti <?= ($device->routing_mode ?? 'split') === 'full' ? 'ti-world' : 'ti-arrows-split' ?> me-1"></i>
+                <?= ($device->routing_mode ?? 'split') === 'full' ? 'Full-Tunnel (Internet)' : 'Split-Tunnel (Local)' ?>
+              </span>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="border p-3 rounded h-100">
+              <span class="text-muted d-block small mb-1">Keepalive</span>
+              <span class="fw-semibold small text-primary">25 seg</span>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Última Conexión</span>
               <?php if ($device->last_seen): ?>
@@ -128,7 +157,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <?php endif; ?>
             </div>
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Creado</span>
               <span class="d-flex justify-content-between align-items-center">
@@ -137,19 +166,25 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
-              <span class="text-muted d-block small mb-1">Red</span>
-              <span class="fw-semibold small text-primary"><?= esc($network->name) ?></span>
-            </div>
-          </div>
-          <div class="col-12 col-md-3">
-            <div class="border p-3 rounded h-100">
-              <span class="text-muted d-block small mb-1">Keepalive</span>
-              <span class="fw-semibold small text-primary">25 seg</span>
+              <span class="text-muted d-block small mb-1">Expiración</span>
+              <?php if (!empty($device->expires_at)): ?>
+                <?php $isExpired = strtotime($device->expires_at) < time(); ?>
+                <span class="fw-semibold small <?= $isExpired ? 'text-danger' : 'text-warning' ?>">
+                  <i class="ti <?= $isExpired ? 'ti-clock-x' : 'ti-clock' ?> me-1"></i>
+                  <?= date('d/m/Y H:i', strtotime($device->expires_at)) ?>
+                  <?= $isExpired ? '(Expirado)' : '' ?>
+                </span>
+              <?php else: ?>
+                <span class="fw-semibold small text-primary">
+                  <i class="ti ti-infinity me-1"></i> Permanente
+                </span>
+              <?php endif; ?>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -173,7 +208,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
         </div>
 
         <div class="row g-3">
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Estado</span>
               <span class="fw-semibold <?= $wgConnected ? 'text-success' : 'text-danger' ?>">
@@ -183,21 +218,21 @@ $timeAgoView = static function (?int $ts, int $ref): string {
             </div>
           </div>
 
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP Pública</span>
               <code class="fw-semibold text-primary"><?= $wg['public_ip'] ? esc($wg['public_ip']) : '—' ?></code>
             </div>
           </div>
 
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Puerto</span>
               <code class="fw-semibold text-primary"><?= $wg['port'] ? esc($wg['port']) : '—' ?></code>
             </div>
           </div>
 
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Último Handshake</span>
               <span class="fw-semibold small text-primary">
@@ -206,7 +241,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
             </div>
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100 text-center">
               <i class="ti ti-arrow-down text-success d-block mb-1 fs-5"></i>
               <span class="text-muted d-block small mb-1">Descarga (Recibido)</span>
@@ -216,7 +251,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
             </div>
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100 text-center">
               <i class="ti ti-arrow-up text-info d-block mb-1 fs-5"></i>
               <span class="text-muted d-block small mb-1">Subida (Enviado)</span>
@@ -240,36 +275,59 @@ $timeAgoView = static function (?int $ts, int $ref): string {
   <div class="col-12">
     <div class="card mb-4">
       <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-center gap-2">
+        <div class="row g-2 justify-content-center">
 
-          <button type="button" class="btn btn-dark border-0 shadow-none text-white" onclick="pingDevice(<?= $device->id ?>)">
-            <i class="ti ti-wifi me-1"></i>
-            Hacer Ping
-          </button>
-
-          <form action="<?= site_url('devices/toggle-active/' . $device->id) ?>"
-                method="post"
-                data-confirm="<?= $device->active ? '¿Desactivar este nodo? Perderá acceso a la VPN.' : '¿Activar este nodo?' ?>">
-            <?= csrf_field() ?>
-
-            <button type="submit"
-                    class="btn btn-primary border-0 shadow-none text-white">
-              <i class="ti <?= $device->active ? 'ti-power' : 'ti-circle-check' ?> me-1"></i>
-              <?= $device->active ? 'Desactivar' : 'Activar' ?>
+          <div class="col-6 col-md-auto">
+            <button type="button" class="btn btn-dark border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap" onclick="pingDevice(<?= $device->id ?>)">
+              <i class="ti ti-wifi me-1"></i>
+              <span>Hacer Ping</span>
             </button>
-          </form>
+          </div>
 
-          <form action="<?= site_url('devices/delete/' . $device->id) ?>"
-                method="post"
-                data-confirm="¿Estás seguro de que deseas eliminar este nodo? Esto invalidará su clave de acceso.">
-            <?= csrf_field() ?>
+          <div class="col-6 col-md-auto">
+            <form action="<?= site_url('devices/rotate-keys/' . $device->id) ?>"
+                  method="post"
+                  class="h-100 m-0"
+                  data-confirm="¿Regenerar las llaves de este nodo? Esto invalidará la configuración y el código QR actuales. Tendrás que reconfigurar el cliente.">
+              <?= csrf_field() ?>
 
-            <button type="submit"
-                    class="btn btn-danger border-0 shadow-none">
-              <i class="ti ti-trash me-1"></i>
-              Eliminar
-            </button>
-          </form>
+              <button type="submit"
+                      class="btn btn-warning border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                <i class="ti ti-refresh me-1"></i>
+                <span>Regenerar Llaves</span>
+              </button>
+            </form>
+          </div>
+
+          <div class="col-6 col-md-auto">
+            <form action="<?= site_url('devices/toggle-active/' . $device->id) ?>"
+                  method="post"
+                  class="h-100 m-0"
+                  data-confirm="<?= $device->active ? '¿Desactivar este nodo? Perderá acceso a la VPN.' : '¿Activar este nodo?' ?>">
+              <?= csrf_field() ?>
+
+              <button type="submit"
+                      class="btn btn-primary border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                <i class="ti <?= $device->active ? 'ti-power' : 'ti-circle-check' ?> me-1"></i>
+                <span><?= $device->active ? 'Desactivar' : 'Activar' ?></span>
+              </button>
+            </form>
+          </div>
+
+          <div class="col-6 col-md-auto">
+            <form action="<?= site_url('devices/delete/' . $device->id) ?>"
+                  method="post"
+                  class="h-100 m-0"
+                  data-confirm="¿Estás seguro de que deseas eliminar este nodo? Esto invalidará su clave de acceso.">
+              <?= csrf_field() ?>
+
+              <button type="submit"
+                      class="btn btn-danger border-0 shadow-none w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                <i class="ti ti-trash me-1"></i>
+                <span>Eliminar</span>
+              </button>
+            </form>
+          </div>
 
         </div>
       </div>
@@ -300,10 +358,16 @@ function pingDevice(deviceId) {
     })
     .then(response => response.json())
     .then(data => {
+        const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+        const safeOutput = escapeHtml(data.output || 'Sin respuesta');
+        const safeMessage = escapeHtml(data.message || '');
+
         if (data.status === 'success') {
             Swal.fire({
                 title: 'Ping Exitoso',
-                html: `<pre class="text-start bg-dark text-success p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${data.output}</pre>`,
+                html: `<pre class="text-start bg-dark text-success p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${safeOutput}</pre>`,
                 icon: 'success',
                 confirmButtonColor: '#34c759',
                 width: '600px'
@@ -311,7 +375,7 @@ function pingDevice(deviceId) {
         } else {
             Swal.fire({
                 title: 'Ping Fallido',
-                html: `<p class="mb-2">${data.message}</p><pre class="text-start bg-dark text-danger p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${data.output || 'Sin respuesta'}</pre>`,
+                html: `<p class="mb-2">${safeMessage}</p><pre class="text-start bg-dark text-danger p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${safeOutput}</pre>`,
                 icon: 'error',
                 confirmButtonColor: '#b31b34',
                 width: '600px'

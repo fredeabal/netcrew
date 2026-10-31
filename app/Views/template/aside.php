@@ -1,11 +1,3 @@
-<?php
-$currentUser      = auth()->user();
-$canNetworksView  = (bool) ($currentUser?->can('networks.view'));
-$canAdminUsers    = (bool) ($currentUser?->can('admin.users') || $currentUser?->can('users.create'));
-$canAdminSettings = (bool) ($currentUser?->can('admin.settings') || $currentUser?->can('admin.roles'));
-$canAdminRoles    = (bool) ($currentUser?->can('admin.roles'));
-$canSettings      = (bool) ($currentUser?->can('admin.settings'));
-?>
     <!-- =====================================================================
          BARRA LATERAL DE NAVEGACIÓN (ASIDE / SIDEBAR)
          ===================================================================== -->
@@ -38,7 +30,7 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
-            <?php if ($canNetworksView): ?>
+            <?php if (auth()->user()->can('networks.view')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('networks') ?>" aria-expanded="false">
                 <span>
@@ -48,12 +40,12 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
               </a>
             </li>
             <?php endif; ?>
-            <?php if ($canAdminUsers || $canAdminSettings): ?>
+            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create') || auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
             <li class="nav-small-cap mt-4">
               <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
               <span class="hide-menu">Administración</span>
             </li>
-            <?php if ($canAdminUsers): ?>
+            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('users') ?>" aria-expanded="false">
                 <span>
@@ -63,7 +55,7 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
               </a>
             </li>
             <?php endif; ?>
-            <?php if ($canAdminSettings): ?>
+            <?php if (auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <span class="d-flex">
@@ -72,7 +64,7 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
                 <span class="hide-menu">Configuración</span>
               </a>
               <ul aria-expanded="false" class="collapse first-level">
-                <?php if ($canAdminRoles): ?>
+                <?php if (auth()->user()->can('admin.roles')): ?>
                 <li class="sidebar-item">
                   <a href="<?= base_url('roles') ?>" class="sidebar-link">
                     <div class="round-16 d-flex align-items-center justify-content-center">
@@ -82,7 +74,7 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
                   </a>
                 </li>
                 <?php endif; ?>
-                 <?php if ($canSettings): ?>
+                 <?php if (auth()->user()->can('admin.settings')): ?>
                  <li class="sidebar-item">
                    <a href="<?= base_url('settings/smtp') ?>" class="sidebar-link">
                      <div class="round-16 d-flex align-items-center justify-content-center">
@@ -107,11 +99,32 @@ $canSettings      = (bool) ($currentUser?->can('admin.settings'));
                       <span class="hide-menu">Mantenimiento</span>
                     </a>
                   </li>
+                  <li class="sidebar-item">
+                    <a href="<?= base_url('audit-logs') ?>" class="sidebar-link">
+                      <div class="round-16 d-flex align-items-center justify-content-center">
+                        <i class="ti ti-circle"></i>
+                      </div>
+                      <span class="hide-menu">Auditoría</span>
+                    </a>
+                  </li>
                  <?php endif; ?>
               </ul>
             </li>
             <?php endif; ?>
             <?php endif; ?>
+
+            <li class="nav-small-cap">
+              <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+              <span class="hide-menu">APLICACIÓN</span>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="javascript:void(0)" onclick="installNetCrewPWA()" aria-expanded="false">
+                <span>
+                  <i class="ti ti-device-mobile"></i>
+                </span>
+                <span class="hide-menu">Instalar App</span>
+              </a>
+            </li>
           </ul>
         </nav>
 

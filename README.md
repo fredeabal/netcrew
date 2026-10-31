@@ -5,7 +5,7 @@
   <br>
   <b>Plataforma Open Source de Administración Centralizada para Redes VPN basadas en WireGuard.</b>
   <br><br>
-  <a href="https://github.com/fredeabal/netcrew/releases"><img src="https://img.shields.io/badge/version-1.2.0-orange.svg" alt="Version 1.2.0"></a>
+  <a href="https://github.com/fredeabal/netcrew/releases"><img src="https://img.shields.io/badge/version-1.2.1-orange.svg" alt="Version 1.2.1"></a>
   <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg" alt="PHP 8.2+"></a>
   <a href="https://codeigniter.com/"><img src="https://img.shields.io/badge/CodeIgniter-4.x-DD4814.svg" alt="CodeIgniter 4"></a>
   <a href="https://www.wireguard.com/"><img src="https://img.shields.io/badge/WireGuard-VPN-88171A.svg" alt="WireGuard"></a>
@@ -68,8 +68,12 @@ El servidor NetCrew interconecta dispositivos ubicados detrás de cualquier NAT 
 
 ## ✨ Características Principales
 
-### 🌐 Gestión de Redes, Nodos y Topología
+### 🌐 Gestión de Redes y Nodos
 * **Arquitectura Hub-and-Spoke:** Los nodos se conectan centralizadamente al servidor WireGuard, permitiendo la interconexión transparente entre ellos.
+* **Split-Tunnel vs Full-Tunnel:** Opción configurable por nodo para enrutar únicamente el tráfico de la red VPN local o dirigir todo el tráfico de Internet a través del túnel (`0.0.0.0/0`).
+* **Accesos Temporales con Expiración:** Asignación de fecha de caducidad por dispositivo (1 día, 7 días, 30 días o permanente) con desactivación automática en WireGuard.
+* **Rotación de Llaves en 1 Clic:** Regeneración instantánea de claves criptográficas Curve25519 conservando la misma IP asignada.
+* **Compartición Ágil y Segura:** Envío directo del `.conf` por correo electrónico y generación de enlaces temporales autodestruibles (One-Time Link) para conectar clientes sin login.
 * **Asignación IP Inteligente:** Cálculo y prevención de colisiones dentro del rango CIDR asignado a cada red.
 * **Despliegue al Instante:** Descarga directa de archivos de configuración `.conf` y lectura mediante **código QR** para dispositivos móviles (iOS, Android) y de escritorio (Windows, macOS, Linux).
 
@@ -92,9 +96,12 @@ Genera instantáneamente archivos `.conf` o escanea códigos QR para vincular di
 </p>
 
 ### ⚡ Sincronización & Mantenimiento en Tiempo Real
-* **Integración SSH Segura:** Sincronización automatizada de peers con el motor WireGuard usando `phpseclib3`.
-* **Limpieza de Peers Fantasma:** Eliminación en memoria de sesiones inactivas y peers eliminados del panel.
-* **Mantenimiento en 1 Clic:** Limpieza integrada de logs, base de datos y control de servicios.
+* **Integración SSH Segura:** Sincronización automatizada de peers con el motor WireGuard usando `phpseclib3` y caché de telemetría de alto rendimiento.
+* **Telemetría y Tráfico en Vivo:** Gráficas de salud y volumen de tráfico (subida/bajada por nodo) mediante ApexCharts en el Dashboard.
+* **Firewall Idempotente y Enrutamiento:** Sincronización automática de cadenas dedicadas en `iptables`, persistencia de `net.ipv4.ip_forward` y detección dinámica de interfaz WAN.
+* **Limpieza de Peers Fantasma:** Eliminación en memoria de sesiones inactivas y reconciliación estricta de peers en la interfaz de red.
+* **Diagnóstico Integrado (Ping ICMP):** Verificación de conectividad en tiempo real hacia cualquier nodo directamente desde la interfaz.
+* **Mantenimiento y Respaldo en 1 Clic:** Limpieza integrada de sesiones/logs/caché, optimización SQLite (`VACUUM`), y descarga/restauración de copias de seguridad de la base de datos.
 
 ### 🔸 Ajustes WireGuard
 Configura los parámetros del servidor WireGuard, incluyendo puertos de escucha, interfaz y credenciales de sincronización SSH.
@@ -110,8 +117,15 @@ Herramientas integradas para realizar optimizaciones de base de datos, depuraci�
 
 ### 🛡️ Seguridad Avanzada y Roles (RBAC)
 * **Gestión de Permisos Modular:** Integración nativa con **CodeIgniter Shield** para definir roles granulares (`superadmin`, `supervisor`, `user`).
-* **Encriptación de Extremo a Extremo:** Almacenamiento seguro en base de datos para llaves privadas de WireGuard y credenciales SSH.
-* **Protección Anti-CSRF:** Filtros activos en todos los formularios y endpoints del sistema.
+* **Registro de Auditoría (Audit Logs):** Trazabilidad completa con visor dedicado para registrar eventos de creación/eliminación de nodos, cambios de permisos y accesos con IP y User-Agent.
+* **Control Jerárquico y Anti-IDOR:** Control estricto de propiedad sobre redes y dispositivos para evitar accesos cruzados no autorizados.
+* **Aislamiento de Criptografía:** Generación de llaves Curve25519 con clamping estándar RFC 7748 nativo vía `libsodium`.
+* **Encriptación de Extremo a Extremo:** Almacenamiento cifrado en reposo para llaves privadas de WireGuard y credenciales SSH/SMTP.
+* **Protección Integral:** Filtros CSRF por sesión, sanitización estricta de dominios, CIDR privado RFC 1918 y mitigación contra inyecciones de configuración.
+
+### 📱 Experiencia de Usuario Responsiva (Mobile-First)
+* **Vistas Adaptativas:** Listados con soporte de tarjetas móviles dedicadas y tablas optimizadas para escritorio.
+* **Diseño Moderno:** Login interactivo con partículas animadas (Zero Trust), tema claro/oscuro persistente y soporte para Select2 con búsqueda.
 
 ### 🔸 Gestión de Usuarios
 Administra las cuentas con acceso a la plataforma, asignando datos de perfil, estados y roles de usuario.
@@ -134,10 +148,10 @@ Control de acceso granular basado en roles para definir y restringir permisos es
 | :--- | :--- |
 | **Backend Core** | CodeIgniter 4.x (PHP 8.2+) |
 | **Autenticación** | CodeIgniter Shield |
-| **Base de Datos** | SQLite3 |
+| **Base de Datos** | SQLite3 (con modo WAL) |
 | **Protocolo VPN** | WireGuard / `wireguard-tools` |
 | **SSH Client** | `phpseclib3` |
-| **Frontend** | Bootstrap 5, SweetAlert2, Tabler Icons |
+| **Frontend** | Bootstrap 5, ApexCharts, SweetAlert2, Tabler Icons, Select2 |
 
 ---
 

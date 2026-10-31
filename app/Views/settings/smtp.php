@@ -63,7 +63,7 @@
                         <div class="row mb-4">
                             <div class="col-md-6 mb-3 mb-md-0">
                                 <label for="smtp_crypto" class="form-label fw-semibold">Cifrado (Crypto)</label>
-                                <select class="form-select" id="smtp_crypto" name="smtp_crypto">
+                                <select class="select2 form-control custom-select" id="smtp_crypto" name="smtp_crypto">
                                     <option value="" <?= old('smtp_crypto', $smtp_crypto ?? '') === '' ? 'selected' : '' ?>>Ninguno</option>
                                     <option value="tls" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'tls' ? 'selected' : '' ?>>TLS</option>
                                     <option value="ssl" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>

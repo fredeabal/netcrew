@@ -169,6 +169,8 @@
     });
   </script>
   <script src="<?= base_url('assets/libs/sweetalert2/dist/sweetalert2.min.js') ?>"></script>
+  <!-- PWA Service Worker & Gestor de Instalación -->
+  <script src="<?= base_url('assets/js/pwa.js') ?>"></script>
 </body>
 
 </html>

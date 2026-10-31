@@ -1,7 +1,20 @@
 //
 // For select 2
 //
-$(".select2").select2();
+$(function () {
+  $(".select2").each(function () {
+    var minSearch = $(this).data("minimum-results-for-search");
+    if (minSearch === undefined) {
+      minSearch = $(this).find("option").length <= 10 ? Infinity : 0;
+    } else if (minSearch === "Infinity") {
+      minSearch = Infinity;
+    }
+    $(this).select2({
+      width: "100%",
+      minimumResultsForSearch: minSearch,
+    });
+  });
+});
 
 // Single Select Placeholder
 $("#select2-with-placeholder").select2({

@@ -57,7 +57,7 @@
                     <div class="row mb-4">
                         <div class="col-md-6 mb-3 mb-md-0">
                             <label for="group" class="form-label fw-semibold">Rol / Grupo</label>
-                            <select class="form-select" id="group" name="group">
+                            <select class="select2 form-control custom-select" id="group" name="group">
                                 <option value="">Selecciona un rol...</option>
                                 <?php foreach ($groups as $key => $group): ?>
                                     <option value="<?= esc($key) ?>" <?= old('group') == $key ? 'selected' : '' ?>><?= esc($group['title']) ?></option>

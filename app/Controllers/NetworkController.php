@@ -84,9 +84,18 @@ class NetworkController extends BaseController
         $cidr = $ip_part . '/24';
         $data['cidr'] = $cidr;
 
-        // Validación adicional para asegurar formato IP
-        if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/24$/', $cidr)) {
-            return redirect()->back()->withInput()->with('error', 'Formato de IP no válido.');
+        // Validación adicional para asegurar formato IPv4 válido y en rango privado/CGNAT
+        if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/24$/', $cidr) || !$this->isValidPrivateNetworkIp($ip_part)) {
+            return redirect()->back()->withInput()->with('error', 'Formato de IP no válido. Debes usar un rango IPv4 privado válido (10.x.x.0/24, 172.16-31.x.0/24, 192.168.x.0/24 o 100.64-127.x.0/24).');
+        }
+
+        // Validar y sanitizar servidores DNS si se proporcionaron
+        if (!empty($data['dns'])) {
+            $cleanDns = $this->validateAndNormalizeDns((string) $data['dns']);
+            if ($cleanDns === null) {
+                return redirect()->back()->withInput()->with('error', 'El formato de servidores DNS no es válido. Ingresa direcciones IP o dominios válidos separados por comas.');
+            }
+            $data['dns'] = $cleanDns;
         }
 
         // Verificar solapamiento con redes restringidas
@@ -194,9 +203,18 @@ class NetworkController extends BaseController
         $cidr = $ip_part . '/24';
         $data['cidr'] = $cidr;
 
-        // Validación adicional para asegurar formato IP
-        if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/24$/', $cidr)) {
-            return redirect()->back()->withInput()->with('error', 'Formato de IP no válido.');
+        // Validación adicional para asegurar formato IPv4 válido y en rango privado/CGNAT
+        if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/24$/', $cidr) || !$this->isValidPrivateNetworkIp($ip_part)) {
+            return redirect()->back()->withInput()->with('error', 'Formato de IP no válido. Debes usar un rango IPv4 privado válido (10.x.x.0/24, 172.16-31.x.0/24, 192.168.x.0/24 o 100.64-127.x.0/24).');
+        }
+
+        // Validar y sanitizar servidores DNS si se proporcionaron
+        if (!empty($data['dns'])) {
+            $cleanDns = $this->validateAndNormalizeDns((string) $data['dns']);
+            if ($cleanDns === null) {
+                return redirect()->back()->withInput()->with('error', 'El formato de servidores DNS no es válido. Ingresa direcciones IP o dominios válidos separados por comas.');
+            }
+            $data['dns'] = $cleanDns;
         }
 
         // Verificar solapamiento con redes restringidas
@@ -379,5 +397,64 @@ class NetworkController extends BaseController
         $mask = ~((1 << $shift) - 1);
         
         return ($ip1 & $mask) === ($ip2 & $mask);
+    }
+
+    /**
+     * Verifica que una dirección IP sea IPv4 válida y pertenezca a rangos privados (RFC 1918) o CGNAT (RFC 6598).
+     */
+    protected function isValidPrivateNetworkIp(string $ip): bool
+    {
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+            return false;
+        }
+
+        $ipLong = ip2long($ip);
+        if ($ipLong === false) {
+            return false;
+        }
+
+        $privateRanges = [
+            ['10.0.0.0', '10.255.255.255'],
+            ['172.16.0.0', '172.31.255.255'],
+            ['192.168.0.0', '192.168.255.255'],
+            ['100.64.0.0', '100.127.255.255'],
+        ];
+
+        foreach ($privateRanges as [$start, $end]) {
+            if ($ipLong >= ip2long($start) && $ipLong <= ip2long($end)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Valida y normaliza una lista de servidores DNS separados por comas.
+     * Devuelve null si algún elemento contiene caracteres inválidos o no es IP/dominio.
+     */
+    protected function validateAndNormalizeDns(string $dns): ?string
+    {
+        if (preg_match('/[\r\n\0]/', $dns)) {
+            return null;
+        }
+
+        $entries = array_filter(array_map('trim', explode(',', $dns)), static fn ($v) => $v !== '');
+        if (empty($entries)) {
+            return '';
+        }
+
+        $clean = [];
+        foreach ($entries as $entry) {
+            if (filter_var($entry, FILTER_VALIDATE_IP) !== false) {
+                $clean[] = $entry;
+            } elseif (preg_match('/^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$/', $entry)) {
+                $clean[] = $entry;
+            } else {
+                return null;
+            }
+        }
+
+        return implode(', ', $clean);
     }
 }

@@ -23,9 +23,9 @@
             <a href="<?= site_url('networks') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none">
               <i class="ti ti-arrow-left fs-5"></i>
             </a>
-            <button type="button" class="btn btn-primary border-0 d-flex align-items-center gap-2 px-4 shadow-none" data-bs-toggle="modal" data-bs-target="#modal-add-device">
+            <a href="<?= site_url('networks/' . $network->id . '/devices/create') ?>" class="btn btn-primary border-0 d-flex align-items-center gap-2 px-4 shadow-none">
               <i class="ti ti-plus fs-5"></i> Nuevo Nodo
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -177,7 +177,7 @@
                               <hr class="dropdown-divider">
                             </li>
                             <li>
-                              <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-edit-device" data-id="<?= $dev->id ?>" data-name="<?= esc($dev->name) ?>" data-type="<?= esc($dev->device_type ?? 'pc') ?>">
+                              <a href="<?= site_url('devices/edit/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
                                 <i class="ti ti-pencil"></i> Editar
                               </a>
                             </li>
@@ -257,7 +257,7 @@
                             <hr class="dropdown-divider">
                           </li>
                           <li>
-                            <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-edit-device" data-id="<?= $dev->id ?>" data-name="<?= esc($dev->name) ?>" data-type="<?= esc($dev->device_type ?? 'pc') ?>">
+                            <a href="<?= site_url('devices/edit/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
                               <i class="ti ti-pencil"></i> Editar
                             </a>
                           </li>
@@ -311,91 +311,6 @@
   </div>
 
 <!-- =====================================================================
-     MODAL: AGREGAR NUEVO DISPOSITIVO
-     ===================================================================== -->
-<div class="modal fade" id="modal-add-device" tabindex="-1" aria-labelledby="modalAddDeviceLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-semibold" id="modalAddDeviceLabel">Agregar Nuevo Nodo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="form-add-device-page">
-        <div class="modal-body py-4">
-          <?= csrf_field() ?>
-          <input type="hidden" name="network_id" value="<?= $network->id ?>">
-          <div class="mb-3">
-            <label for="device-name" class="form-label">Nombre del Dispositivo</label>
-            <input type="text" class="form-control" id="device-name" name="name" placeholder="Ej: Laptop Oficina" required minlength="2" maxlength="100">
-            <small class="text-muted d-block mb-3">Se generará su IP privada y el par de llaves WireGuard.</small>
-          </div>
-          <div class="mb-3">
-            <label for="device-type" class="form-label">Tipo de Dispositivo</label>
-            <select class="form-select" id="device-type" name="device_type">
-              <option value="pc">Computadora / Laptop (PC)</option>
-              <option value="server">Servidor</option>
-              <option value="mobile">Teléfono</option>
-              <option value="tablet">Tablet</option>
-              <option value="router">Router / Firewall</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer border-top-0 pt-0">
-          <button type="button" class="btn btn-danger px-4 border-0" data-bs-dismiss="modal">
-            <i class="ti ti-x me-1"></i>Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary px-4 border-0" id="btn-save-device">
-            <i class="ti ti-device-floppy me-1"></i>Generar Nodo
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- =====================================================================
-     MODAL: EDITAR DISPOSITIVO
-     ===================================================================== -->
-<div class="modal fade" id="modal-edit-device" tabindex="-1" aria-labelledby="modalEditDeviceLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-semibold" id="modalEditDeviceLabel">Editar Nodo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="form-edit-device-page">
-        <div class="modal-body py-4">
-          <?= csrf_field() ?>
-          <input type="hidden" name="device_id" id="edit-device-id" value="">
-          <div class="mb-3">
-            <label for="edit-device-name" class="form-label">Nombre del Dispositivo</label>
-            <input type="text" class="form-control" id="edit-device-name" name="name" placeholder="Ej: Laptop Oficina" required minlength="2" maxlength="100">
-          </div>
-          <div class="mb-3">
-            <label for="edit-device-type" class="form-label">Tipo de Dispositivo</label>
-            <select class="form-select" id="edit-device-type" name="device_type">
-              <option value="pc">Computadora / Laptop (PC)</option>
-              <option value="server">Servidor</option>
-              <option value="mobile">Teléfono</option>
-              <option value="tablet">Tablet</option>
-              <option value="router">Router / Firewall</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer border-top-0 pt-0">
-          <button type="button" class="btn btn-danger px-4 border-0" data-bs-dismiss="modal">
-            <i class="ti ti-x me-1"></i>Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary px-4 border-0" id="btn-update-device">
-            <i class="ti ti-device-floppy me-1"></i>Guardar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- =====================================================================
      MODAL: VER CONFIGURACIÓN / QR
      ===================================================================== -->
 <div class="modal fade" id="modal-view-config" tabindex="-1" aria-labelledby="modalViewConfigLabel" aria-hidden="true">
@@ -414,10 +329,15 @@
           </div>
         </div>
 
-        <div class="d-flex gap-2 justify-content-center mt-4">
-          <button type="button" class="btn btn-danger border-0" data-bs-dismiss="modal">Cerrar</button>
+        <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+          <button type="button" class="btn btn-dark border-0" id="btn-copy-share-link">
+            <i class="ti ti-link me-1"></i> Copiar Enlace Temporal
+          </button>
+          <button type="button" class="btn btn-info border-0" id="btn-send-email-config">
+            <i class="ti ti-mail me-1"></i> Enviar por Email
+          </button>
           <a href="#" class="btn btn-primary border-0 d-flex align-items-center gap-2" id="btn-download-config-modal">
-            <i class="ti ti-download"></i> Descargar archivo .conf
+            <i class="ti ti-download"></i> Descargar .conf
           </a>
         </div>
       </div>
@@ -440,10 +360,96 @@ document.addEventListener("DOMContentLoaded", function () {
   const modalViewConfig = new bootstrap.Modal(document.getElementById('modal-view-config'));
   const modalAddDevice = new bootstrap.Modal(document.getElementById('modal-add-device'));
 
+  let currentActiveDeviceId = null;
+  const btnShareLink = document.getElementById("btn-copy-share-link");
+  const btnSendEmail = document.getElementById("btn-send-email-config");
+
+  if (btnShareLink) {
+    btnShareLink.addEventListener("click", function() {
+      if (!currentActiveDeviceId) return;
+      btnShareLink.disabled = true;
+      btnShareLink.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Generando...`;
+
+      fetch(`<?= site_url('devices/generate-share-link/') ?>${currentActiveDeviceId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(r => r.json())
+      .then(res => {
+        btnShareLink.disabled = false;
+        btnShareLink.innerHTML = `<i class="ti ti-link me-1"></i> Copiar Enlace Temporal`;
+        if (res.success) {
+          navigator.clipboard.writeText(res.share_url).then(() => {
+            Swal.fire({
+              icon: 'success',
+              title: '¡Enlace Copiado al Portapapeles!',
+              html: `<p class="mb-2">El destinatario puede abrir este enlace para ver el QR o descargar el .conf sin iniciar sesión:</p><input type="text" class="form-control text-center text-primary" value="${res.share_url}" readonly><small class="text-muted d-block mt-2">Válido durante 60 minutos.</small>`,
+              confirmButtonColor: '#F38020'
+            });
+          });
+        } else {
+          Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo generar enlace' });
+        }
+      })
+      .catch(() => {
+        btnShareLink.disabled = false;
+        btnShareLink.innerHTML = `<i class="ti ti-link me-1"></i> Copiar Enlace Temporal`;
+      });
+    });
+  }
+
+  if (btnSendEmail) {
+    btnSendEmail.addEventListener("click", function() {
+      if (!currentActiveDeviceId) return;
+      Swal.fire({
+        title: 'Enviar Configuración por Correo',
+        text: 'Ingresa la dirección de correo a la que deseas enviar el archivo .conf adjunto:',
+        input: 'email',
+        inputPlaceholder: 'usuario@empresa.com',
+        showCancelButton: true,
+        confirmButtonText: 'Enviar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#F38020',
+        cancelButtonColor: '#dc3545',
+        showLoaderOnConfirm: true,
+        preConfirm: (email) => {
+          let formData = new FormData();
+          formData.append('email', email);
+          return fetch(`<?= site_url('devices/send-email/') ?>${currentActiveDeviceId}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (!data.success) {
+              throw new Error(data.message || 'Error al enviar');
+            }
+            return data;
+          })
+          .catch(error => {
+            Swal.showValidationMessage(error.message);
+          });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Correo Enviado!',
+            text: result.value.message || 'Se ha enviado la configuración por correo exitosamente.',
+            confirmButtonColor: '#F38020'
+          });
+        }
+      });
+    });
+  }
+
   // Manejo de la previsualización del QR y archivo de configuración
   document.querySelectorAll('.btn-view-config').forEach(btn => {
     btn.addEventListener('click', function() {
       const devId = this.dataset.id;
+      currentActiveDeviceId = devId;
       
       // Limpiar contenedor QR previo
       qrcodeContainer.innerHTML = "";
@@ -485,166 +491,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Envío del formulario de agregar dispositivo mediante AJAX para mostrar la configuración al instante
-  const formAddDevice = document.getElementById('form-add-device-page');
-  formAddDevice.addEventListener('submit', function (e) {
-    e.preventDefault();
-    
-    const formData = new FormData(formAddDevice);
-    const btnSubmit = document.getElementById('btn-save-device');
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generando...`;
 
-    fetch('<?= site_url('devices/store') ?>', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(res => {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = 'Generar Nodo';
-      
-      if (res.success) {
-        // Cerrar modal de agregar
-        modalAddDevice.hide();
-        formAddDevice.reset();
-
-        // Mostrar SweetAlert Toast de éxito
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'bottom',
-          showConfirmButton: false,
-          timer: 5000,
-          timerProgressBar: true,
-          background: '#121a1f',
-          color: '#fff'
-        });
-
-        Toast.fire({
-          icon: 'success',
-          title: res.message
-        });
-
-        // Cargar inmediatamente la configuración generada en el modal correspondiente
-        qrcodeContainer.innerHTML = "";
-
-        fetch(`<?= site_url('devices/details-json/') ?>${res.device.id}`)
-          .then(r => r.json())
-          .then(cRes => {
-            if (cRes.success) {
-              btnDownloadConfigModal.href = `<?= site_url('devices/download/') ?>${cRes.device.id}`;
-              
-              qrcode = new QRCode(qrcodeContainer, {
-                text: cRes.device.config,
-                width: 250,
-                height: 250,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
-              });
-
-              // Mostrar modal de configuración generada
-              modalViewConfig.show();
-
-              // Recargar la página al cerrar el modal de configuración para ver el nuevo nodo en la tabla
-              document.getElementById('modal-view-config').addEventListener('hidden.bs.modal', function () {
-                window.location.reload();
-              }, { once: true });
-            } else {
-              window.location.reload();
-            }
-          });
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error de Validación',
-          text: res.message || 'No se pudo crear el dispositivo.'
-        });
-      }
-    })
-    .catch(err => {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = 'Generar Nodo';
-      console.error(err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de Red',
-        text: 'Ocurrió un error de red al intentar guardar.'
-      });
-    });
-  });
-
-  // ---------------------------------------------------------------------
-  // Editar dispositivo
-  // ---------------------------------------------------------------------
-  const modalEditEl = document.getElementById('modal-edit-device');
-  const modalEdit = modalEditEl ? new bootstrap.Modal(modalEditEl) : null;
-
-  document.querySelectorAll('.btn-edit-device').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      document.getElementById('edit-device-id').value = this.dataset.id;
-      document.getElementById('edit-device-name').value = this.dataset.name;
-      document.getElementById('edit-device-type').value = this.dataset.type;
-      modalEdit.show();
-    });
-  });
-
-  const formEdit = document.getElementById('form-edit-device-page');
-  if (formEdit) {
-    formEdit.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const btnSubmit = document.getElementById('btn-update-device');
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Guardando...';
-
-      const formData = new FormData(this);
-      const deviceId = formData.get('device_id');
-
-      fetch('<?= base_url('devices/update/') ?>' + deviceId, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-      .then(response => response.json())
-      .then(res => {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = 'Guardar Cambios';
-        if (res.success) {
-          modalEdit.hide();
-          Swal.fire({
-            icon: 'success',
-            title: '¡Actualizado!',
-            text: res.message,
-            timer: 2000,
-            showConfirmButton: false
-          }).then(() => {
-            window.location.reload();
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: res.message || 'No se pudo actualizar.'
-          });
-        }
-      })
-      .catch(err => {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = 'Guardar Cambios';
-        Swal.fire({
-          icon: 'error',
-          title: 'Error de Red',
-          text: 'Ocurrió un error al intentar guardar los cambios.'
-        });
-      });
-    });
-  }
 
   // Buscador de nodos en tiempo real (nombre o IP)
   const searchInput = document.getElementById('search-devices');
@@ -701,7 +548,11 @@ document.addEventListener("DOMContentLoaded", function () {
               const peer = peers[pubkey];
               if (peer && peer.connected) {
                 const publicIp = peer.endpoint ? peer.endpoint.split(':')[0] : 'IP desconocida';
-                cell.innerHTML = `<code class="fs-3 text-dark">${publicIp}</code>`;
+                const codeEl = document.createElement('code');
+                codeEl.className = 'fs-3 text-dark';
+                codeEl.textContent = publicIp;
+                cell.innerHTML = '';
+                cell.appendChild(codeEl);
                 cell.className = isTd ? "text-center device-status-cell" : "device-status-cell mobile-card-value";
               } else {
                 cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
@@ -810,8 +661,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Auto-refresh cada 15 segundos para no sobrecargar de llamadas SSH pero mantenerlo vivo
   const statusInterval = setInterval(updateRealtimeStatuses, 15000);
-
-
 
   // Limpiar intervalo al salir de la página por si acaso
   window.addEventListener('beforeunload', () => {

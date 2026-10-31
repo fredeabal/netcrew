@@ -12,7 +12,7 @@ class DeviceModel extends Model
     protected $returnType       = 'object';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['network_id', 'name', 'ip_address', 'public_key', 'private_key', 'active', 'os', 'device_type', 'last_seen'];
+    protected $allowedFields    = ['network_id', 'name', 'ip_address', 'public_key', 'private_key', 'active', 'os', 'device_type', 'routing_mode', 'expires_at', 'last_seen'];
 
     // Dates
     protected $useTimestamps = true;
@@ -26,13 +26,15 @@ class DeviceModel extends Model
 
     // Validation
     protected $validationRules      = [
-        'network_id'  => 'required|integer',
-        'name'        => 'required|min_length[2]|max_length[100]',
-        'ip_address'  => 'required|valid_ip',
-        'public_key'  => 'required|is_unique[devices.public_key,id,{id}]',
-        'private_key' => 'required',
-        'os'          => 'permit_empty|in_list[linux,windows,osx,ios,android]',
-        'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
+        'network_id'   => 'required|integer',
+        'name'         => 'required|min_length[2]|max_length[100]',
+        'ip_address'   => 'required|valid_ip',
+        'public_key'   => 'required|is_unique[devices.public_key,id,{id}]',
+        'private_key'  => 'required',
+        'os'           => 'permit_empty|in_list[linux,windows,osx,ios,android]',
+        'device_type'  => 'required|in_list[pc,server,mobile,tablet,router]',
+        'routing_mode' => 'permit_empty|in_list[split,full]',
+        'expires_at'   => 'permit_empty|valid_date[Y-m-d H:i:s]',
     ];
     
     protected $validationMessages   = [

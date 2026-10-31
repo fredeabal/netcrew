@@ -397,7 +397,7 @@ class UsersController extends BaseController
                 return redirect()->to('users')->with('message', 'Usuario eliminado correctamente.');
             } catch (\Throwable $e) {
                 $db->transRollback();
-                return redirect()->to('users')->with('error', 'Error al eliminar usuario: ' . $e->getMessage());
+                return redirect()->to('users')->with('error', 'Error al eliminar usuario: ' . esc($e->getMessage()));
             }
         }
 

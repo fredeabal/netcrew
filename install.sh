@@ -15,11 +15,17 @@ if [ ! -t 0 ] && [ -z "$NETCREW_SELF_RUN" ]; then
     cat > "$TMP_SCRIPT"
     chmod +x "$TMP_SCRIPT"
     export NETCREW_SELF_RUN=1
+    export NETCREW_SELF_TMP="$TMP_SCRIPT"
     exec "$TMP_SCRIPT" "$@" < /dev/tty
 fi
 
+# Limpiar archivo temporal si venimos de auto-ejecución
+if [ -n "$NETCREW_SELF_TMP" ] && [ -f "$NETCREW_SELF_TMP" ]; then
+    rm -f "$NETCREW_SELF_TMP"
+fi
+
 # Colores para la consola
-RED='\030[0;31m'
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -41,7 +47,9 @@ echo -e "${NC}"
 # 2. Detectar IP pública o interfaz de red del servidor
 SERVER_IP=$(hostname -I | awk '{print $1}')
 read -p "👉 Ingresa la IP o Dominio del servidor [Predeterminado: ${SERVER_IP}]: " INPUT_DOMAIN
-DOMAIN=${INPUT_DOMAIN:-$SERVER_IP}
+RAW_DOMAIN=${INPUT_DOMAIN:-$SERVER_IP}
+# Limpiar posible protocolo (http:// o https://), barras o rutas accidentales
+DOMAIN=$(echo "$RAW_DOMAIN" | sed -e 's|^[^/]*//||' -e 's|/.*$||' | tr -d '[:space:]')
 
 echo -e "\n${YELLOW}⏳ [1/6] Actualizando paquetes e instalando dependencias del sistema...${NC}"
 export DEBIAN_FRONTEND=noninteractive
@@ -153,6 +161,9 @@ chmod 600 "$SSH_KEY_FILE" 2>/dev/null || true
 php spark migrate --all
 php spark db:seed UserSeeder
 
+# Eliminar llave privada SSH en texto plano tras haber sido cifrada en la BD por UserSeeder
+rm -f "$SSH_KEY_FILE" "${SSH_KEY_FILE}.pub" 2>/dev/null || true
+
 # Cambiar a entorno de producción una vez completada la instalación
 sed -i "s|CI_ENVIRONMENT = development|CI_ENVIRONMENT = production|g" .env
 
@@ -202,7 +213,8 @@ systemctl restart php${PHP_VER}-fpm
 # 8. Ajustar permisos finales del sistema de archivos
 chown -R www-data:www-data "$INSTALL_DIR"
 chmod -R 755 "$INSTALL_DIR"
-chmod -R 775 "${INSTALL_DIR}/writable"
+chmod 640 "${INSTALL_DIR}/.env" 2>/dev/null || true
+chmod -R 770 "${INSTALL_DIR}/writable"
 chmod -R 775 "${INSTALL_DIR}/public/uploads" 2>/dev/null || true
 
 clear

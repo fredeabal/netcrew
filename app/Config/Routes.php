@@ -32,6 +32,9 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->get('roles', 'RolesController::index', ['filter' => 'permission:admin.roles']);
     $routes->get('roles/edit/(:segment)', 'RolesController::edit/$1', ['filter' => 'permission:admin.roles']);
     $routes->post('roles/update/(:segment)', 'RolesController::update/$1', ['filter' => 'permission:admin.roles']);
+
+    // Registro de Auditoría
+    $routes->get('audit-logs', 'AuditLogsController::index', ['filter' => 'permission:admin.settings']);
 });
 
 // Rutas de Superadmin (Configuración - requieren permisos)
@@ -61,22 +64,32 @@ $routes->group('networks', ['filter' => 'session'], static function ($routes) {
     $routes->post('delete/(:num)', 'NetworkController::delete/$1', ['filter' => 'permission:networks.delete']);
     $routes->post('toggle-active/(:num)', 'NetworkController::toggleActive/$1', ['filter' => 'permission:networks.edit']);
     $routes->get('(:num)/devices', 'DeviceController::index/$1', ['filter' => 'permission:devices.view']);
+    $routes->get('(:num)/devices/create', 'DeviceController::create/$1', ['filter' => 'permission:devices.create']);
 });
 
 // Rutas de Dispositivos (Devices)
 $routes->group('devices', ['filter' => 'session'], static function ($routes) {
+    $routes->get('create/(:num)', 'DeviceController::create/$1', ['filter' => 'permission:devices.create']);
+    $routes->get('edit/(:num)', 'DeviceController::edit/$1', ['filter' => 'permission:devices.edit']);
     $routes->get('list/(:num)', 'DeviceController::listByNetwork/$1', ['filter' => 'permission:devices.view']);
     $routes->post('store', 'DeviceController::store', ['filter' => 'permission:devices.create']);
     $routes->post('update/(:num)', 'DeviceController::update/$1', ['filter' => 'permission:devices.edit']);
     $routes->post('delete/(:num)', 'DeviceController::delete/$1', ['filter' => 'permission:devices.delete']);
     $routes->post('ping/(:num)', 'DeviceController::ping/$1', ['filter' => 'permission:devices.view']);
+    $routes->post('rotate-keys/(:num)', 'DeviceController::rotateKeys/$1', ['filter' => 'permission:devices.edit']);
     $routes->post('toggle-active/(:num)', 'DeviceController::toggleActive/$1', ['filter' => 'permission:devices.edit']);
     $routes->get('download/(:num)', 'DeviceController::downloadConfig/$1', ['filter' => 'permission:devices.view']);
     $routes->get('details-json/(:num)', 'DeviceController::getDetailsJson/$1', ['filter' => 'permission:devices.view']);
     $routes->get('realtime-status/(:num)', 'DeviceController::realtimeStatus/$1', ['filter' => 'permission:devices.view']);
     $routes->get('node-details/(:num)', 'DeviceController::nodeDetails/$1', ['filter' => 'permission:devices.view']);
     $routes->get('show/(:num)', 'DeviceController::show/$1', ['filter' => 'permission:devices.view']);
+    $routes->post('generate-share-link/(:num)', 'DeviceController::generateShareLink/$1', ['filter' => 'permission:devices.view']);
+    $routes->post('send-email/(:num)', 'DeviceController::sendConfigEmail/$1', ['filter' => 'permission:devices.view']);
 });
+
+// Ruta pública para enlace temporal compartido de configuración WireGuard (One-Time Link)
+$routes->get('connect/(:alphanumeric)', 'DeviceController::connectShare/$1');
+$routes->get('connect/(:alphanumeric)/download', 'DeviceController::downloadShare/$1');
 
 // Ruta para cerrar sesión tras activar la cuenta
 $routes->get('auth/logout-activated', static function () {

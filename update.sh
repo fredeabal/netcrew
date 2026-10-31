@@ -5,13 +5,21 @@
 # Este script descarga e instala la última versión de NetCrew sin perder datos.
 # =================================================================================
 
+set -e
+
 # Si se ejecuta mediante curl/pipe, guardar en un archivo temporal y reconectar la terminal
 if [ ! -t 0 ] && [ -z "$NETCREW_SELF_RUN" ]; then
     TMP_SCRIPT=$(mktemp /tmp/netcrew_update.XXXXXX.sh)
     cat > "$TMP_SCRIPT"
     chmod +x "$TMP_SCRIPT"
     export NETCREW_SELF_RUN=1
+    export NETCREW_SELF_TMP="$TMP_SCRIPT"
     exec "$TMP_SCRIPT" "$@" < /dev/tty
+fi
+
+# Limpiar archivo temporal si venimos de auto-ejecución
+if [ -n "$NETCREW_SELF_TMP" ] && [ -f "$NETCREW_SELF_TMP" ]; then
+    rm -f "$NETCREW_SELF_TMP"
 fi
 
 # Colores para salida de terminal
@@ -87,17 +95,22 @@ export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader --no-interaction
 
 echo -e "${YELLOW}⏳ [3/5] Aplicando migraciones de base de datos...${NC}"
-php spark migrate
+php spark migrate --all
 
 echo -e "${YELLOW}⏳ [4/5] Restaurando permisos y limpiando caché de la aplicación...${NC}"
 # Limpiar caché interno de CodeIgniter 4
 php spark cache:clear 2>/dev/null || true
 
+# Eliminar llaves privadas SSH residuales en texto plano si existieran de instalaciones antiguas
+rm -f "$INSTALL_DIR/writable/netcrew_ssh_key" "$INSTALL_DIR/writable/netcrew_ssh_key.pub" 2>/dev/null || true
+
 # Asegurar que la carpeta uploads exista antes de darle permisos
 mkdir -p "$INSTALL_DIR/public/uploads"
 
 chown -R www-data:www-data "$INSTALL_DIR"
-chmod -R 775 "$INSTALL_DIR/writable"
+chmod -R 755 "$INSTALL_DIR"
+chmod 640 "$INSTALL_DIR/.env" 2>/dev/null || true
+chmod -R 770 "$INSTALL_DIR/writable"
 chmod -R 775 "$INSTALL_DIR/public/uploads"
 
 echo -e "${YELLOW}⏳ [5/5] Reiniciando servicios y limpiando caché (OPCache / Nginx)...${NC}"
@@ -106,7 +119,9 @@ for service in $(systemctl list-unit-files --type=service 2>/dev/null | grep -oE
     systemctl restart "$service" 2>/dev/null || true
 done
 systemctl restart php-fpm 2>/dev/null || true
-systemctl reload nginx 2>/dev/null || true
+if command -v nginx &> /dev/null && nginx -t 2>/dev/null; then
+    systemctl reload nginx 2>/dev/null || true
+fi
 
 echo ""
 echo -e "${GREEN}======================================================================${NC}"

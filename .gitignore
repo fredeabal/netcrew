@@ -45,13 +45,15 @@ $RECYCLE.BIN/
 .vagrant
 Vagrantfile
 
-# SQLite databases
+# SQLite databases & local SSH keys
 /writable/*.db
 /writable/*.db2
 /writable/*.sqlite
 /writable/*.db-wal
 /writable/*.db-shm
 /writable/*.db-*
+/writable/database/*
+/writable/netcrew_ssh_key*
 
 
 #-------------------------

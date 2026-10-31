@@ -69,7 +69,7 @@
                                 <input type="hidden" name="group" value="<?= esc($userGroup) ?>">
                                 <small class="text-muted fs-2">Tu propio rol no puede ser modificado.</small>
                             <?php else: ?>
-                                <select class="form-select" id="group" name="group">
+                                <select class="select2 form-control custom-select" id="group" name="group">
                                     <option value="">Selecciona un rol...</option>
                                     <?php foreach ($groups as $key => $group): ?>
                                         <option value="<?= esc($key) ?>" <?= old('group', $userGroup) == $key ? 'selected' : '' ?>><?= esc($group['title']) ?></option>

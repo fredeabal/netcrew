@@ -18,7 +18,7 @@
 <script>
   // Tema DB > localStorage > preferencia del sistema
   (function() {
-    var dbTheme = '<?= $userTheme ?>';
+    var dbTheme = '<?= esc($userTheme, 'js') ?>';
     var theme = 'light';
     
     if (dbTheme === 'dark' || dbTheme === 'light') {
@@ -41,6 +41,17 @@
   <meta name="description" content="NetCrew - Plataforma avanzada de administración de redes VPN WireGuard. Gestión intuitiva de nodos, tráfico y seguridad corporativa." />
   <meta name="keywords" content="NetCrew, VPN, WireGuard, Gestión de Redes, Seguridad Corporativa, Control de Nodos" />
   <meta name="author" content="NetCrew" />
+
+  <!-- Configuración PWA (Instalable en iOS y Android) -->
+  <link rel="manifest" href="<?= base_url('manifest.json') ?>" />
+  <meta name="theme-color" content="#F38020" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NetCrew" />
+  <link rel="apple-touch-icon" href="<?= base_url('assets/images/logos/apple-touch-icon.png') ?>" />
+  <link rel="apple-touch-icon" sizes="192x192" href="<?= base_url('assets/images/logos/icon-192.png') ?>" />
+  <link rel="apple-touch-icon" sizes="512x512" href="<?= base_url('assets/images/logos/icon-512.png') ?>" />
 
   <!-- Icono Favicon -->
   <link rel="shortcut icon" type="image/png" href="<?= base_url('assets/') ?>images/logos/favicon.png" />
@@ -132,6 +143,15 @@
                             <div class="w-100 ps-3">
                               <h6 class="mb-1 fs-3 fw-semibold lh-base">Guía de Uso</h6>
                               <span class="fs-2 d-block text-body-secondary">Aprende a usar NetCrew</span>
+                            </div>
+                          </a>
+                          <a href="javascript:void(0)" onclick="installNetCrewPWA()" class="py-8 px-7 d-flex align-items-center">
+                            <span class="d-flex align-items-center justify-content-center bg-light-primary rounded p-2 text-primary">
+                              <i class="ti ti-device-mobile fs-7"></i>
+                            </span>
+                            <div class="w-100 ps-3">
+                              <h6 class="mb-1 fs-3 fw-semibold lh-base">Instalar App</h6>
+                              <span class="fs-2 d-block text-body-secondary">Añadir a pantalla de inicio</span>
                             </div>
                           </a>
                         </div>

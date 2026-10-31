@@ -65,6 +65,7 @@ class ProfileController extends BaseController
                     'regex_match' => 'El teléfono debe incluir el código de país (ej: +34 o +58).'
                 ]
             ],
+            'theme'    => 'permit_empty|in_list[light,dark,system]',
         ];
 
         // Si se va a cambiar la contraseña
@@ -144,7 +145,7 @@ class ProfileController extends BaseController
             ]);
         } catch (\Exception $e) {
             log_message('error', '[ProfileUpdate] ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
-            return redirect()->back()->withInput()->with('error', 'Error al guardar: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al guardar: ' . esc($e->getMessage()));
         }
 
         return redirect()->to('profile')->with('message', 'Perfil actualizado.');

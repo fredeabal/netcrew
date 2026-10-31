@@ -52,6 +52,60 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
+    // Mostrar formulario HTML para crear un nuevo nodo
+    // ---------------------------------------------------------------------
+    public function create($networkId)
+    {
+        $network = $this->networkModel->find($networkId);
+        if (!$network) {
+            return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+        }
+
+        if (!$this->hasNetworkAccess($network, 'create')) {
+            return redirect()->to('/networks/' . $networkId . '/devices')->with('error', 'No tienes permisos para agregar nodos a esta red.');
+        }
+
+        $data = [
+            'title'   => 'Nuevo Nodo - ' . $network->name,
+            'network' => $network,
+        ];
+
+        echo view('template/header', $data);
+        echo view('devices/create', $data);
+        echo view('template/footer');
+    }
+
+    // ---------------------------------------------------------------------
+    // Mostrar formulario HTML para editar un nodo
+    // ---------------------------------------------------------------------
+    public function edit($id)
+    {
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return redirect()->to('/networks')->with('error', 'Dispositivo no encontrado.');
+        }
+
+        $network = $this->networkModel->find($device->network_id);
+        if (!$network) {
+            return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+        }
+
+        if (!$this->hasNetworkAccess($network, 'edit')) {
+            return redirect()->to('/devices/show/' . $id)->with('error', 'No tienes permisos para editar este nodo.');
+        }
+
+        $data = [
+            'title'   => 'Editar Nodo - ' . $device->name,
+            'device'  => $device,
+            'network' => $network,
+        ];
+
+        echo view('template/header', $data);
+        echo view('devices/edit', $data);
+        echo view('template/footer');
+    }
+
+    // ---------------------------------------------------------------------
     // Mostrar página de detalles de un nodo
     // ---------------------------------------------------------------------
     public function show($id)
@@ -130,7 +184,12 @@ class DeviceController extends BaseController
     // ---------------------------------------------------------------------
     public function store()
     {
+        $isAjax = $this->request->isAJAX();
+
         if ($this->request->getMethod() !== 'POST') {
+            if (!$isAjax) {
+                return redirect()->to('/networks')->with('error', 'Método no permitido.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Método no permitido.'
@@ -138,33 +197,57 @@ class DeviceController extends BaseController
         }
 
         $rules = [
-            'network_id'  => 'required|is_natural_no_zero',
-            'name'        => 'required|min_length[2]|max_length[100]',
-            'device_type' => 'permit_empty|in_list[pc,server,mobile,tablet,router]',
+            'network_id'   => 'required|is_natural_no_zero',
+            'name'         => 'required|min_length[2]|max_length[100]',
+            'device_type'  => 'permit_empty|in_list[pc,server,mobile,tablet,router]',
+            'routing_mode' => 'permit_empty|in_list[split,full]',
+            'expiration'   => 'permit_empty|in_list[never,1d,7d,30d]',
         ];
 
         if (!$this->validate($rules)) {
+            $msg = implode(' ', $this->validator->getErrors());
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => implode(' ', $this->validator->getErrors()),
+                'message' => $msg,
                 'errors'  => $this->validator->getErrors()
             ])->setStatusCode(400);
         }
 
-        $networkId  = (int) $this->request->getPost('network_id');
-        $name       = trim((string) $this->request->getPost('name'));
-        $deviceType = (string) ($this->request->getPost('device_type') ?: 'pc');
+        $networkId   = (int) $this->request->getPost('network_id');
+        $name        = trim((string) $this->request->getPost('name'));
+        $deviceType  = (string) ($this->request->getPost('device_type') ?: 'pc');
+        $routingMode = (string) ($this->request->getPost('routing_mode') ?: 'split');
+        $expiration  = (string) ($this->request->getPost('expiration') ?: 'never');
+
+        $expiresAt = null;
+        if ($expiration === '1d') {
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 day'));
+        } elseif ($expiration === '7d') {
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+        } elseif ($expiration === '30d') {
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+30 days'));
+        }
 
         // Validar que SSH esté configurado a nivel global antes de crear nodos
         if (!WireguardService::isConfigured()) {
+            $msg = 'No se pueden crear nodos: El Administrador no ha configurado la conexión SSH del servidor VPN.';
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No se pueden crear nodos: El Administrador no ha configurado la conexión SSH del servidor VPN.'
+                'message' => $msg
             ])->setStatusCode(403);
         }
 
         $network = $this->networkModel->find($networkId);
         if (!$network) {
+            if (!$isAjax) {
+                return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Red no encontrada.'
@@ -173,26 +256,38 @@ class DeviceController extends BaseController
 
         // Validar que la red esté activa
         if (!$network->active) {
+            $msg = 'No se pueden agregar nodos a una red desactivada.';
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No se pueden agregar nodos a una red desactivada.'
+                'message' => $msg
             ])->setStatusCode(400);
         }
 
         // Validar permisos para crear nodos en esta red
         if (!$this->hasNetworkAccess($network, 'create')) {
+            $msg = 'No tienes permisos para agregar nodos a esta red.';
+            if (!$isAjax) {
+                return redirect()->to('/networks/' . $networkId . '/devices')->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No tienes permisos para agregar nodos a esta red.'
+                'message' => $msg
             ])->setStatusCode(403);
         }
 
         // Validar capacidad de la red (/24 = máx 253 nodos)
         $currentNodesCount = $this->deviceModel->where('network_id', $networkId)->countAllResults();
         if ($currentNodesCount >= 253) {
+            $msg = 'La red ha alcanzado su capacidad máxima (253 nodos).';
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'La red ha alcanzado su capacidad máxima (253 nodos).'
+                'message' => $msg
             ])->setStatusCode(400);
         }
 
@@ -206,9 +301,13 @@ class DeviceController extends BaseController
         // Generar la siguiente IP disponible
         $ipAddress = $this->generateNextAvailableIp($network->cidr, $existingIps);
         if (!$ipAddress) {
+            $msg = 'No hay direcciones IP disponibles en el rango de esta red.';
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No hay direcciones IP disponibles en el rango de esta red.'
+                'message' => $msg
             ])->setStatusCode(400);
         }
 
@@ -218,36 +317,50 @@ class DeviceController extends BaseController
             $privateKey = $keypair['privateKey'];
             $publicKey  = $keypair['publicKey'];
         } catch (\Throwable $e) {
+            $msg = 'Error al generar llaves criptográficas: ' . $e->getMessage();
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'Error al generar llaves criptográficas: ' . $e->getMessage()
+                'message' => $msg
             ])->setStatusCode(500);
         }
 
         // Registrar dispositivo
         $data = [
-            'network_id'  => $networkId,
-            'name'        => $name,
-            'ip_address'  => $ipAddress,
-            'public_key'  => $publicKey,
-            'private_key' => $privateKey,
-            'active'      => 1,
-            'device_type' => $deviceType
+            'network_id'   => $networkId,
+            'name'         => $name,
+            'ip_address'   => $ipAddress,
+            'public_key'   => $publicKey,
+            'private_key'  => $privateKey,
+            'active'       => 1,
+            'device_type'  => $deviceType,
+            'routing_mode' => $routingMode,
+            'expires_at'   => $expiresAt,
         ];
 
         try {
             if (!$this->deviceModel->save($data)) {
+                $msg = 'Error al registrar el dispositivo.';
+                if (!$isAjax) {
+                    return redirect()->back()->withInput()->with('error', $msg);
+                }
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => 'Error al registrar el dispositivo.',
+                    'message' => $msg,
                     'errors'  => $this->deviceModel->errors()
                 ])->setStatusCode(400);
             }
         } catch (\Throwable $e) {
             log_message('error', 'Error al guardar dispositivo en BD: ' . $e->getMessage());
+            $msg = 'Conflicto de asignación: la dirección IP o la clave ya existen en la red. Intenta nuevamente.';
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'Conflicto de asignación: la dirección IP o la clave ya existen en la red. Intenta nuevamente.',
+                'message' => $msg,
             ])->setStatusCode(409);
         }
 
@@ -257,15 +370,24 @@ class DeviceController extends BaseController
         // Registrar el peer en el servidor. Si falla, se revierte el alta en la BD.
         try {
             $this->pushPeer($deviceObj, true);
+            \App\Models\AuditLogModel::log('DEVICE_CREATE', "Creó el nodo '{$data['name']}' ({$data['ip_address']}) en red ID: {$networkId}");
         } catch (\Throwable $e) {
             log_message('error', 'No se pudo registrar el nodo ' . $insertId . ' en WireGuard: ' . $e->getMessage());
             $this->deviceModel->delete($insertId);
             $this->bestEffort(fn () => $this->pushPeer($deviceObj, false), 'revertir alta del nodo ' . $insertId);
 
+            $msg = 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage();
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $msg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage(),
+                'message' => $msg,
             ])->setStatusCode(502);
+        }
+
+        if (!$isAjax) {
+            return redirect()->to('/networks/' . $networkId . '/devices')->with('message', 'Dispositivo agregado correctamente.');
         }
 
         return $this->response->setJSON([
@@ -284,7 +406,12 @@ class DeviceController extends BaseController
     // ---------------------------------------------------------------------
     public function update($id)
     {
+        $isAjax = $this->request->isAJAX();
+
         if ($this->request->getMethod() !== 'POST') {
+            if (!$isAjax) {
+                return redirect()->to('/networks')->with('error', 'Método no permitido.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Método no permitido.'
@@ -293,6 +420,9 @@ class DeviceController extends BaseController
 
         $device = $this->deviceModel->find($id);
         if (!$device) {
+            if (!$isAjax) {
+                return redirect()->to('/networks')->with('error', 'Dispositivo no encontrado.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Dispositivo no encontrado.'
@@ -301,6 +431,9 @@ class DeviceController extends BaseController
 
         $network = $this->networkModel->find($device->network_id);
         if (!$network) {
+            if (!$isAjax) {
+                return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Red no encontrada.'
@@ -309,6 +442,9 @@ class DeviceController extends BaseController
 
         // Validar acceso / propiedad
         if (!$this->hasNetworkAccess($network, 'edit')) {
+            if (!$isAjax) {
+                return redirect()->to('/devices/show/' . $id)->with('error', 'No tienes permisos para editar este nodo.');
+            }
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'No tienes permisos para editar este nodo.'
@@ -316,26 +452,59 @@ class DeviceController extends BaseController
         }
 
         $rules = [
-            'name'        => 'required|min_length[2]|max_length[100]',
-            'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
+            'name'         => 'required|min_length[2]|max_length[100]',
+            'device_type'  => 'required|in_list[pc,server,mobile,tablet,router]',
+            'routing_mode' => 'permit_empty|in_list[split,full]',
+            'expiration'   => 'permit_empty|in_list[keep,never,1d,7d,30d]',
         ];
 
         if (!$this->validate($rules)) {
+            $errMsg = implode(' ', $this->validator->getErrors());
+            if (!$isAjax) {
+                return redirect()->back()->withInput()->with('error', $errMsg);
+            }
             return $this->response->setJSON([
                 'success' => false,
-                'message' => implode(' ', $this->validator->getErrors()),
+                'message' => $errMsg,
                 'errors'  => $this->validator->getErrors(),
             ])->setStatusCode(400);
         }
 
-        $name       = trim((string) $this->request->getPost('name'));
-        $deviceType = (string) $this->request->getPost('device_type');
+        $name        = trim((string) $this->request->getPost('name'));
+        $deviceType  = (string) $this->request->getPost('device_type');
+        $routingMode = (string) ($this->request->getPost('routing_mode') ?: 'split');
+        $expiration  = (string) ($this->request->getPost('expiration') ?: 'keep');
 
-        if ($this->deviceModel->update($id, ['name' => $name, 'device_type' => $deviceType])) {
+        $updateData = [
+            'name'         => $name,
+            'device_type'  => $deviceType,
+            'routing_mode' => $routingMode,
+        ];
+
+        if ($expiration === 'never') {
+            $updateData['expires_at'] = null;
+        } elseif ($expiration === '1d') {
+            $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+1 day'));
+        } elseif ($expiration === '7d') {
+            $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+7 days'));
+        } elseif ($expiration === '30d') {
+            $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+30 days'));
+        }
+
+        if ($this->deviceModel->update($id, $updateData)) {
+            \App\Models\AuditLogModel::log('device.updated', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.");
+
+            if (!$isAjax) {
+                return redirect()->to('/devices/show/' . $id)->with('message', 'Nodo actualizado correctamente.');
+            }
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Nodo actualizado correctamente.'
             ]);
+        }
+
+        if (!$isAjax) {
+            return redirect()->back()->withInput()->with('error', 'Error al actualizar el nodo.');
         }
 
         return $this->response->setJSON([
@@ -383,6 +552,7 @@ class DeviceController extends BaseController
         }
 
         if ($this->deviceModel->delete($id)) {
+            \App\Models\AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})");
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
         }
 
@@ -392,6 +562,84 @@ class DeviceController extends BaseController
         }
 
         return redirect()->to("networks/{$networkId}/devices")->with('error', 'Error al eliminar.');
+    }
+
+    // ---------------------------------------------------------------------
+    // Rotar / Regenerar par de llaves criptográficas del dispositivo
+    // ---------------------------------------------------------------------
+    public function rotateKeys($id)
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return redirect()->back();
+        }
+
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return redirect()->to('/networks')->with('error', 'Dispositivo no encontrado.');
+        }
+
+        $networkId = $device->network_id;
+        $network = $this->networkModel->find($networkId);
+        if (!$network) {
+            return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+        }
+
+        // Validar permisos para editar
+        if (!$this->hasNetworkAccess($network, 'edit')) {
+            return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
+        }
+
+        if (!WireguardService::isConfigured()) {
+            return redirect()->back()->with('error', 'El servidor VPN no está configurado.');
+        }
+
+        // 1. Generar nuevo par de llaves WireGuard
+        try {
+            $keypair = WireguardService::generateKeyPair();
+            $newPrivateKey = $keypair['privateKey'];
+            $newPublicKey  = $keypair['publicKey'];
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Error generando nuevas llaves: ' . $e->getMessage());
+        }
+
+        $oldPublicKey = $device->public_key;
+
+        // 2. Si el dispositivo está activo, aplicar rotación en el servidor WireGuard
+        if ($device->active) {
+            try {
+                $wg = WireguardService::fromSettings(5);
+                $wg->setTimeout(30);
+                // Quitar clave antigua y agregar clave nueva
+                $wg->removePeer($oldPublicKey);
+                $wg->addPeer($newPublicKey, $device->ip_address);
+                $wg->saveConfig();
+            } catch (\Throwable $e) {
+                log_message('error', 'Fallo al rotar peer en servidor WireGuard: ' . $e->getMessage());
+                return redirect()->back()->with('error', 'No se pudo actualizar la clave en el servidor VPN: ' . esc($e->getMessage()));
+            }
+        }
+
+        // 3. Persistir nuevas llaves en la base de datos (DeviceModel se encarga de cifrar la private_key)
+        $updateData = [
+            'public_key'  => $newPublicKey,
+            'private_key' => $newPrivateKey,
+        ];
+
+        if ($this->deviceModel->update($id, $updateData)) {
+            return redirect()->to("devices/show/{$id}")->with('message', '¡Llaves regeneradas con éxito! Recuerda descargar la nueva configuración o escanear el nuevo código QR.');
+        }
+
+        // Revertir cambio en servidor WireGuard en caso de fallo en BD
+        if ($device->active) {
+            $this->bestEffort(function() use ($device, $oldPublicKey, $newPublicKey) {
+                $wg = WireguardService::fromSettings(5);
+                $wg->removePeer($newPublicKey);
+                $wg->addPeer($oldPublicKey, $device->ip_address);
+                $wg->saveConfig();
+            }, 'revertir rotación de llaves para el nodo ' . $id);
+        }
+
+        return redirect()->back()->with('error', 'Error al guardar las nuevas llaves en la base de datos.');
     }
 
     // ---------------------------------------------------------------------
@@ -488,7 +736,15 @@ class DeviceController extends BaseController
 
         $serverEndpoint = $this->resolveServerEndpoint();
 
-        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
+        $configString = $this->buildConfigContent(
+            $decryptedPrivateKey,
+            $device->ip_address,
+            $serverPublicKey,
+            $network->cidr,
+            $serverEndpoint,
+            $network->dns,
+            $device->routing_mode ?? 'split'
+        );
 
         return $this->response->setJSON([
             'success' => true,
@@ -533,7 +789,204 @@ class DeviceController extends BaseController
 
         $serverEndpoint = $this->resolveServerEndpoint();
 
-        $configString = $this->buildConfigContent($decryptedPrivateKey, $device->ip_address, $serverPublicKey, $network->cidr, $serverEndpoint, $network->dns);
+        $configString = $this->buildConfigContent(
+            $decryptedPrivateKey,
+            $device->ip_address,
+            $serverPublicKey,
+            $network->cidr,
+            $serverEndpoint,
+            $network->dns,
+            $device->routing_mode ?? 'split'
+        );
+
+        $filename = url_title($device->name, '-', true) . '.conf';
+
+        return $this->response->setHeader('Content-Type', 'text/plain')
+                                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                                ->setBody($configString);
+    }
+
+    // ---------------------------------------------------------------------
+    // Generar enlace temporal compartido (One-Time / Timed Secret Link)
+    // ---------------------------------------------------------------------
+    public function generateShareLink($id)
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Método no permitido'])->setStatusCode(405);
+        }
+
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo no encontrado'])->setStatusCode(404);
+        }
+
+        $network = $this->networkModel->find($device->network_id);
+        if (!$network || !$this->hasNetworkAccess($network, 'view')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado'])->setStatusCode(403);
+        }
+
+        $token = bin2hex(random_bytes(24));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+60 minutes'));
+
+        $db = \Config\Database::connect();
+        $db->table('device_share_tokens')->insert([
+            'device_id'  => $device->id,
+            'token'      => $token,
+            'expires_at' => $expiresAt,
+            'used'       => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $shareUrl = site_url('connect/' . $token);
+
+        return $this->response->setJSON([
+            'success'   => true,
+            'share_url' => $shareUrl,
+            'expires'   => '60 minutos',
+        ]);
+    }
+
+    // ---------------------------------------------------------------------
+    // Enviar archivo de configuración por correo electrónico
+    // ---------------------------------------------------------------------
+    public function sendConfigEmail($id)
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Método no permitido'])->setStatusCode(405);
+        }
+
+        $targetEmail = trim((string) $this->request->getPost('email'));
+        if (empty($targetEmail) || filter_var($targetEmail, FILTER_VALIDATE_EMAIL) === false) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Por favor, introduce un correo electrónico válido'])->setStatusCode(400);
+        }
+
+        $device = $this->deviceModel->find($id);
+        if (!$device) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo no encontrado'])->setStatusCode(404);
+        }
+
+        $network = $this->networkModel->find($device->network_id);
+        if (!$network || !$this->hasNetworkAccess($network, 'view')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado'])->setStatusCode(403);
+        }
+
+        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
+        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
+        if (empty($decryptedPrivateKey) || empty($serverPublicKey)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Configuración de WireGuard incompleta o clave ilegible'])->setStatusCode(400);
+        }
+
+        $serverEndpoint = $this->resolveServerEndpoint();
+        $configContent = $this->buildConfigContent(
+            $decryptedPrivateKey,
+            $device->ip_address,
+            $serverPublicKey,
+            $network->cidr,
+            $serverEndpoint,
+            $network->dns,
+            $device->routing_mode ?? 'split'
+        );
+
+        $filename = url_title($device->name, '-', true) . '.conf';
+
+        try {
+            $emailService = \Config\Services::email();
+            $emailService->setTo($targetEmail);
+            $emailService->setSubject('Configuración VPN WireGuard - ' . $device->name);
+            $emailService->setMessage("Hola,\n\nAdjunto encontrarás el archivo de configuración WireGuard para el nodo: {$device->name}.\nRed: {$network->name} ({$device->ip_address})\n\nGuarda el archivo .conf e impórtalo en tu cliente oficial de WireGuard.\n\nSaludos,\nEquipo NetCrew");
+            $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
+
+            if ($emailService->send()) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Configuración enviada exitosamente a ' . esc($targetEmail)]);
+            } else {
+                log_message('error', 'Fallo al enviar correo de configuración: ' . $emailService->printDebugger(['headers']));
+                return $this->response->setJSON(['success' => false, 'message' => 'No se pudo enviar el correo. Revisa los Ajustes SMTP.'])->setStatusCode(500);
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al enviar: ' . $e->getMessage()])->setStatusCode(500);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Vista pública de conexión compartida (Sin autenticación requerida)
+    // ---------------------------------------------------------------------
+    public function connectShare($token)
+    {
+        $db = \Config\Database::connect();
+        $row = $db->table('device_share_tokens')
+                  ->where('token', $token)
+                  ->where('expires_at >', date('Y-m-d H:i:s'))
+                  ->where('used', 0)
+                  ->get()
+                  ->getRow();
+
+        if (!$row) {
+            return view('errors/html/error_404', [
+                'message' => 'El enlace de conexión ha expirado o ya ha sido utilizado.'
+            ]);
+        }
+
+        $device = $this->deviceModel->find($row->device_id);
+        if (!$device) {
+            return redirect()->to('/');
+        }
+
+        $network = $this->networkModel->find($device->network_id);
+        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
+        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
+        $serverEndpoint = $this->resolveServerEndpoint();
+
+        $configString = $this->buildConfigContent(
+            $decryptedPrivateKey,
+            $device->ip_address,
+            $serverPublicKey,
+            $network->cidr,
+            $serverEndpoint,
+            $network->dns,
+            $device->routing_mode ?? 'split'
+        );
+
+        $data = [
+            'token'   => $token,
+            'device'  => $device,
+            'network' => $network,
+            'config'  => $configString,
+        ];
+
+        return view('devices/connect_share', $data);
+    }
+
+    // ---------------------------------------------------------------------
+    // Descarga desde vista pública de conexión compartida
+    // ---------------------------------------------------------------------
+    public function downloadShare($token)
+    {
+        $db = \Config\Database::connect();
+        $row = $db->table('device_share_tokens')
+                  ->where('token', $token)
+                  ->where('expires_at >', date('Y-m-d H:i:s'))
+                  ->get()
+                  ->getRow();
+
+        if (!$row) {
+            return redirect()->to('/');
+        }
+
+        $device = $this->deviceModel->find($row->device_id);
+        $network = $this->networkModel->find($device->network_id);
+        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
+        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
+        $serverEndpoint = $this->resolveServerEndpoint();
+
+        $configString = $this->buildConfigContent(
+            $decryptedPrivateKey,
+            $device->ip_address,
+            $serverPublicKey,
+            $network->cidr,
+            $serverEndpoint,
+            $network->dns,
+            $device->routing_mode ?? 'split'
+        );
 
         $filename = url_title($device->name, '-', true) . '.conf';
 
@@ -580,7 +1033,7 @@ class DeviceController extends BaseController
     // ---------------------------------------------------------------------
     // Helper: Formatear contenido del archivo .conf
     // ---------------------------------------------------------------------
-    protected function buildConfigContent($privateKey, $ipAddress, $serverPublicKey, $allowedIps, $serverEndpoint, $dns = null)
+    protected function buildConfigContent($privateKey, $ipAddress, $serverPublicKey, $allowedIps, $serverEndpoint, $dns = null, $routingMode = 'split')
     {
         // Limpiar endpoint de esquemas (http://, https://) y barras diagonales accidentales
         $serverEndpoint = trim($serverEndpoint);
@@ -599,14 +1052,25 @@ class DeviceController extends BaseController
                   "Address = {$ipAddress}/{$mask}\n";
 
         if (!empty($dns)) {
-            $config .= "DNS = " . trim($dns) . "\n";
+            // Sanitizar DNS contra inyección de nuevas líneas o directivas en el .conf
+            $cleanDns = [];
+            foreach (explode(',', (string) $dns) as $entry) {
+                $entry = trim(preg_replace('/[\r\n\0]/', '', $entry));
+                if ($entry !== '' && (filter_var($entry, FILTER_VALIDATE_IP) !== false || preg_match('/^[a-zA-Z0-9.-]+$/', $entry))) {
+                    $cleanDns[] = $entry;
+                }
+            }
+            if (!empty($cleanDns)) {
+                $config .= "DNS = " . implode(', ', $cleanDns) . "\n";
+            }
         }
                   
-        $allowedIpsList = [$allowedIps];
-                  
-
-        
-        $allowedIpsString = implode(', ', $allowedIpsList);
+        // Modo de enrutamiento: Full-Tunnel (todo el tráfico / Internet) vs Split-Tunnel (solo red local)
+        if ($routingMode === 'full') {
+            $allowedIpsString = '0.0.0.0/0, ::/0';
+        } else {
+            $allowedIpsString = $allowedIps;
+        }
         
         $config .= "\n[Peer]\n" .
                    "PublicKey = {$serverPublicKey}\n" .
@@ -714,7 +1178,7 @@ class DeviceController extends BaseController
     protected function fetchPeerStatus(object $device): ?array
     {
         try {
-            $dump = WireguardService::fromSettings(5)->dump();
+            $dump = WireguardService::cachedDump(5, 5);
         } catch (\Throwable $e) {
             log_message('notice', 'No se pudo obtener estado WireGuard en tiempo real para nodo ' . $device->id . ': ' . $e->getMessage());
             return null;
@@ -814,7 +1278,7 @@ class DeviceController extends BaseController
 
         $peers = [];
         try {
-            $dump       = WireguardService::fromSettings(5)->dump();
+            $dump       = WireguardService::cachedDump(5, 5);
             $remoteTime = $dump['remote_time'];
 
             // Solo se devuelven los peers de esta red (no exponer datos de otras redes)
@@ -884,7 +1348,16 @@ class DeviceController extends BaseController
             return false;
         }
 
-        if ($user->inGroup('superadmin', 'supervisor') || $user->can('devices.*') || $user->can("devices.{$action}")) {
+        if ($user->inGroup('superadmin')) {
+            return true;
+        }
+
+        $hasPermission = $user->can('devices.*') || $user->can("devices.{$action}");
+        if (!$hasPermission) {
+            return false;
+        }
+
+        if ($user->inGroup('supervisor')) {
             return true;
         }
 

@@ -12,6 +12,17 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NetCrew | Acceso</title>
+  <!-- Configuración PWA (Instalable en iOS y Android) -->
+  <link rel="manifest" href="<?= base_url('manifest.json') ?>" />
+  <meta name="theme-color" content="#F38020" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NetCrew" />
+  <link rel="apple-touch-icon" href="<?= base_url('assets/images/logos/apple-touch-icon.png') ?>" />
+  <link rel="apple-touch-icon" sizes="192x192" href="<?= base_url('assets/images/logos/icon-192.png') ?>" />
+  <link rel="apple-touch-icon" sizes="512x512" href="<?= base_url('assets/images/logos/icon-512.png') ?>" />
+
   <link rel="shortcut icon" type="image/png" href="<?= base_url('assets/images/logos/favicon.png') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>" />
@@ -162,5 +173,7 @@
       }
     });
   </script>
+  <!-- PWA Service Worker & Gestor de Instalación -->
+  <script src="<?= base_url('assets/js/pwa.js') ?>"></script>
 </body>
 </html>

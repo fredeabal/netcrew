@@ -260,11 +260,13 @@ class WireguardService
     public function addPeer(string $publicKey, string $ip): void
     {
         $this->run('wg set ' . $this->iface() . ' peer ' . escapeshellarg($publicKey) . ' allowed-ips ' . escapeshellarg($ip . '/32'));
+        self::invalidateDumpCache();
     }
 
     public function removePeer(string $publicKey): void
     {
         $this->run('wg set ' . $this->iface() . ' peer ' . escapeshellarg($publicKey) . ' remove');
+        self::invalidateDumpCache();
     }
 
     public function removePeers(array $publicKeys): void
@@ -277,6 +279,7 @@ class WireguardService
         }
 
         $this->runBatch($commands);
+        self::invalidateDumpCache();
     }
 
     /**
@@ -290,6 +293,34 @@ class WireguardService
     public function isInterfaceUp(): bool
     {
         return $this->succeeds('wg show ' . $this->iface());
+    }
+
+    /**
+     * Obtiene el estado de los peers usando una caché breve para evitar abrir
+     * múltiples sesiones SSH concurrentes desde el dashboard o el polling.
+     *
+     * @return array{remote_time:int, peers:array<string,array>}
+     */
+    public static function cachedDump(int $ttl = 5, int $sshTimeout = 5): array
+    {
+        $cacheKey = 'wg_peers_dump';
+        $cached   = cache()->get($cacheKey);
+        if (is_array($cached) && isset($cached['remote_time'], $cached['peers'])) {
+            return $cached;
+        }
+
+        $dump = self::fromSettings($sshTimeout)->dump();
+        cache()->save($cacheKey, $dump, $ttl);
+
+        return $dump;
+    }
+
+    /**
+     * Invalida la caché de estado de peers.
+     */
+    public static function invalidateDumpCache(): void
+    {
+        cache()->delete('wg_peers_dump');
     }
 
     /**
@@ -328,14 +359,38 @@ class WireguardService
     }
 
     /**
-     * Reconcilia los peers del servidor con los dispositivos activos de la BD.
+     * Reconcilia los peers del servidor con los dispositivos activos de la BD
+     * que pertenezcan a redes activas y no hayan expirado.
      *
      * @return array{removed:int, restored:int}
      */
     public function syncPeers(): array
     {
+        // 1. Desactivar automáticamente cualquier nodo cuya fecha de expiración haya pasado
+        $now = date('Y-m-d H:i:s');
+        $deviceModel = new DeviceModel();
+        $expiredDevices = $deviceModel->where('active', 1)
+                                      ->where('expires_at IS NOT NULL')
+                                      ->where('expires_at <=', $now)
+                                      ->findAll();
+
+        if (!empty($expiredDevices)) {
+            foreach ($expiredDevices as $expDev) {
+                $deviceModel->update($expDev->id, ['active' => 0]);
+            }
+        }
+
         $serverPeers = $this->dump()['peers'];
-        $devices     = (new DeviceModel())->where('active', 1)->findAll();
+        $devices     = $deviceModel
+            ->select('devices.*')
+            ->join('networks', 'networks.id = devices.network_id')
+            ->where('devices.active', 1)
+            ->where('networks.active', 1)
+            ->groupStart()
+                ->where('devices.expires_at IS NULL')
+                ->orWhere('devices.expires_at >', $now)
+            ->groupEnd()
+            ->findAll();
 
         $activeKeys = [];
         $commands   = [];
@@ -373,6 +428,7 @@ class WireguardService
 
         $commands[] = 'wg-quick save ' . $this->iface();
         $this->runBatch($commands);
+        self::invalidateDumpCache();
 
         return ['removed' => $removed, 'restored' => $restored];
     }

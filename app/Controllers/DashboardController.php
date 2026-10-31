@@ -100,12 +100,10 @@ class DashboardController extends BaseController
         }
 
         try {
-            // Conexión SSH rápida con timeout de 3 segundos
-            $wg = WireguardService::fromSettings(3);
-            $telemetry['isInterfaceUp'] = $wg->isInterfaceUp();
-
-            $dump  = $wg->dump();
+            // Obtener estado de peers (cacheado por 5s para evitar múltiples sesiones SSH)
+            $dump  = WireguardService::cachedDump(5, 3);
             $peers = $dump['peers'] ?? [];
+            $telemetry['isInterfaceUp'] = true;
 
             $onlineCount     = 0;
             $trafficByDevice = [];

@@ -4,10 +4,10 @@
 <div class="card border shadow-none position-relative overflow-hidden mb-4">
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
-      <div class="col-9">
+      <div class="col-8 col-sm-9">
         <h4 class="fw-semibold mb-8">Panel de Usuario</h4>
         <nav aria-label="breadcrumb">
-          <ol class="breadcrumb">
+          <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item">
               <a class="text-muted text-decoration-none" href="<?= base_url() ?>">Inicio</a>
             </li>
@@ -15,10 +15,10 @@
           </ol>
         </nav>
       </div>
-      <div class="col-3 text-end">
-        <span class="badge <?= ($telemetry['isInterfaceUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> px-3 py-2 fs-2 fw-semibold">
-          <i class="ti <?= ($telemetry['isInterfaceUp'] ?? false) ? 'ti-check' : 'ti-alert-circle' ?> me-1"></i>
-          WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>
+      <div class="col-4 col-sm-3 text-end">
+        <span class="badge <?= ($telemetry['isInterfaceUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> px-2 px-sm-3 py-2 fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+          <i class="ti <?= ($telemetry['isInterfaceUp'] ?? false) ? 'ti-check' : 'ti-alert-circle' ?> me-sm-1"></i>
+          <span class="d-none d-sm-inline">WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
         </span>
       </div>
     </div>

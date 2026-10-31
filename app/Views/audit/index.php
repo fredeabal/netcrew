@@ -36,7 +36,8 @@
             <p class="text-muted mb-0 small">Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.</p>
           </div>
         <?php else: ?>
-          <div class="table-responsive">
+          <!-- VISTA ESCRITORIO: TABLA (d-none d-md-block) -->
+          <div class="table-responsive d-none d-md-block">
             <table class="table table-hover align-middle">
               <thead>
                 <tr class="text-muted fw-semibold">
@@ -74,6 +75,59 @@
               </tbody>
             </table>
           </div>
+
+          <!-- VISTA MÓVIL: CARDS (d-block d-md-none) -->
+          <div class="d-block d-md-none" id="auditCardsContainer">
+            <?php foreach ($logs as $log): ?>
+              <?php
+                $isLogin = str_contains($log->action, 'LOGIN') || str_contains($log->action, 'LOGOUT');
+                $isSuccess = str_contains($log->action, 'SUCCESS');
+                $isFailed = str_contains($log->action, 'FAILED') || str_contains($log->action, 'DELETE');
+                
+                $badgeBg = 'bg-dark-subtle text-dark';
+                $icon = 'ti-activity';
+                if ($isSuccess) {
+                    $badgeBg = 'bg-success-subtle text-success';
+                    $icon = 'ti-circle-check';
+                } elseif ($isFailed) {
+                    $badgeBg = 'bg-danger-subtle text-danger';
+                    $icon = 'ti-alert-circle';
+                } elseif ($isLogin) {
+                    $badgeBg = 'bg-info-subtle text-info';
+                    $icon = 'ti-login';
+                }
+              ?>
+              <div class="mobile-card-item">
+                <div class="mobile-card-header">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge <?= $badgeBg ?> fw-semibold px-2 py-1 fs-2">
+                      <i class="ti <?= $icon ?> me-1"></i><?= esc($log->action) ?>
+                    </span>
+                  </div>
+                  <small class="text-muted fs-2">
+                    <?= date('d/m/Y H:i', strtotime($log->created_at)) ?>
+                  </small>
+                </div>
+                <div class="mobile-card-body">
+                  <?php if (!empty($log->description)): ?>
+                    <p class="mb-2 fs-3 text-body">
+                      <?= esc($log->description) ?>
+                    </p>
+                  <?php endif; ?>
+                  <div class="d-flex align-items-center justify-content-between pt-1 border-top border-opacity-10 border-white">
+                    <div class="d-flex align-items-center gap-1 text-muted fs-2">
+                      <i class="ti ti-user text-primary"></i>
+                      <span class="fw-semibold text-reset"><?= esc($log->username ?? 'Sistema') ?></span>
+                    </div>
+                    <code class="text-muted fs-2">
+                      <i class="ti ti-world me-1"></i><?= esc($log->ip_address) ?>
+                    </code>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+
           <div class="mt-4">
             <?= $pager->links('audit', 'premium') ?>
           </div>

@@ -37,14 +37,15 @@
   <!-- Etiquetas meta requeridas y SEO -->
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="NetCrew - Plataforma avanzada de administración de redes VPN WireGuard. Gestión intuitiva de nodos, tráfico y seguridad corporativa." />
   <meta name="keywords" content="NetCrew, VPN, WireGuard, Gestión de Redes, Seguridad Corporativa, Control de Nodos" />
   <meta name="author" content="NetCrew" />
 
   <!-- Configuración PWA (Instalable en iOS y Android) -->
   <link rel="manifest" href="<?= base_url('manifest.json') ?>" />
-  <meta name="theme-color" content="#F38020" />
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

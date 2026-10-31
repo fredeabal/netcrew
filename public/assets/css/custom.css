@@ -165,10 +165,103 @@
     color: var(--bs-primary);
 }
 
-/* --- Badge de rol con efecto sutil --- */
+/* ==========================================================================
+   REGLA 6 (DESIGN_UI): INSIGNIAS Y BADGES UNIFICADOS
+   - Escala Tipográfica Unificada: fs-2 (0.75rem / 12px) y padding px-2.5 py-1
+   - Esquinas Moderadas como Botones: border-radius: 6px (nunca rounded-pill)
+   - Alto contraste en Modo Claro (Light Mode) y fondos sutiles en Modo Oscuro
+   ========================================================================== */
 .badge {
-    font-weight: 500;
-    letter-spacing: 0.3px;
+    font-size: 0.75rem !important; /* 12px / fs-2 */
+    font-weight: 600 !important;
+    letter-spacing: 0.25px;
+    border-radius: 6px !important;
+    padding: 0.25rem 0.625rem !important; /* px-2.5 py-1 */
+    line-height: 1.25 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Evitar forma de píldora exagerada en todo el sistema según Regla 6 */
+.badge.rounded-pill {
+    border-radius: 6px !important;
+}
+
+/* --- MODO CLARO (LIGHT MODE) - ALTO CONTRASTE Y LEGIBILIDAD GARANTIZADA --- */
+[data-bs-theme="light"] .badge.bg-dark-subtle,
+[data-bs-theme="light"] .badge.bg-secondary-subtle {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+[data-bs-theme="light"] .badge.bg-success-subtle {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+
+[data-bs-theme="light"] .badge.bg-danger-subtle {
+    background-color: #fef2f2 !important;
+    color: #b91c1c !important;
+    border: 1px solid #fecaca !important;
+}
+
+[data-bs-theme="light"] .badge.bg-warning-subtle {
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border: 1px solid #fde68a !important;
+}
+
+[data-bs-theme="light"] .badge.bg-info-subtle {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    border: 1px solid #bae6fd !important;
+}
+
+[data-bs-theme="light"] .badge.bg-primary-subtle {
+    background-color: rgba(var(--bs-primary-rgb), 0.12) !important;
+    color: var(--bs-primary) !important;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.25) !important;
+}
+
+/* --- MODO OSCURO (DARK MODE) - FONDOS TRASLÚCIDOS SUTILES --- */
+[data-bs-theme="dark"] .badge.bg-dark-subtle,
+[data-bs-theme="dark"] .badge.bg-secondary-subtle {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-success-subtle {
+    background-color: rgba(19, 222, 185, 0.15) !important;
+    color: #13deb9 !important;
+    border: 1px solid rgba(19, 222, 185, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-danger-subtle {
+    background-color: rgba(250, 137, 107, 0.15) !important;
+    color: #fa896b !important;
+    border: 1px solid rgba(250, 137, 107, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-warning-subtle {
+    background-color: rgba(255, 174, 31, 0.15) !important;
+    color: #ffae1f !important;
+    border: 1px solid rgba(255, 174, 31, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-info-subtle {
+    background-color: rgba(83, 155, 255, 0.15) !important;
+    color: #539bff !important;
+    border: 1px solid rgba(83, 155, 255, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-primary-subtle {
+    background-color: rgba(var(--bs-primary-rgb), 0.18) !important;
+    color: var(--bs-primary) !important;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.3) !important;
 }
 
 /* --- Barra de búsqueda mejorada --- */

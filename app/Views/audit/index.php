@@ -36,6 +36,32 @@
             <p class="text-muted mb-0 small">Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.</p>
           </div>
         <?php else: ?>
+          <?php
+            // Helper para determinar estilos e icono semántico según la acción
+            $getAuditBadgeMeta = function($action) {
+                $act = strtoupper($action);
+                if (str_contains($act, 'SUCCESS')) {
+                    return ['class' => 'bg-success-subtle text-success', 'icon' => 'ti-circle-check'];
+                }
+                if (str_contains($act, 'FAIL') || str_contains($act, 'DELETE') || str_contains($act, 'ERROR')) {
+                    return ['class' => 'bg-danger-subtle text-danger', 'icon' => 'ti-alert-circle'];
+                }
+                if (str_contains($act, 'LOGOUT')) {
+                    return ['class' => 'bg-warning-subtle text-warning', 'icon' => 'ti-logout'];
+                }
+                if (str_contains($act, 'LOGIN')) {
+                    return ['class' => 'bg-info-subtle text-info', 'icon' => 'ti-login'];
+                }
+                if (str_contains($act, 'CREATE')) {
+                    return ['class' => 'bg-primary-subtle text-primary', 'icon' => 'ti-plus'];
+                }
+                if (str_contains($act, 'UPDATE') || str_contains($act, 'EDIT')) {
+                    return ['class' => 'bg-info-subtle text-info', 'icon' => 'ti-pencil'];
+                }
+                return ['class' => 'bg-secondary-subtle text-secondary', 'icon' => 'ti-activity'];
+            };
+          ?>
+
           <!-- VISTA ESCRITORIO: TABLA (d-none d-md-block) -->
           <div class="table-responsive d-none d-md-block">
             <table class="table table-hover align-middle">
@@ -50,18 +76,19 @@
               </thead>
               <tbody class="border-top">
                 <?php foreach ($logs as $log): ?>
+                  <?php $meta = $getAuditBadgeMeta($log->action); ?>
                   <tr>
                     <td>
                       <small class="text-muted"><?= date('d/m/Y H:i:s', strtotime($log->created_at)) ?></small>
                     </td>
                     <td>
-                      <span class="badge bg-primary-subtle text-primary fw-semibold">
+                      <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
                         <i class="ti ti-user me-1"></i><?= esc($log->username ?? 'Sistema') ?>
                       </span>
                     </td>
                     <td>
-                      <span class="badge bg-dark-subtle text-dark fw-semibold">
-                        <?= esc($log->action) ?>
+                      <span class="badge <?= $meta['class'] ?> fw-semibold fs-2 px-2.5 py-1">
+                        <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
                       </span>
                     </td>
                     <td>
@@ -79,29 +106,12 @@
           <!-- VISTA MÓVIL: CARDS (d-block d-md-none) -->
           <div class="d-block d-md-none" id="auditCardsContainer">
             <?php foreach ($logs as $log): ?>
-              <?php
-                $isLogin = str_contains($log->action, 'LOGIN') || str_contains($log->action, 'LOGOUT');
-                $isSuccess = str_contains($log->action, 'SUCCESS');
-                $isFailed = str_contains($log->action, 'FAILED') || str_contains($log->action, 'DELETE');
-                
-                $badgeBg = 'bg-dark-subtle text-dark';
-                $icon = 'ti-activity';
-                if ($isSuccess) {
-                    $badgeBg = 'bg-success-subtle text-success';
-                    $icon = 'ti-circle-check';
-                } elseif ($isFailed) {
-                    $badgeBg = 'bg-danger-subtle text-danger';
-                    $icon = 'ti-alert-circle';
-                } elseif ($isLogin) {
-                    $badgeBg = 'bg-info-subtle text-info';
-                    $icon = 'ti-login';
-                }
-              ?>
+              <?php $meta = $getAuditBadgeMeta($log->action); ?>
               <div class="mobile-card-item">
                 <div class="mobile-card-header">
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge <?= $badgeBg ?> fw-semibold px-2 py-1 fs-2">
-                      <i class="ti <?= $icon ?> me-1"></i><?= esc($log->action) ?>
+                    <span class="badge <?= $meta['class'] ?> fw-semibold fs-2 px-2.5 py-1">
+                      <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
                     </span>
                   </div>
                   <small class="text-muted fs-2">

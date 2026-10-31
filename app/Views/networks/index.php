@@ -92,7 +92,7 @@
                     <?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?>
                   </td>
                   <td class="text-center">
-                    <span class="badge bg-light-primary text-primary fw-semibold fs-3 rounded-pill px-3 py-1">
+                    <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
                       <?= esc($net->device_count) ?>
                     </span>
                   </td>
@@ -196,7 +196,7 @@
                 <div class="mobile-card-row">
                   <span class="mobile-card-label"><i class="ti ti-devices"></i> Nodos:</span>
                   <span class="mobile-card-value">
-                    <span class="badge bg-light-primary text-primary fw-semibold rounded-pill px-2 py-1">
+                    <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
                       <?= esc($net->device_count) ?>
                     </span>
                   </span>

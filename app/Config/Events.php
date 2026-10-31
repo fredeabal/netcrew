@@ -55,3 +55,20 @@ Events::on('pre_system', static function (): void {
         }
     }
 });
+
+// --------------------------------------------------------------------
+// Eventos de Auditoría de Autenticación
+// --------------------------------------------------------------------
+Events::on('login', static function ($user): void {
+    \App\Models\AuditLogModel::log('LOGIN_SUCCESS', 'Inicio de sesión exitoso', $user->id ?? null, $user->username ?? $user->email ?? 'Usuario');
+});
+
+Events::on('failedLogin', static function ($credentials): void {
+    $identifier = $credentials['email'] ?? $credentials['username'] ?? 'Desconocido';
+    \App\Models\AuditLogModel::log('LOGIN_FAILED', "Intento fallido de inicio de sesión para: {$identifier}");
+});
+
+Events::on('logout', static function ($user): void {
+    \App\Models\AuditLogModel::log('LOGOUT', 'Cierre de sesión', $user->id ?? null, $user->username ?? $user->email ?? 'Usuario');
+});
+

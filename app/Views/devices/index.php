@@ -138,7 +138,7 @@
                       <td class="text-center">
                         <code class="fs-3 text-muted"><?= esc($dev->ip_address) ?></code>
                       </td>
-                      <td class="text-center device-status-cell bg-danger-subtle text-danger fs-3" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">
+                      <td class="text-center device-status-cell text-muted fs-3" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">
                         -
                       </td>
                       <td class="text-center text-muted device-last-seen-cell" data-pubkey="<?= esc($dev->public_key) ?>">
@@ -357,8 +357,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const qrcodeContainer = document.getElementById("qrcode-container-page");
   const btnDownloadConfigModal = document.getElementById("btn-download-config-modal");
   
-  const modalViewConfig = new bootstrap.Modal(document.getElementById('modal-view-config'));
-  const modalAddDevice = new bootstrap.Modal(document.getElementById('modal-add-device'));
+  const modalViewConfigEl = document.getElementById('modal-view-config');
+  const modalViewConfig = modalViewConfigEl ? new bootstrap.Modal(modalViewConfigEl) : null;
 
   let currentActiveDeviceId = null;
   const btnShareLink = document.getElementById("btn-copy-share-link");
@@ -604,19 +604,26 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           });
 
+          function setWrapperStatus(wrapper, state) {
+            wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');
+            if (state === 'online') {
+              wrapper.classList.add('bg-success-subtle', 'text-success');
+            } else if (state === 'offline') {
+              wrapper.classList.add('bg-danger-subtle', 'text-danger');
+            } else {
+              wrapper.classList.add('bg-light', 'text-muted');
+            }
+          }
+
           iconWrappers.forEach(wrapper => {
             const pubkey = wrapper.dataset.pubkey;
             const active = wrapper.dataset.active;
             
             if (active === '1') {
               const peer = peers[pubkey];
-              if (peer && peer.connected) {
-                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-success-subtle text-success";
-              } else {
-                wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
-              }
+              setWrapperStatus(wrapper, (peer && peer.connected) ? 'online' : 'offline');
             } else {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
+              setWrapperStatus(wrapper, 'inactive');
             }
           });
         } else {
@@ -629,10 +636,11 @@ document.addEventListener("DOMContentLoaded", function () {
             cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
           });
           iconWrappers.forEach(wrapper => {
+            wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');
             if (wrapper.dataset.active === '1') {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
+              wrapper.classList.add('bg-danger-subtle', 'text-danger');
             } else {
-              wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
+              wrapper.classList.add('bg-light', 'text-muted');
             }
           });
         }
@@ -648,10 +656,11 @@ document.addEventListener("DOMContentLoaded", function () {
           cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
         });
         iconWrappers.forEach(wrapper => {
+          wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');
           if (wrapper.dataset.active === '1') {
-            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-danger-subtle text-danger";
+            wrapper.classList.add('bg-danger-subtle', 'text-danger');
           } else {
-            wrapper.className = "network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper bg-light text-muted";
+            wrapper.classList.add('bg-light', 'text-muted');
           }
         });
       })

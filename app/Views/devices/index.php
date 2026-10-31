@@ -534,9 +534,13 @@ document.addEventListener("DOMContentLoaded", function () {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    fetch(`<?= site_url('devices/realtime-status/' . $network->id) ?>`)
+    // Ruta relativa al origen actual: evita fallos si se accede por una IP/host distinto a app.baseURL
+    fetch(`<?= parse_url(site_url('devices/realtime-status/' . $network->id), PHP_URL_PATH) ?>`, { credentials: 'same-origin' })
       .then(response => response.json())
       .then(res => {
+        if (!res.success) {
+          console.error('Estado en tiempo real no disponible:', res.message);
+        }
         if (res.success) {
           const peers = res.peers || {};
           cells.forEach(cell => {

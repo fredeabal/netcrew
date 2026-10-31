@@ -189,12 +189,12 @@ if (!empty($networks)) {
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <?php if (auth()->user()->can('networks.create') || auth()->user()->inGroup('superadmin')): ?>
-                            <a href="<?= site_url('networks/create') ?>" class="btn btn-sm btn-primary border-0 d-flex align-items-center gap-1 shadow-none">
+                            <a href="<?= site_url('networks/create') ?>" class="btn btn-sm btn-primary border-0 d-none d-sm-inline-flex align-items-center gap-1 shadow-none">
                                 <i class="ti ti-plus fs-4"></i>
-                                <span class="d-none d-sm-inline">Nueva Red</span>
+                                <span>Nueva Red</span>
                             </a>
                         <?php endif; ?>
-                        <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary">
+                        <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
                             Gestionar Redes <i class="ti ti-arrow-right ms-1"></i>
                         </a>
                     </div>

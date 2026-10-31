@@ -1196,13 +1196,17 @@ body {
     }
 
     /* Botones touch-friendly y estilizados */
-    .btn {
+    .btn:not(.btn-sm) {
         min-height: 40px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
         border-radius: 10px !important;
         font-weight: 600;
+    }
+
+    .btn.btn-sm {
+        min-height: 32px;
+        padding: 0.25rem 0.65rem !important;
+        font-size: 0.78rem !important;
+        border-radius: 8px !important;
     }
 }
 

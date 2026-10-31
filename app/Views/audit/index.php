@@ -37,28 +37,79 @@
           </div>
         <?php else: ?>
           <?php
-            // Helper para determinar estilos e icono semántico según la acción
+            // Helper para determinar estilos, icono y texto uniforme para cada acción
             $getAuditBadgeMeta = function($action) {
-                $act = strtoupper($action);
-                if (str_contains($act, 'SUCCESS')) {
-                    return ['class' => 'bg-success-subtle text-success', 'icon' => 'ti-circle-check'];
+                $act = strtoupper(str_replace(['.', '-'], '_', $action));
+
+                if (str_contains($act, 'LOGIN_SUCCESS') || str_contains($act, 'AUTH_SUCCESS')) {
+                    return [
+                        'class' => 'bg-success-subtle text-success',
+                        'icon'  => 'ti-circle-check',
+                        'label' => 'Inicio Sesión'
+                    ];
                 }
-                if (str_contains($act, 'FAIL') || str_contains($act, 'DELETE') || str_contains($act, 'ERROR')) {
-                    return ['class' => 'bg-danger-subtle text-danger', 'icon' => 'ti-alert-circle'];
+                if (str_contains($act, 'LOGIN_FAIL') || str_contains($act, 'AUTH_FAIL')) {
+                    return [
+                        'class' => 'bg-danger-subtle text-danger',
+                        'icon'  => 'ti-alert-circle',
+                        'label' => 'Fallo Acceso'
+                    ];
                 }
                 if (str_contains($act, 'LOGOUT')) {
-                    return ['class' => 'bg-warning-subtle text-warning', 'icon' => 'ti-logout'];
+                    return [
+                        'class' => 'bg-warning-subtle text-warning',
+                        'icon'  => 'ti-logout',
+                        'label' => 'Cierre Sesión'
+                    ];
                 }
-                if (str_contains($act, 'LOGIN')) {
-                    return ['class' => 'bg-info-subtle text-info', 'icon' => 'ti-login'];
+                if (str_contains($act, 'DEVICE_CREATE')) {
+                    return [
+                        'class' => 'bg-primary-subtle text-primary',
+                        'icon'  => 'ti-plus',
+                        'label' => 'Nodo Creado'
+                    ];
+                }
+                if (str_contains($act, 'DEVICE_UPDATE') || str_contains($act, 'DEVICE_UPDATED')) {
+                    return [
+                        'class' => 'bg-info-subtle text-info',
+                        'icon'  => 'ti-pencil',
+                        'label' => 'Nodo Editado'
+                    ];
+                }
+                if (str_contains($act, 'DEVICE_DELETE')) {
+                    return [
+                        'class' => 'bg-danger-subtle text-danger',
+                        'icon'  => 'ti-trash',
+                        'label' => 'Nodo Borrado'
+                    ];
                 }
                 if (str_contains($act, 'CREATE')) {
-                    return ['class' => 'bg-primary-subtle text-primary', 'icon' => 'ti-plus'];
+                    return [
+                        'class' => 'bg-primary-subtle text-primary',
+                        'icon'  => 'ti-plus',
+                        'label' => 'Creación'
+                    ];
                 }
                 if (str_contains($act, 'UPDATE') || str_contains($act, 'EDIT')) {
-                    return ['class' => 'bg-info-subtle text-info', 'icon' => 'ti-pencil'];
+                    return [
+                        'class' => 'bg-info-subtle text-info',
+                        'icon'  => 'ti-pencil',
+                        'label' => 'Modificación'
+                    ];
                 }
-                return ['class' => 'bg-secondary-subtle text-secondary', 'icon' => 'ti-activity'];
+                if (str_contains($act, 'DELETE')) {
+                    return [
+                        'class' => 'bg-danger-subtle text-danger',
+                        'icon'  => 'ti-trash',
+                        'label' => 'Eliminación'
+                    ];
+                }
+
+                return [
+                    'class' => 'bg-secondary-subtle text-secondary',
+                    'icon'  => 'ti-activity',
+                    'label' => ucwords(strtolower(str_replace(['_', '.'], ' ', $action)))
+                ];
             };
           ?>
 
@@ -87,8 +138,8 @@
                       </span>
                     </td>
                     <td>
-                      <span class="badge <?= $meta['class'] ?> fw-semibold badge-audit">
-                        <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
+                      <span class="badge <?= $meta['class'] ?> fw-semibold badge-action">
+                        <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($meta['label']) ?>
                       </span>
                     </td>
                     <td>
@@ -110,8 +161,8 @@
               <div class="mobile-card-item">
                 <div class="mobile-card-header">
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge <?= $meta['class'] ?> fw-semibold badge-audit">
-                      <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
+                    <span class="badge <?= $meta['class'] ?> fw-semibold badge-action">
+                      <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($meta['label']) ?>
                     </span>
                   </div>
                   <small class="text-muted fs-2">

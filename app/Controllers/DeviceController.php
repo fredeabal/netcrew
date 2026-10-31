@@ -492,7 +492,7 @@ class DeviceController extends BaseController
         }
 
         if ($this->deviceModel->update($id, $updateData)) {
-            \App\Models\AuditLogModel::log('device.updated', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.");
+            \App\Models\AuditLogModel::log('DEVICE_UPDATE', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.");
 
             if (!$isAjax) {
                 return redirect()->to('/devices/show/' . $id)->with('message', 'Nodo actualizado correctamente.');

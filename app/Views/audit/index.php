@@ -83,7 +83,7 @@
                     </td>
                     <td>
                       <span class="fw-semibold text-body">
-                        <i class="ti ti-user text-muted me-1"></i><?= esc($log->username ?? 'Sistema') ?>
+                        <?= esc($log->username ?? 'Sistema') ?>
                       </span>
                     </td>
                     <td>
@@ -125,8 +125,7 @@
                     </p>
                   <?php endif; ?>
                   <div class="d-flex align-items-center justify-content-between pt-1 border-top border-opacity-10 border-white">
-                    <div class="d-flex align-items-center gap-1 text-muted fs-2">
-                      <i class="ti ti-user text-primary"></i>
+                    <div class="text-muted fs-2">
                       <span class="fw-semibold text-reset"><?= esc($log->username ?? 'Sistema') ?></span>
                     </div>
                     <code class="text-muted fs-2">

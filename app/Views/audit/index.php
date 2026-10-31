@@ -82,12 +82,12 @@
                       <small class="text-muted"><?= date('d/m/Y H:i:s', strtotime($log->created_at)) ?></small>
                     </td>
                     <td>
-                      <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
-                        <i class="ti ti-user me-1"></i><?= esc($log->username ?? 'Sistema') ?>
+                      <span class="fw-semibold text-body">
+                        <i class="ti ti-user text-muted me-1"></i><?= esc($log->username ?? 'Sistema') ?>
                       </span>
                     </td>
                     <td>
-                      <span class="badge <?= $meta['class'] ?> fw-semibold fs-2 px-2.5 py-1">
+                      <span class="badge <?= $meta['class'] ?> fw-semibold badge-audit">
                         <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
                       </span>
                     </td>
@@ -110,7 +110,7 @@
               <div class="mobile-card-item">
                 <div class="mobile-card-header">
                   <div class="d-flex align-items-center gap-2">
-                    <span class="badge <?= $meta['class'] ?> fw-semibold fs-2 px-2.5 py-1">
+                    <span class="badge <?= $meta['class'] ?> fw-semibold badge-audit">
                       <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($log->action) ?>
                     </span>
                   </div>

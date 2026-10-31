@@ -30,9 +30,9 @@
     <div class="card">
       <div class="card-body">
         <?php if (empty($logs)): ?>
-          <div class="alert alert-dark text-center py-5 rounded border-0" role="alert">
+          <div class="text-center py-5">
             <i class="ti ti-history fs-8 text-muted d-block mb-2"></i>
-            <h6 class="fw-semibold text-dark">No hay registros de auditoría aún</h6>
+            <h6 class="fw-semibold">No hay registros de auditoría aún</h6>
             <p class="text-muted mb-0 small">Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.</p>
           </div>
         <?php else: ?>
@@ -75,7 +75,7 @@
             </table>
           </div>
           <div class="mt-4">
-            <?= $pager->links('audit', 'bootstrap_pager') ?>
+            <?= $pager->links('audit', 'premium') ?>
           </div>
         <?php endif; ?>
       </div>

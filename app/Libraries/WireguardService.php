@@ -136,7 +136,8 @@ class WireguardService
         try {
             return \Config\Services::encrypter()->decrypt(base64_decode($value));
         } catch (Throwable $e) {
-            throw new RuntimeException('Error al desencriptar la credencial SSH guardada.', 0, $e);
+            log_message('error', 'Error al desencriptar credencial SSH (' . $key . '): ' . $e->getMessage());
+            throw new RuntimeException('Error al desencriptar la credencial SSH guardada (la clave de cifrado .env cambió). Por favor, ve a "Ajustes WireGuard" e introduce nuevamente tu contraseña o llave SSH para reconectar.', 0, $e);
         }
     }
 

@@ -25,6 +25,16 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
+                    <?php if (!empty($credential_decrypt_error)): ?>
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert">
+                            <i class="ti ti-alert-triangle fs-6 flex-shrink-0"></i>
+                            <div>
+                                <strong>La clave de cifrado de la aplicación (.env) ha cambiado.</strong><br>
+                                No se pudo desencriptar la credencial SSH anterior. Por favor, reintroduce tu contraseña o llave privada SSH a continuación y pulsa <strong>Guardar Cambios</strong> para restablecer la comunicación con WireGuard.
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <form action="<?= base_url('settings/wireguard/update') ?>" method="POST">
                         <?= csrf_field() ?>
 
@@ -75,6 +85,7 @@
                             <div class="col-md-6">
                                 <label for="wg_endpoint" class="form-label fw-semibold">Endpoint Público del Servidor (IP/Host:Puerto)</label>
                                 <input type="text" class="form-control" id="wg_endpoint" name="wg_endpoint" value="<?= old('wg_endpoint', esc($wg_endpoint ?? '')) ?>" placeholder="Ej: vpn.tudominio.com:51820">
+                                <small class="text-muted d-block mt-1">Dominio o IP pública con su puerto UDP (ej: <code>vpn.tudominio.com:51820</code>).</small>
                             </div>
                         </div>
 

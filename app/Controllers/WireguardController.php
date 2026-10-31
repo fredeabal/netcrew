@@ -14,18 +14,43 @@ class WireguardController extends BaseController
     {
         $settings = service('settings');
 
+        // Verificar si las credenciales guardadas se pueden desencriptar con la llave actual
+        $decryptError = false;
+        $encPass = $settings->get('WireGuard.sshPassword');
+        $hasValidPass = false;
+        if (!empty($encPass)) {
+            try {
+                \Config\Services::encrypter()->decrypt(base64_decode($encPass));
+                $hasValidPass = true;
+            } catch (\Throwable $e) {
+                $decryptError = true;
+            }
+        }
+
+        $encKey = $settings->get('WireGuard.sshPrivateKey');
+        $hasValidKey = false;
+        if (!empty($encKey)) {
+            try {
+                \Config\Services::encrypter()->decrypt(base64_decode($encKey));
+                $hasValidKey = true;
+            } catch (\Throwable $e) {
+                $decryptError = true;
+            }
+        }
+
         $data = [
-            'title'               => 'Ajustes Globales WireGuard',
-            'wg_ssh_host'         => $settings->get('WireGuard.sshHost'),
-            'wg_ssh_port'         => $settings->get('WireGuard.sshPort') ?: 22,
-            'wg_ssh_user'         => $settings->get('WireGuard.sshUser'),
-            'wg_ssh_auth_type'    => $settings->get('WireGuard.sshAuthType') ?: 'password',
-            'wg_ssh_password'     => !empty($settings->get('WireGuard.sshPassword')) ? '********' : '',
-            'wg_ssh_private_key'  => !empty($settings->get('WireGuard.sshPrivateKey')) ? '********' : '',
-            'wg_interface'        => $settings->get('WireGuard.interface') ?: 'wg0',
-            'wg_public_key'       => $settings->get('WireGuard.publicKey'),
-            'wg_endpoint'         => $settings->get('WireGuard.endpoint'),
-            'wg_restricted_cidrs' => $settings->get('WireGuard.restrictedCidrs'),
+            'title'                    => 'Ajustes Globales WireGuard',
+            'wg_ssh_host'              => $settings->get('WireGuard.sshHost'),
+            'wg_ssh_port'              => $settings->get('WireGuard.sshPort') ?: 22,
+            'wg_ssh_user'              => $settings->get('WireGuard.sshUser'),
+            'wg_ssh_auth_type'         => $settings->get('WireGuard.sshAuthType') ?: 'password',
+            'wg_ssh_password'          => $hasValidPass ? '********' : '',
+            'wg_ssh_private_key'       => $hasValidKey ? '********' : '',
+            'wg_interface'             => $settings->get('WireGuard.interface') ?: 'wg0',
+            'wg_public_key'            => $settings->get('WireGuard.publicKey'),
+            'wg_endpoint'              => $settings->get('WireGuard.endpoint'),
+            'wg_restricted_cidrs'      => $settings->get('WireGuard.restrictedCidrs'),
+            'credential_decrypt_error' => $decryptError,
         ];
 
         // Autodescubrir clave si está en blanco y tenemos datos SSH.
@@ -45,17 +70,40 @@ class WireguardController extends BaseController
     // ---------------------------------------------------------------------
     public function wireguardUpdate()
     {
+        // Limpiar y pre-sanitizar el endpoint antes de validar
+        $rawEndpoint   = (string) $this->request->getPost('wg_endpoint');
+        $cleanEndpoint = trim($rawEndpoint);
+        $cleanEndpoint = preg_replace('#^https?://#i', '', $cleanEndpoint);
+        $cleanEndpoint = rtrim($cleanEndpoint, '/');
+
+        // Validar formato del endpoint (dominio:puerto o ip:puerto)
+        $endpointValid = true;
+        if ($cleanEndpoint !== '') {
+            // Debe tener formato host:puerto (ej: vpn.dominio.com:51820 o 192.168.0.123:51820)
+            if (!preg_match('/^([a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\]):(\d{1,5})$/', $cleanEndpoint, $matches)) {
+                $endpointValid = false;
+            } else {
+                $portNum = (int) $matches[2];
+                if ($portNum < 1 || $portNum > 65535) {
+                    $endpointValid = false;
+                }
+            }
+        }
+
         $rules = [
             'wg_ssh_host'      => 'required',
             'wg_ssh_user'      => 'required',
             'wg_ssh_port'      => 'required|numeric',
             'wg_ssh_auth_type' => 'required|in_list[password,key]',
             'wg_interface'     => 'required|alpha_dash',
-            'wg_endpoint'      => 'permit_empty|regex_match[/^[\w\.-]+:\d+$/]',
         ];
 
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        if (!$this->validate($rules) || !$endpointValid) {
+            $errors = $this->validator->getErrors();
+            if (!$endpointValid) {
+                $errors['wg_endpoint'] = 'El endpoint público debe tener el formato host:puerto (por ejemplo: vpn.tudominio.com:51820 o 192.168.0.123:51820).';
+            }
+            return redirect()->back()->withInput()->with('errors', $errors);
         }
 
         $settings = service('settings');
@@ -68,7 +116,7 @@ class WireguardController extends BaseController
         $settings->set('WireGuard.sshPort', (int)$this->request->getPost('wg_ssh_port'));
         $settings->set('WireGuard.sshAuthType', $this->request->getPost('wg_ssh_auth_type'));
         $settings->set('WireGuard.interface', $this->request->getPost('wg_interface') ?: 'wg0');
-        $settings->set('WireGuard.endpoint', $this->request->getPost('wg_endpoint'));
+        $settings->set('WireGuard.endpoint', $cleanEndpoint);
         $settings->set('WireGuard.restrictedCidrs', $this->request->getPost('wg_restricted_cidrs'));
 
         $encrypter = \Config\Services::encrypter();

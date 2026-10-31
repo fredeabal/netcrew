@@ -139,7 +139,7 @@
                     </td>
                     <td>
                       <span class="badge <?= $meta['class'] ?> fw-semibold badge-action">
-                        <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($meta['label']) ?>
+                        <?= esc($meta['label']) ?>
                       </span>
                     </td>
                     <td>
@@ -162,7 +162,7 @@
                 <div class="mobile-card-header">
                   <div class="d-flex align-items-center gap-2">
                     <span class="badge <?= $meta['class'] ?> fw-semibold badge-action">
-                      <i class="ti <?= $meta['icon'] ?> me-1"></i><?= esc($meta['label']) ?>
+                      <?= esc($meta['label']) ?>
                     </span>
                   </div>
                   <small class="text-muted fs-2">

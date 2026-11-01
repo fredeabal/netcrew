@@ -8,10 +8,23 @@ class RolesController extends BaseController
 {
     public function index()
     {
+        $allGroups = config('AuthGroups')->groups ?? [];
+        $total     = count($allGroups);
+        $perPage   = 100;
+        $page      = max(1, (int) ($this->request->getVar('page_roles') ?? 1));
+        $groups    = array_slice($allGroups, ($page - 1) * $perPage, $perPage, true);
+
+        $pagerLinks = '';
+        if ($total > $perPage) {
+            $pager = service('pager');
+            $pagerLinks = $pager->makeLinks($page, $perPage, $total, 'premium', 1, 'roles');
+        }
+
         $data = [
-            'title' => 'Gestión de Roles y Permisos',
-            'groups' => config('AuthGroups')->groups,
-            'permissions' => config('AuthGroups')->permissions
+            'title'       => 'Gestión de Roles y Permisos',
+            'groups'      => $groups,
+            'permissions' => config('AuthGroups')->permissions,
+            'pagerLinks'  => $pagerLinks,
         ];
 
         echo view('template/header', $data);

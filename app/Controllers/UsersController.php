@@ -16,7 +16,7 @@ class UsersController extends BaseController
      * @var UserModel
      */
     protected $usersModel;
-    protected $perPage = 50;
+    protected $perPage = 100;
 
     public function __construct()
     {

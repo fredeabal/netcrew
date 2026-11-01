@@ -191,9 +191,11 @@
           <?php endforeach; ?>
         </div>
 
+        <?php if (isset($pager) && $pager->getPageCount('networks') > 1): ?>
         <div class="mt-4 d-flex justify-content-center relative-z0">
           <?= $pager->links('networks', 'premium') ?>
-          </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
       </div>
     </div>

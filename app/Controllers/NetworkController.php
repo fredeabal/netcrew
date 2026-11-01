@@ -28,7 +28,7 @@ class NetworkController extends BaseController
 
         $data = [
             'title'    => 'Redes',
-            'networks' => $this->networkModel->getNetworksForUser(auth()->id(), $isSuperAdmin, $search, 10),
+            'networks' => $this->networkModel->getNetworksForUser(auth()->id(), $isSuperAdmin, $search, 100),
             'pager'    => $this->networkModel->pager,
             'search'   => $search,
         ];

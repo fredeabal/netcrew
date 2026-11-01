@@ -33,17 +33,29 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'No tienes permisos para administrar los nodos de esta red.');
         }
 
-        $devices = $this->deviceModel->where('network_id', $networkId)->findAll();
+        $allDevices = $this->deviceModel->where('network_id', $networkId)->findAll();
 
         // Ordenar dispositivos correctamente por IP (evitando ordenamiento alfabético de SQLite)
-        usort($devices, function($a, $b) {
+        usort($allDevices, function($a, $b) {
             return ip2long($a->ip_address) <=> ip2long($b->ip_address);
         });
 
+        $total   = count($allDevices);
+        $perPage = 100;
+        $page    = max(1, (int) ($this->request->getVar('page_devices') ?? 1));
+        $devices = array_slice($allDevices, ($page - 1) * $perPage, $perPage);
+
+        $pagerLinks = '';
+        if ($total > $perPage) {
+            $pager = service('pager');
+            $pagerLinks = $pager->makeLinks($page, $perPage, $total, 'premium', 1, 'devices');
+        }
+
         $data = [
-            'title'   => 'Administrar Nodos - ' . $network->name,
-            'network' => $network,
-            'devices' => $devices
+            'title'      => 'Administrar Nodos - ' . $network->name,
+            'network'    => $network,
+            'devices'    => $devices,
+            'pagerLinks' => $pagerLinks,
         ];
 
         echo view('template/header', $data);

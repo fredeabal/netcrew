@@ -1,25 +1,26 @@
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
      ===================================================================== -->
-<div class="card border shadow-none position-relative overflow-hidden mb-4">
-  <div class="card-body px-4 py-3">
-    <div class="row align-items-center">
-      <div class="col-8 col-sm-9">
-        <h4 class="fw-semibold mb-8">Panel de Administración</h4>
+<div class="card border shadow-none position-relative overflow-hidden mb-3 mb-md-4">
+  <div class="card-body px-3 px-md-4 py-3">
+    <div class="d-flex align-items-center justify-content-between gap-2">
+      <div>
+        <h4 class="fw-semibold mb-1">Panel de Administración</h4>
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item">
               <a class="text-muted text-decoration-none" href="<?= base_url() ?>">Inicio</a>
             </li>
-            <li class="breadcrumb-item" aria-current="page">Dashboard</li>
+            <li class="breadcrumb-item active text-muted" aria-current="page">Dashboard</li>
           </ol>
         </nav>
       </div>
-      <div class="col-4 col-sm-3 text-end">
-        <span class="badge <?= ($telemetry['isInterfaceUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> px-2 px-sm-3 py-2 fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
-          <i class="ti <?= ($telemetry['isInterfaceUp'] ?? false) ? 'ti-check' : 'ti-alert-circle' ?> me-sm-1"></i>
+      <div class="flex-shrink-0 text-end">
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+          <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
           <span class="d-none d-sm-inline">WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
-        </span>
+          <span class="d-inline d-sm-none"><?= ($telemetry['isInterfaceUp'] ?? false) ? 'Activo' : 'Off' ?></span>
+        </div>
       </div>
     </div>
   </div>
@@ -28,51 +29,48 @@
 <!-- =====================================================================
      TARJETAS DE ESTADÍSTICAS (MÉTRICAS GLOBALES)
      ===================================================================== -->
-<div class="row">
+<div class="row g-2 g-md-3 mb-3 mb-md-4">
     <!-- Card Usuarios Registrados -->
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card border shadow-none h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h6 class="card-subtitle text-muted mb-0">Usuarios Registrados</h6>
-                    <div class="bg-primary-subtle text-primary rounded p-2">
-                        <i class="ti ti-users fs-6"></i>
+    <div class="col-4">
+        <div class="card border shadow-none h-100 mb-0 dash-stat-card">
+            <div class="card-body p-2 p-sm-3 p-md-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted fs-2 fw-semibold text-truncate">Usuarios</span>
+                    <div class="dash-stat-icon bg-primary-subtle text-primary">
+                        <i class="ti ti-users"></i>
                     </div>
                 </div>
-                <h3 class="card-title mb-0 fw-semibold"><?= esc($totalUsers ?? 0) ?></h3>
-                <p class="card-text text-muted fs-2 mt-2">Usuarios totales en la plataforma.</p>
+                <h3 class="dash-stat-number fw-bold text-body mb-0 dash-figure"><?= esc($totalUsers ?? 0) ?></h3>
             </div>
         </div>
     </div>
 
     <!-- Card Redes Totales -->
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card border shadow-none h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h6 class="card-subtitle text-muted mb-0">Redes VPN</h6>
-                    <div class="bg-success-subtle text-success rounded p-2">
-                        <i class="ti ti-network fs-6"></i>
+    <div class="col-4">
+        <div class="card border shadow-none h-100 mb-0 dash-stat-card">
+            <div class="card-body p-2 p-sm-3 p-md-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted fs-2 fw-semibold text-truncate">Redes VPN</span>
+                    <div class="dash-stat-icon bg-info-subtle text-info">
+                        <i class="ti ti-network"></i>
                     </div>
                 </div>
-                <h3 class="card-title mb-0 fw-semibold"><?= esc($totalNetworks ?? 0) ?></h3>
-                <p class="card-text text-muted fs-2 mt-2">Redes creadas en el sistema.</p>
+                <h3 class="dash-stat-number fw-bold text-body mb-0 dash-figure"><?= esc($totalNetworks ?? 0) ?></h3>
             </div>
         </div>
     </div>
 
     <!-- Card Dispositivos Totales -->
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card border shadow-none h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h6 class="card-subtitle text-muted mb-0">Dispositivos Totales</h6>
-                    <div class="bg-info-subtle text-info rounded p-2">
-                        <i class="ti ti-devices fs-6"></i>
+    <div class="col-4">
+        <div class="card border shadow-none h-100 mb-0 dash-stat-card">
+            <div class="card-body p-2 p-sm-3 p-md-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted fs-2 fw-semibold text-truncate">Dispositivos</span>
+                    <div class="dash-stat-icon bg-success-subtle text-success">
+                        <i class="ti ti-devices"></i>
                     </div>
                 </div>
-                <h3 class="card-title mb-0 fw-semibold"><?= esc($totalDevices ?? 0) ?></h3>
-                <p class="card-text text-muted fs-2 mt-2">Dispositivos registrados globalmente.</p>
+                <h3 class="dash-stat-number fw-bold text-body mb-0 dash-figure"><?= esc($totalDevices ?? 0) ?></h3>
             </div>
         </div>
     </div>
@@ -85,18 +83,18 @@
     <!-- Gráfica de Tráfico Transferido (RX / TX) -->
     <div class="col-xl-8 col-lg-7 mb-4">
         <div class="card border shadow-none h-100">
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
                     <div>
                         <h5 class="card-title fw-semibold mb-1">Tráfico de Red Transferido</h5>
                         <p class="card-subtitle text-muted fs-2 mb-0">Consumo de datos en tiempo real por dispositivo</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success fs-2 px-2 py-1" title="Tráfico de descarga total recibido por el servidor">
-                            <i class="ti ti-arrow-down me-1"></i> RX: <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
+                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                        <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga total recibido por el servidor">
+                            <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
                         </span>
-                        <span class="badge bg-warning-subtle text-warning fs-2 px-2 py-1" title="Tráfico de subida total transmitido por el servidor">
-                            <i class="ti ti-arrow-up me-1"></i> TX: <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
+                        <span class="badge bg-warning-subtle text-warning px-2 py-1" title="Tráfico de subida total transmitido por el servidor">
+                            <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
                         </span>
                     </div>
                 </div>
@@ -118,7 +116,7 @@
                         <p class="text-muted fs-2 mb-0">Los nodos configurados aún no han generado paquetes de datos a través de la interfaz.</p>
                     </div>
                 <?php else: ?>
-                    <div id="chart-traffic" style="min-height: 330px;"></div>
+                    <div id="chart-traffic" class="dash-chart-lg"></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -127,43 +125,43 @@
     <!-- Indicador Radial de Conectividad / Salud de Red -->
     <div class="col-xl-4 col-lg-5 mb-4">
         <div class="card border shadow-none h-100">
-            <div class="card-body d-flex flex-column justify-content-between">
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <h5 class="card-title fw-semibold mb-0">Salud de la Red</h5>
-                        <span class="status-indicator-dot status-online" style="width: 10px; height: 10px;" title="En vivo"></span>
+                        <span class="status-indicator-dot status-online" title="En vivo"></span>
                     </div>
                     <p class="card-subtitle text-muted fs-2 mb-3">Dispositivos conectados en tiempo real</p>
                 </div>
 
                 <div class="position-relative d-flex justify-content-center my-2">
-                    <div id="chart-health" style="min-height: 250px;"></div>
+                    <div id="chart-health" class="dash-chart-md"></div>
                 </div>
 
                 <div class="border-top pt-3 mt-2">
-                    <div class="row text-center g-2">
+                    <div class="row text-center g-0 dash-health-row">
                         <div class="col-4">
-                            <div class="p-2 rounded bg-light-subtle">
-                                <span class="d-block text-success fw-bold fs-4">
+                            <div class="dash-health-cell">
+                                <span class="d-block text-success fw-medium fs-4 dash-figure">
                                     <i class="ti ti-point-filled"></i><?= esc($telemetry['onlineDevices'] ?? 0) ?>
                                 </span>
-                                <span class="text-muted fs-1 text-uppercase fw-semibold">Online</span>
+                                <span class="text-muted fs-2 fw-medium">Online</span>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-2 rounded bg-light-subtle">
-                                <span class="d-block text-muted fw-bold fs-4">
+                            <div class="dash-health-cell">
+                                <span class="d-block text-muted fw-medium fs-4 dash-figure">
                                     <?= esc($telemetry['offlineDevices'] ?? 0) ?>
                                 </span>
-                                <span class="text-muted fs-1 text-uppercase fw-semibold">Offline</span>
+                                <span class="text-muted fs-2 fw-medium">Offline</span>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-2 rounded bg-light-subtle">
-                                <span class="d-block text-primary fw-bold fs-4">
+                            <div class="dash-health-cell">
+                                <span class="d-block text-body fw-medium fs-4 dash-figure">
                                     <?= esc($telemetry['formattedTotal'] ?? '0 B') ?>
                                 </span>
-                                <span class="text-muted fs-1 text-uppercase fw-semibold">Total</span>
+                                <span class="text-muted fs-2 fw-medium">Total</span>
                             </div>
                         </div>
                     </div>
@@ -180,21 +178,21 @@
 <div class="row">
     <div class="col-12 mb-4">
         <div class="card border shadow-none">
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
                 <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
                         <h5 class="card-title fw-semibold mb-1">Últimas Redes Creadas</h5>
                         <p class="card-subtitle text-muted fs-2 mb-0">Últimas redes VPN desplegadas en el sistema</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-none d-md-flex align-items-center gap-2">
                         <?php if (auth()->user()->can('networks.create') || auth()->user()->inGroup('superadmin')): ?>
-                            <a href="<?= site_url('networks/create') ?>" class="btn btn-sm btn-primary border-0 d-none d-sm-inline-flex align-items-center gap-1 shadow-none">
-                                <i class="ti ti-plus fs-4"></i>
-                                <span>Nueva Red</span>
+                            <a href="<?= site_url('networks/create') ?>" class="btn btn-sm btn-primary border-0 d-inline-flex align-items-center px-2 py-1 shadow-none" title="Nueva Red">
+                                <i class="ti ti-plus"></i>
+                                <span class="d-none d-sm-inline ms-1">Nueva Red</span>
                             </a>
                         <?php endif; ?>
-                        <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
-                            Ver todas <i class="ti ti-arrow-right ms-1"></i>
+                        <a href="<?= site_url('networks') ?>" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center px-2 py-1">
+                            <span>Ver todas</span><i class="ti ti-arrow-right ms-1"></i>
                         </a>
                     </div>
                 </div>
@@ -208,7 +206,7 @@
                                 <th scope="col" class="text-center">Rango CIDR</th>
                                 <th scope="col" class="text-center">Propietario</th>
                                 <th scope="col" class="text-center">Nodos</th>
-                                <th scope="col" class="text-center">Fecha de Creación</th>
+                                <th scope="col" class="text-center">Creada</th>
                                 <th scope="col" class="text-end">Acciones</th>
                             </tr>
                         </thead>
@@ -237,18 +235,16 @@
                                         </div>
                                     </td>
                                     <td class="text-center text-muted">
-                                        <code class="text-primary"><?= esc($net->cidr) ?></code>
+                                        <span class="net-mono"><?= esc($net->cidr) ?></span>
                                     </td>
                                     <td class="text-center text-muted">
                                         <?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
-                                            <?= esc($net->device_count ?? 0) ?>
-                                        </span>
+                                        <span class="net-mono text-body"><?= esc($net->device_count ?? 0) ?></span>
                                     </td>
                                     <td class="text-center">
-                                        <h6 class="fs-3 fw-semibold mb-0"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
+                                        <h6 class="fw-semibold mb-0 text-login-time"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
                                         <span class="fw-normal text-muted text-login-time"><?= date('H:i', strtotime($net->created_at)) ?></span>
                                     </td>
                                     <td class="text-end" onclick="event.stopPropagation();">
@@ -302,7 +298,7 @@
                                     </div>
                                     <div>
                                         <h6 class="mobile-card-title"><?= esc($net->name) ?></h6>
-                                        <code class="text-primary fs-2"><?= esc($net->cidr) ?></code>
+                                        <span class="net-mono"><?= esc($net->cidr) ?></span>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center" onclick="event.stopPropagation();">
@@ -341,19 +337,17 @@
                             </div>
                             <div class="mobile-card-body">
                                 <div class="mobile-card-row">
-                                    <span class="mobile-card-label"><i class="ti ti-user"></i> Propietario:</span>
+                                    <span class="mobile-card-label">Propietario</span>
                                     <span class="mobile-card-value text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></span>
                                 </div>
                                 <div class="mobile-card-row">
-                                    <span class="mobile-card-label"><i class="ti ti-devices"></i> Nodos:</span>
+                                    <span class="mobile-card-label">Nodos</span>
                                     <span class="mobile-card-value">
-                                        <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
-                                            <?= esc($net->device_count ?? 0) ?>
-                                        </span>
+                                        <span class="net-mono text-body"><?= esc($net->device_count ?? 0) ?></span>
                                     </span>
                                 </div>
                                 <div class="mobile-card-row">
-                                    <span class="mobile-card-label"><i class="ti ti-calendar"></i> Creado:</span>
+                                    <span class="mobile-card-label">Creada</span>
                                     <span class="mobile-card-value text-muted"><?= date('d/m/Y H:i', strtotime($net->created_at)) ?></span>
                                 </div>
                             </div>

@@ -39,6 +39,15 @@
     --bs-info: #539bff !important;
     --bs-info-rgb: 83, 155, 255 !important;
     --bs-info-bg-subtle: rgba(83, 155, 255, 0.15) !important;
+
+    /* Color de Código */
+    --bs-code-color: var(--bs-primary) !important;
+}
+
+/* Color para etiquetas y clases de código */
+code,
+.code {
+    color: var(--bs-primary) !important;
 }
 
 /* Forzar Primary en componentes específicos */
@@ -348,18 +357,36 @@
     border-right: 1px solid #1a262d !important;
 }
 
-/* Controles de Formulario y Buscador */
+/* Controles de Formulario, Input Groups y Buscador */
+.input-group-text {
+    border-color: #dfe5ef;
+}
+
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .input-group-text {
+    border: 1px solid #1a262d !important;
+    color: #a8b6c2 !important;
+}
+
 [data-bs-theme="dark"] .form-control,
 [data-bs-theme="dark"] .form-select {
     background-color: #0b1114 !important;
-    border: 1px solid #1a262d !important;
-    color: #a8b6c2 !important;
+}
+
+[data-bs-theme="dark"] .input-group-text {
+    background-color: transparent !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus,
+[data-bs-theme="dark"] .input-group:focus-within .input-group-text {
+    border-color: rgba(var(--bs-primary-rgb), 0.5) !important;
 }
 
 [data-bs-theme="dark"] .form-control:focus,
 [data-bs-theme="dark"] .form-select:focus {
     background-color: #0b1114 !important;
-    border-color: rgba(var(--bs-primary-rgb), 0.5) !important;
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25) !important;
 }
 
@@ -1325,3 +1352,154 @@ body {
 
 
 
+
+/* ==========================================================================
+   LISTADO DE REDES (/networks) - pase unslop
+   Estado con punto estático, cifras en mono tabular, jerarquía por color
+   ========================================================================== */
+.net-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.net-dot-on {
+    background-color: #16a34a;
+}
+
+.net-dot-off {
+    background-color: var(--bs-secondary-color);
+    opacity: 0.6;
+}
+
+[data-bs-theme="dark"] .net-dot-on {
+    background-color: #4cc38a;
+}
+
+.net-name {
+    color: var(--bs-body-color);
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: color 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-bs-theme="dark"] .net-name {
+    color: #ededed;
+}
+
+a.net-name:hover {
+    color: var(--bs-primary);
+}
+
+.net-mono {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+
+.net-mono.text-body {
+    color: var(--bs-body-color) !important;
+}
+
+.net-table > :not(caption) > * > * {
+    padding: 0.75rem 1rem;
+}
+
+.net-table thead th {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* ==========================================================================
+   DASHBOARD - pase unslop
+   Cifras tabulares, fila de salud con separadores hairline, sin estilos inline
+   ========================================================================== */
+.dash-figure {
+    font-variant-numeric: tabular-nums;
+}
+
+.dash-stat-card {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.dash-stat-card:hover {
+    border-color: rgba(var(--bs-primary-rgb), 0.35) !important;
+}
+.dash-stat-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+@media (min-width: 768px) {
+    .dash-stat-icon {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        font-size: 1.15rem;
+    }
+}
+.dash-stat-number {
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+@media (min-width: 768px) {
+    .dash-stat-number {
+        font-size: 1.85rem;
+    }
+}
+
+.dash-chart-lg {
+    min-height: 330px;
+}
+
+.dash-chart-md {
+    min-height: 250px;
+}
+
+.dash-health-cell {
+    padding: 0.25rem 0.5rem;
+}
+
+.dash-health-row > [class*="col-"] + [class*="col-"] {
+    border-left: 1px solid var(--bs-border-color);
+}
+
+/* ==========================================================================
+   VISTAS VARIAS - pase unslop (sin estilos inline en las vistas)
+   ========================================================================== */
+.swal-output {
+    font-size: 0.8125rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.connect-page {
+    background-color: #0b1114;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.connect-card {
+    max-width: 520px;
+    width: 100%;
+    background: #141c22;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.connect-note {
+    font-size: 0.6875rem;
+}

@@ -30,10 +30,10 @@
       <div class="card h-100 border border-dark-border-subtle bg-dark-subtle shadow-sm hover-up">
         <div class="card-body p-4">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <span class="badge bg-primary text-white rounded-pill px-3 py-1 fs-2">Paso 1</span>
+            <span class="badge bg-primary-subtle text-primary">Paso 1</span>
             <i class="ti ti-network text-primary fs-7"></i>
           </div>
-          <h5 class="fw-bold mb-3">Crear tu Red Privada</h5>
+          <h5 class="fw-semibold mb-3">Crear tu Red Privada</h5>
           
           <ul class="list-unstyled mb-0 fs-3 text-muted">
             <li class="d-flex align-items-start gap-2 mb-3">
@@ -63,10 +63,10 @@
       <div class="card h-100 border border-dark-border-subtle bg-dark-subtle shadow-sm hover-up">
         <div class="card-body p-4">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <span class="badge bg-primary text-white rounded-pill px-3 py-1 fs-2">Paso 2</span>
+            <span class="badge bg-primary-subtle text-primary">Paso 2</span>
             <i class="ti ti-device-laptop text-primary fs-7"></i>
           </div>
-          <h5 class="fw-bold mb-3">Añadir Nodos a la Red</h5>
+          <h5 class="fw-semibold mb-3">Añadir Nodos a la Red</h5>
           
           <ul class="list-unstyled mb-0 fs-3 text-muted">
             <li class="d-flex align-items-start gap-2 mb-3">
@@ -91,15 +91,15 @@
       <div class="card h-100 border border-dark-border-subtle bg-dark-subtle shadow-sm hover-up">
         <div class="card-body p-4">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <span class="badge bg-primary text-white rounded-pill px-3 py-1 fs-2">Paso 3</span>
+            <span class="badge bg-primary-subtle text-primary">Paso 3</span>
             <i class="ti ti-shield-lock text-primary fs-7"></i>
           </div>
-          <h5 class="fw-bold mb-3">Establecer la Conexión VPN</h5>
+          <h5 class="fw-semibold mb-3">Establecer la Conexión VPN</h5>
           
           <ul class="list-unstyled mb-0 fs-3 text-muted">
             <li class="d-flex align-items-start gap-2 mb-3">
               <i class="ti ti-circle-check text-primary fs-5 mt-1"></i>
-              <span>Descarga e instala el <a href="https://www.wireguard.com/install/" target="_blank" class="text-primary text-decoration-underline fw-bold">cliente oficial de WireGuard <i class="ti ti-external-link fs-3"></i></a> en tu dispositivo móvil o equipo de escritorio.</span>
+              <span>Descarga e instala el <a href="https://www.wireguard.com/install/" target="_blank" class="text-primary text-decoration-underline fw-semibold">cliente oficial de WireGuard <i class="ti ti-external-link fs-3"></i></a> en tu dispositivo móvil o equipo de escritorio.</span>
             </li>
             <li class="d-flex align-items-start gap-2 mb-3">
               <i class="ti ti-circle-check text-primary fs-5 mt-1"></i>

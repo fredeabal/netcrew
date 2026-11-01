@@ -1,11 +1,11 @@
 <!-- =====================================================================
      CABECERA Y BREADCRUMB (NAVEGACIÓN)
      ===================================================================== -->
-<div class="card shadow-none border position-relative overflow-hidden mb-4">
-    <div class="card-body px-4 py-3">
-        <div class="row align-items-center">
-            <div class="col-8">
-                <h4 class="fw-semibold mb-8">Mantenimiento del Sistema</h4>
+<div class="card border shadow-none position-relative overflow-hidden mb-3 mb-md-4">
+    <div class="card-body px-3 px-md-4 py-3">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <div>
+                <h4 class="fw-semibold mb-1">Mantenimiento del Sistema</h4>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
                         <li class="breadcrumb-item"><a class="text-muted text-decoration-none" href="<?= base_url('dashboard') ?>">Dashboard</a></li>
@@ -13,11 +13,12 @@
                     </ol>
                 </nav>
             </div>
-            <div class="col-4 text-end">
-                <span class="badge <?= ($stats['isWgUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> px-3 py-2 fs-2 fw-semibold">
-                    <i class="ti <?= ($stats['isWgUp'] ?? false) ? 'ti-check' : 'ti-alert-circle' ?> me-1"></i>
-                    WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?>
-                </span>
+            <div class="flex-shrink-0 text-end">
+                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+                    <span class="status-indicator-dot <?= ($stats['isWgUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
+                    <span class="d-none d-sm-inline">WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
+                    <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Activo' : 'Off' ?></span>
+                </div>
             </div>
         </div>
     </div>
@@ -105,7 +106,7 @@
                         <i class="ti ti-wand fs-6 text-primary"></i>
                         <h5 class="card-title fw-bold text-primary mb-0">Mantenimiento Completo</h5>
                     </div>
-                    <p class="card-text text-muted mb-0">Ejecuta todas las acciones de mantenimiento simultáneamente: limpia sesiones inactivas, archivos de depuración, logs, caché temporal, optimiza la base de datos (VACUUM) y sincroniza los peers y reglas de firewall de WireGuard.</p>
+                    <p class="card-text text-muted mb-0">Limpia sesiones, logs y caché, optimiza la base de datos (VACUUM) y sincroniza WireGuard.</p>
                 </div>
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/clear-all') ?>" method="POST" data-confirm="¿Estás seguro de que deseas ejecutar el mantenimiento completo del sistema? Se limpiarán temporales, caché y se optimizará la base de datos.">
@@ -122,7 +123,7 @@
     <!-- ================= SECCIÓN: DATOS Y RESPALDOS ================= -->
 
     <!-- Respaldos (Backup) -->
-    <div class="col-12 mb-4">
+    <div class="col-12 mb-4 d-none d-md-block">
         <div class="card shadow-none border">
             <div class="card-body">
                 <div class="d-flex align-items-center gap-3 mb-3">
@@ -131,10 +132,10 @@
                     </div>
                     <div>
                         <h5 class="fw-bold mb-0">Respaldo y Restauración de Base de Datos</h5>
-                        <p class="text-muted fs-2 mb-0">Copia de seguridad en caliente con VACUUM y restauración íntegra</p>
+                        <!-- <p class="text-muted fs-2 mb-0">Copia de seguridad en caliente con VACUUM y restauración íntegra</p> -->
                     </div>
                 </div>
-                <p class="text-muted mb-4">Descarga una copia de seguridad completa del sistema actual en formato SQLite o sube un archivo de respaldo para restaurarlo. <strong>Atención:</strong> Al restaurar, se reemplazará la base de datos actual con la del respaldo.</p>
+                <p class="text-muted mb-4">Descarga o restaura una copia SQLite completa. <strong>Atención:</strong> Al restaurar se reemplazará la base de datos actual.</p>
                 
                 <div class="row g-4">
                     <div class="col-md-6">
@@ -191,7 +192,7 @@
                         </div>
                         <h5 class="fw-bold mb-0">Reconciliar Peers</h5>
                     </div>
-                    <p class="text-muted fs-2">Sincroniza los peers entre la base de datos y WireGuard. Elimina nodos huérfanos/fantasmas del servidor y restaura los nodos activos faltantes.</p>
+                    <p class="text-muted fs-2">Sincroniza peers con WireGuard: elimina nodos huérfanos y restaura los activos.</p>
                 </div>
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/clear-ghost-peers') ?>" method="POST" data-confirm="¿Deseas reconciliar los peers con el servidor WireGuard? Se eliminarán los nodos inactivos y se restaurarán los activos.">
@@ -216,7 +217,7 @@
                         </div>
                         <h5 class="fw-bold mb-0">Reparar Firewall</h5>
                     </div>
-                    <p class="text-muted fs-2">Reconstruye el script de firewall en el servidor, activa <code>ip_forward=1</code> y reaplica las reglas de reenvío para que los nodos puedan comunicarse entre sí.</p>
+                    <p class="text-muted fs-2">Reaplica reglas de firewall y reenvío (<code>ip_forward=1</code>) entre nodos.</p>
                 </div>
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/sync-firewall') ?>" method="POST" data-confirm="¿Deseas reconstruir y reaplicar las reglas de firewall y reenvío de paquetes en el servidor WireGuard?">
@@ -241,7 +242,7 @@
                         </div>
                         <h5 class="fw-bold mb-0">Reiniciar Servicio</h5>
                     </div>
-                    <p class="text-muted fs-2">Fuerza el reinicio de la interfaz del demonio WireGuard en el servidor Linux si algún servicio no responde adecuadamente.</p>
+                    <p class="text-muted fs-2">Reinicia la interfaz del servicio WireGuard en el servidor.</p>
                 </div>
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/restart-wireguard') ?>" method="POST" data-confirm="¿Estás seguro de que deseas reiniciar el servicio WireGuard? Las conexiones activas se reconectarán brevemente.">

@@ -50,22 +50,27 @@
                 <img src="<?= base_url('assets/images/logos/light-logo.svg') ?>" class="light-logo" alt="Logo-light" style="width: 260px; max-width: 100%; height: auto;" />
               </a>
 
-              <h2 class="mb-1 fs-7 fw-bolder">Recuperar Contraseña</h2>
-              <p class="mb-7 text-muted">Ingresa tu correo y te enviaremos un enlace de recuperación para iniciar sesión al instante.</p>
+              <h3 class="mb-1 fw-bold">Recuperar Contraseña</h3>
+              <p class="mb-4 text-muted fs-3">Ingresa tu correo y te enviaremos un enlace de recuperación para iniciar sesión al instante.</p>
 
               <form action="<?= url_to('magic-link') ?>" method="post" novalidate>
                 <?= csrf_field() ?>
 
                 <div class="mb-4">
-                  <label for="email" class="form-label">Correo Electrónico</label>
-                  <input type="email" class="form-control" id="email" name="email" inputmode="email" autocomplete="email" placeholder="<?= lang('Auth.email') ?>" value="<?= old('email') ?>">
+                  <label for="email" class="form-label fw-semibold">Correo Electrónico</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-mail"></i></span>
+                    <input type="email" class="form-control" id="email" name="email" inputmode="email" autocomplete="email" placeholder="usuario@empresa.com" value="<?= old('email') ?>" required>
+                  </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary w-100 py-8 mb-4 rounded-2 mt-3">Enviar Enlace</button>
+                <button type="submit" class="btn btn-primary w-100 py-2 fs-4 fw-semibold rounded-2 mb-4 d-flex align-items-center justify-content-center shadow-none">
+                  <i class="ti ti-send me-2"></i>Enviar Enlace
+                </button>
                 
                 <div class="text-center">
-                  <a class="text-muted fw-medium fs-3 text-decoration-none" href="<?= url_to('login') ?>">
-                    Volver al inicio de sesión
+                  <a class="text-muted fw-medium fs-3 text-decoration-none text-primary-hover" href="<?= url_to('login') ?>">
+                    <i class="ti ti-arrow-left me-1"></i>Volver al inicio de sesión
                   </a>
                 </div>
               </form>

@@ -61,25 +61,33 @@
                 <img src="<?= base_url('assets/images/logos/light-logo.svg') ?>" class="light-logo" alt="Logo-light" style="width: 260px; max-width: 100%; height: auto;" />
               </a>
 
-              <h2 class="mb-1 fs-7 fw-bolder">Acceder al Sistema</h2>
-              <p class="mb-7">Tu panel de control avanzado</p>
+              <h3 class="mb-1 fw-bold">Iniciar Sesión</h3>
+              <p class="text-muted mb-4 fs-3">Introduce tus credenciales para acceder a NetCrew</p>
 
               <form action="<?= url_to('login') ?>" method="post" novalidate>
                 <?= csrf_field() ?>
 
                 <div class="mb-3">
-                  <label for="email" class="form-label">Correo Electrónico</label>
-                  <input type="email" class="form-control" id="email" name="email" inputmode="email" autocomplete="email" placeholder="<?= lang('Auth.email') ?>" value="<?= old('email') ?>">
+                  <label for="email" class="form-label fw-semibold">Correo Electrónico</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-mail"></i></span>
+                    <input type="email" class="form-control" id="email" name="email" inputmode="email" autocomplete="email" placeholder="usuario@empresa.com" value="<?= old('email') ?>" required>
+                  </div>
                 </div>
                 <div class="mb-4">
-                  <label for="password" class="form-label">Contraseña</label>
-                  <input type="password" class="form-control" id="password" name="password" inputmode="text" autocomplete="current-password" placeholder="<?= lang('Auth.password') ?>">
+                  <label for="password" class="form-label fw-semibold">Contraseña</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-lock"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" inputmode="text" autocomplete="current-password" placeholder="••••••••" required>
+                  </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary w-100 py-8 mb-4 rounded-2 mt-4">Iniciar Sesión</button>
+                <button type="submit" class="btn btn-primary w-100 py-2 fs-4 fw-semibold rounded-2 mb-4 d-flex align-items-center justify-content-center shadow-none">
+                  <i class="ti ti-login me-2"></i>Iniciar Sesión
+                </button>
 
                 <div class="text-center">
-                  <a class="text-muted fw-medium fs-3 text-decoration-none" href="<?= url_to('magic-link') ?>">¿Olvidaste tu contraseña?</a>
+                  <a class="text-muted fw-medium fs-3 text-decoration-none text-primary-hover" href="<?= url_to('magic-link') ?>">¿Olvidaste tu contraseña?</a>
                 </div>
               </form>
             </div>

@@ -8,33 +8,15 @@
   <link rel="stylesheet" href="<?= base_url('assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <style>
-    body {
-      background-color: #0b1114;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .connect-card {
-      max-width: 520px;
-      width: 100%;
-      background: #141c22;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-  </style>
 </head>
-<body>
+<body class="connect-page">
 
   <div class="connect-card p-4 p-md-5 text-center">
     <div class="mb-4">
       <img src="<?= base_url('assets/images/logos/light-logo.svg') ?>" alt="NetCrew" height="38" />
     </div>
 
-    <h4 class="fw-bold text-white mb-2"><?= esc($device->name) ?></h4>
+    <h4 class="fw-semibold text-white mb-2"><?= esc($device->name) ?></h4>
     <p class="text-muted small mb-4">
       Escanea el código QR con la app oficial de WireGuard o descarga el archivo <code>.conf</code>.
     </p>
@@ -52,7 +34,7 @@
       </div>
       <div class="d-flex justify-content-between mb-1">
         <span class="text-muted">IP asignada:</span>
-        <code class="text-primary"><?= esc($device->ip_address) ?></code>
+        <span class="net-mono"><?= esc($device->ip_address) ?></span>
       </div>
       <div class="d-flex justify-content-between">
         <span class="text-muted">Enrutamiento:</span>
@@ -67,7 +49,7 @@
     </div>
 
     <div class="mt-4">
-      <small class="text-muted d-block" style="font-size: 11px;">
+      <small class="text-muted d-block connect-note">
         Este enlace temporal expira en 60 minutos por razones de seguridad.
       </small>
     </div>

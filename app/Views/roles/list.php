@@ -29,21 +29,29 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive d-none d-md-block">
-                    <table class="table align-middle text-nowrap" id="roles-table">
+                    <table class="table table-hover align-middle text-nowrap net-table" id="roles-table">
                         <thead>
-                            <tr>
+                            <tr class="text-muted fw-semibold">
                                 <th class="text-start">Rol</th>
                                 <th class="text-start">Descripción</th>
-                                <th class="text-end">Acciones</th>
+                                <th class="text-end"><span class="visually-hidden">Acciones</span></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach($groups as $key => $group): ?>
                             <tr onclick="window.location='<?= base_url('roles/edit/' . esc($key)) ?>'" class="cursor-pointer">
                                 <td class="text-start">
-                                    <div class="fw-bold text-start text-primary-hover"><?= esc($group['title']) ?></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary me-3 flex-shrink-0">
+                                            <i class="ti ti-shield fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium text-start text-primary-hover"><?= esc($group['title']) ?></div>
+                                            <span class="net-mono text-muted fs-2"><?= esc($key) ?></span>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="text-start">
+                                <td class="text-start text-muted">
                                     <?= esc($group['description']) ?>
                                 </td>
                                 <td class="text-end" onclick="event.stopPropagation();">
@@ -77,7 +85,7 @@
                           </div>
                           <div>
                             <h6 class="mobile-card-title"><?= esc($group['title']) ?></h6>
-                            <code class="text-primary fs-2"><?= esc($key) ?></code>
+                            <span class="net-mono"><?= esc($key) ?></span>
                           </div>
                         </div>
                         <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
@@ -97,7 +105,7 @@
                       </div>
                       <div class="mobile-card-body">
                         <div class="mobile-card-row">
-                          <span class="mobile-card-label"><i class="ti ti-notes"></i> Descripción:</span>
+                          <span class="mobile-card-label">Descripción</span>
                           <span class="mobile-card-value text-muted"><?= esc($group['description']) ?></span>
                         </div>
                       </div>

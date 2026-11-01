@@ -79,7 +79,7 @@
           </div>
 
           <div class="d-flex justify-content-center gap-2 mt-4">
-            <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn btn-danger px-4">
+            <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn btn-dark px-4">
               <i class="ti ti-x me-1"></i>Cancelar
             </a>
             <button type="submit" class="btn btn-primary px-4">

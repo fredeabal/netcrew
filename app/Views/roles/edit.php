@@ -1,4 +1,3 @@
-<div class="container-fluid">
     <!-- =====================================================================
          CABECERA Y BREADCRUMB (NAVEGACIÓN)
          ===================================================================== -->
@@ -33,13 +32,21 @@
 
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title fw-semibold mb-4">Rol: <?= esc($groupInfo['title']) ?></h5>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
+                                <i class="ti ti-shield fs-6"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-0"><?= esc($groupInfo['title']) ?></h5>
+                                <span class="net-mono text-muted fs-2"><?= esc($groupName) ?></span>
+                            </div>
+                        </div>
                         <p class="text-muted mb-4"><?= esc($groupInfo['description']) ?></p>
 
                         <!-- Listado de permisos agrupados -->
                         <?php foreach ($groupedPermissions as $categoryName => $perms): ?>
                             <div class="mb-5 border-bottom pb-4">
-                                <h6 class="fw-bold mb-3 text-primary"><?= esc($categoryName) ?></h6>
+                                <h6 class="fw-semibold mb-3"><?= esc($categoryName) ?></h6>
                                 <div class="row">
                                     <?php foreach ($perms as $perm): ?>
                                         <div class="col-md-6 col-lg-3 mb-3">
@@ -66,7 +73,7 @@
 
                         <!-- Acciones -->
                         <div class="d-flex justify-content-center mt-5">
-                            <a href="<?= base_url('roles') ?>" class="btn btn-danger px-4 me-2">
+                            <a href="<?= base_url('roles') ?>" class="btn btn-dark px-4 me-2">
                                 <i class="ti ti-x me-1"></i>Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary px-4">
@@ -78,4 +85,3 @@
             </form>
         </div>
     </div>
-</div>

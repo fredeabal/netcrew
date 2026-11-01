@@ -5,7 +5,7 @@
   <div class="card-body px-4 py-3">
     <div class="row align-items-center">
       <div class="col-12 col-md-8 text-center text-md-start">
-        <h4 class="fw-semibold mb-2 mb-md-8">Gestión de Usuarios</h4>
+        <h4 class="fw-semibold mb-2 mb-md-0">Gestión de Usuarios</h4>
         <nav aria-label="breadcrumb" class="d-flex justify-content-center justify-content-md-start">
           <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item">
@@ -42,20 +42,21 @@
                 </div>
 
                 <?php if (empty($users)): ?>
-                    <div class="alert alert-dark text-center py-4" role="alert">
-                        <?= !empty($search) ? 'No se encontraron usuarios para tu búsqueda.' : 'No hay otros usuarios registrados en el sistema.' ?>
+                    <div class="text-center py-5">
+                        <h6 class="fw-medium mb-1"><?= !empty($search) ? 'Sin resultados' : 'Aún no hay usuarios' ?></h6>
+                        <p class="text-muted fs-3 mb-0"><?= !empty($search) ? 'Ningún usuario coincide con tu búsqueda' : 'No hay otros usuarios registrados en el sistema' ?></p>
                     </div>
                 <?php else: ?>
                 <div class="table-responsive d-none d-md-block">
-                    <table class="table table-hover align-middle text-nowrap text-center" id="users-table">
+                    <table class="table table-hover align-middle text-nowrap net-table" id="users-table">
                         <thead>
                             <tr>
                                 <th class="text-start">Usuario</th>
-                                <th class="text-start">Email</th>
+                                <th class="text-center">Email</th>
                                 <th class="text-center">Rol</th>
-                                <th class="text-center">Último Acceso</th>
+                                <th class="text-center">Último acceso</th>
                                 <th class="text-center">Estado</th>
-                                <th class="text-end">Acciones</th>
+                                <th class="text-end"><span class="visually-hidden">Acciones</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -65,7 +66,7 @@
                                      <div class="d-flex align-items-center">
                                          <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle me-3 object-fit-cover" width="40" height="40" />
                                          <div class="text-start">
-                                             <div class="fw-bold">
+                                             <div class="fw-medium">
                                                  <a href="<?= site_url('users/edit/' . $user->id) ?>" class="text-reset text-primary-hover text-decoration-none">
                                                      <?= esc($user->username) ?>
                                                  </a>
@@ -73,23 +74,19 @@
                                          </div>
                                      </div>
                                  </td>
-                                <td class="text-start">
-                                    <?= esc($user->email) ?>
-                                </td>
-                                <td class="text-muted text-center">
-                                    <?= esc($user->groupTitle) ?>
-                                </td>
+                                <td class="text-center text-muted"><?= esc($user->email) ?></td>
+                                <td class="text-center"><?= esc($user->groupTitle) ?></td>
                                 <td class="text-center">
-                                    <h6 class="fs-3 fw-semibold mb-0"><?= esc($user->lastLoginDate) ?></h6>
+                                    <h6 class="fw-semibold mb-0 text-login-time"><?= esc($user->lastLoginDate) ?></h6>
                                     <?php if (!empty($user->lastLoginTime)): ?>
                                         <span class="fw-normal text-muted text-login-time"><?= esc($user->lastLoginTime) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($user->active): ?>
-                                        <span class="badge bg-primary badge-status">Activo</span>
+                                        <span class="badge bg-success-subtle text-success badge-status">Activo</span>
                                     <?php else: ?>
-                                        <span class="badge bg-danger badge-status">Suspendido</span>
+                                        <span class="badge bg-danger-subtle text-danger badge-status">Suspendido</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end" onclick="event.stopPropagation();">
@@ -130,7 +127,7 @@
                         <div class="d-flex align-items-center gap-2">
                           <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle object-fit-cover flex-shrink-0 border border-2 <?= $user->active ? 'border-primary' : 'border-danger' ?>" width="36" height="36" />
                           <div>
-                            <h6 class="mobile-card-title"><?= esc($user->username) ?></h6>
+                            <h6 class="mobile-card-title mb-0"><?= esc($user->username) ?></h6>
                             <span class="text-muted fs-2"><?= esc($user->email) ?></span>
                           </div>
                         </div>
@@ -161,17 +158,23 @@
                       </div>
                       <div class="mobile-card-body">
                         <div class="mobile-card-row">
-                          <span class="mobile-card-label"><i class="ti ti-shield"></i> Rol:</span>
+                          <span class="mobile-card-label">Rol</span>
                           <span class="mobile-card-value text-muted"><?= esc($user->groupTitle) ?></span>
                         </div>
                         <div class="mobile-card-row">
-                          <span class="mobile-card-label"><i class="ti ti-mail"></i> Email:</span>
-                          <span class="mobile-card-value text-muted"><?= esc($user->email) ?></span>
+                          <span class="mobile-card-label">Último acceso</span>
+                          <span class="mobile-card-value net-mono">
+                            <?= esc($user->lastLoginDate) ?> <?= !empty($user->lastLoginTime) ? esc($user->lastLoginTime) : '' ?>
+                          </span>
                         </div>
                         <div class="mobile-card-row">
-                          <span class="mobile-card-label"><i class="ti ti-login"></i> Último Acceso:</span>
-                          <span class="mobile-card-value text-muted">
-                            <?= esc($user->lastLoginDate) ?> <?= !empty($user->lastLoginTime) ? esc($user->lastLoginTime) : '' ?>
+                          <span class="mobile-card-label">Estado</span>
+                          <span class="mobile-card-value">
+                            <?php if ($user->active): ?>
+                              <span class="badge bg-success-subtle text-success">Activo</span>
+                            <?php else: ?>
+                              <span class="badge bg-danger-subtle text-danger">Suspendido</span>
+                            <?php endif; ?>
                           </span>
                         </div>
                       </div>

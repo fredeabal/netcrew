@@ -45,22 +45,20 @@
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Rango CIDR</span>
-                <code class="fw-semibold text-primary"><?= esc($network->cidr) ?></code>
+                <span class="net-mono text-body fw-medium"><?= esc($network->cidr) ?></span>
               </div>
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Estado de Red</span>
-                <code class="fw-semibold <?= $network->active ? 'text-primary' : 'text-danger' ?>">
-                  <?= $network->active ? 'Activa' : 'Inactiva' ?>
-                </code>
+                <span class="net-mono fw-medium <?= $network->active ? 'text-body' : 'text-danger' ?>"><?= $network->active ? 'Activa' : 'Inactiva' ?></span>
               </div>
             </div>
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Total Nodos</span>
-                <code class="fw-semibold text-primary"><?= count($devices) ?></code>
+                <span class="net-mono text-body fw-medium"><?= count($devices) ?></span>
               </div>
             </div>
 
@@ -68,14 +66,14 @@
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Capacidad (/24)</span>
-                <code class="fw-semibold text-primary"><?= count($devices) ?> / 254</code>
+                <span class="net-mono text-body fw-medium"><?= count($devices) ?> / 254</span>
               </div>
             </div>
           </div>
 
           <!-- Tabla de Nodos / Dispositivos -->
-          <div class="d-flex align-items-center gap-2 mb-4">
-            <div class="bg-light-primary text-primary rounded d-flex align-items-center justify-content-center network-icon-circle">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle">
               <i class="ti ti-devices fs-6"></i>
             </div>
             <h5 class="fw-semibold mb-0">Administrar Nodos</h5>
@@ -88,22 +86,21 @@
             </div>
           </div>
           <?php if (empty($devices)): ?>
-            <div class="alert alert-dark text-center py-5 rounded border-0" role="alert">
-              <i class="ti ti-devices fs-8 text-muted d-block mb-2"></i>
-              <h6 class="fw-semibold text-dark">No hay nodos registrados</h6>
-              <p class="text-muted mb-0 small">Registra tu primer dispositivo para empezar a generar archivos de configuración de WireGuard.</p>
+            <div class="text-center py-5">
+              <h6 class="fw-medium mb-1">Aún no hay nodos</h6>
+              <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración de WireGuard.</p>
             </div>
           <?php else: ?>
             <div class="table-responsive d-none d-md-block">
-              <table class="table table-hover align-middle text-nowrap text-center" id="devices-table">
+              <table class="table table-hover align-middle text-nowrap net-table" id="devices-table">
                 <thead>
                   <tr class="text-muted fw-semibold">
-                    <th scope="col" class="text-start">Nombre del Dispositivo</th>
-                    <th scope="col" class="text-center">IP Red</th>
-                    <th scope="col" class="text-center">IP Física</th>
-                    <th scope="col" class="text-center">Última Conexión</th>
+                    <th scope="col">Dispositivo</th>
+                    <th scope="col" class="text-center">IP red</th>
+                    <th scope="col" class="text-center">IP física</th>
+                    <th scope="col" class="text-center">Última conexión</th>
                     <th scope="col" class="text-center">Tráfico (↑/↓)</th>
-                    <th scope="col" class="text-end">Acciones</th>
+                    <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody class="border-top">
@@ -127,7 +124,7 @@
                              <i class="ti <?= $iconClass ?> fs-5"></i>
                           </div>
                           <div>
-                            <h6 class="fw-semibold mb-0">
+                            <h6 class="fw-medium mb-0">
                               <a href="<?= site_url('devices/show/' . $dev->id) ?>" class="<?= $dev->active ? 'text-reset text-primary-hover' : 'text-muted' ?> text-decoration-none">
                                 <?= esc($dev->name) ?>
                               </a>
@@ -136,21 +133,19 @@
                         </div>
                       </td>
                       <td class="text-center">
-                        <code class="fs-3 text-muted"><?= esc($dev->ip_address) ?></code>
+                        <span class="net-mono"><?= esc($dev->ip_address) ?></span>
                       </td>
-                      <td class="text-center device-status-cell text-muted fs-3" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">
-                        -
-                      </td>
+                      <td class="text-center device-status-cell text-muted" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">—</td>
                       <td class="text-center text-muted device-last-seen-cell" data-pubkey="<?= esc($dev->public_key) ?>">
                         <?php if ($dev->last_seen): ?>
-                          <div><?= date('d/m/Y', strtotime($dev->last_seen)) ?></div>
-                          <small class="text-muted d-block"><?= date('H:i', strtotime($dev->last_seen)) ?></small>
+                          <h6 class="fw-semibold mb-0 text-login-time"><?= date('d/m/Y', strtotime($dev->last_seen)) ?></h6>
+                          <span class="d-block fw-normal text-muted text-login-time"><?= date('H:i', strtotime($dev->last_seen)) ?></span>
                         <?php else: ?>
                           <span class="text-muted">—</span>
                         <?php endif; ?>
                       </td>
                       <td class="text-center device-traffic-cell" data-pubkey="<?= esc($dev->public_key) ?>">
-                        <span class="text-muted fs-3">—</span>
+                        <span class="text-muted">—</span>
                       </td>
                       <td class="text-end" onclick="event.stopPropagation();">
                         <div class="dropdown">
@@ -229,7 +224,7 @@
                       </div>
                       <div>
                         <h6 class="mobile-card-title"><?= esc($dev->name) ?></h6>
-                        <code class="text-primary fs-2"><?= esc($dev->ip_address) ?></code>
+                        <span class="net-mono"><?= esc($dev->ip_address) ?></span>
                       </div>
                     </div>
                     <div class="d-flex align-items-center" onclick="event.stopPropagation();">
@@ -283,22 +278,22 @@
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
-                      <span class="mobile-card-label"><i class="ti ti-world"></i> IP Pública:</span>
-                      <span class="device-status-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">-</span>
+                      <span class="mobile-card-label">IP pública</span>
+                      <span class="device-status-cell mobile-card-value text-muted net-mono" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">—</span>
                     </div>
                     <div class="mobile-card-row">
-                      <span class="mobile-card-label"><i class="ti ti-arrows-sort"></i> Tráfico (↑/↓):</span>
+                      <span class="mobile-card-label">Tráfico</span>
                       <span class="device-traffic-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">—</span>
                     </div>
                     <div class="mobile-card-row">
-                      <span class="mobile-card-label"><i class="ti ti-clock"></i> Última Conexión:</span>
+                      <span class="mobile-card-label">Última conexión</span>
                       <span class="device-last-seen-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">
                         <?= $dev->last_seen ? date('d/m/Y H:i', strtotime($dev->last_seen)) : '—' ?>
                       </span>
                     </div>
                     <div class="mobile-card-row">
-                      <span class="mobile-card-label"><i class="ti ti-devices"></i> Tipo:</span>
-                      <span class="mobile-card-value text-muted text-uppercase"><?= esc($dev->device_type ?? 'pc') ?> (<?= esc($dev->os ?? 'linux') ?>)</span>
+                      <span class="mobile-card-label">Tipo</span>
+                      <span class="mobile-card-value text-muted"><?= esc($dev->device_type ?? 'pc') ?> (<?= esc($dev->os ?? 'linux') ?>)</span>
                     </div>
                   </div>
                 </div>
@@ -552,19 +547,15 @@ document.addEventListener("DOMContentLoaded", function () {
               const peer = peers[pubkey];
               if (peer && peer.connected) {
                 const publicIp = peer.endpoint ? peer.endpoint.split(':')[0] : 'IP desconocida';
-                const codeEl = document.createElement('code');
-                codeEl.className = 'fs-3 text-dark';
-                codeEl.textContent = publicIp;
-                cell.innerHTML = '';
-                cell.appendChild(codeEl);
-                cell.className = isTd ? "text-center device-status-cell" : "device-status-cell mobile-card-value";
+                cell.innerHTML = `<span class="net-mono">${publicIp}</span>`;
+                cell.className = isTd ? "text-center device-status-cell" : "device-status-cell mobile-card-value net-mono";
               } else {
-                cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-                cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
+                cell.innerHTML = `<span class="text-muted">—</span>`;
+                cell.className = isTd ? "text-center device-status-cell text-muted" : "device-status-cell mobile-card-value text-muted";
               }
             } else {
-              cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
-              cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
+              cell.innerHTML = `<span class="text-muted">—</span>`;
+              cell.className = isTd ? "text-center device-status-cell text-muted" : "device-status-cell mobile-card-value text-muted";
             }
           });
 
@@ -574,7 +565,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (peer && peer.last_seen_date && peer.last_seen_time) {
               if (cell.tagName === 'TD') {
-                cell.innerHTML = `<div>${peer.last_seen_date}</div><small class="text-muted d-block">${peer.last_seen_time}</small>`;
+                cell.innerHTML = `<h6 class="fw-semibold mb-0 text-login-time">${peer.last_seen_date}</h6><span class="d-block fw-normal text-muted text-login-time">${peer.last_seen_time}</span>`;
               } else {
                 cell.innerHTML = `<span>${peer.last_seen_date} <span class="text-muted ms-1">${peer.last_seen_time}</span></span>`;
               }

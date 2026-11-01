@@ -115,14 +115,14 @@
 
           <!-- VISTA ESCRITORIO: TABLA (d-none d-md-block) -->
           <div class="table-responsive d-none d-md-block">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle net-table">
               <thead>
                 <tr class="text-muted fw-semibold">
-                  <th>Fecha y Hora</th>
+                  <th>Fecha</th>
                   <th>Usuario</th>
                   <th>Acción</th>
                   <th>Detalle</th>
-                  <th>IP</th>
+                  <th class="text-end">IP</th>
                 </tr>
               </thead>
               <tbody class="border-top">
@@ -130,7 +130,8 @@
                   <?php $meta = $getAuditBadgeMeta($log->action); ?>
                   <tr>
                     <td>
-                      <small class="text-muted"><?= date('d/m/Y H:i:s', strtotime($log->created_at)) ?></small>
+                      <h6 class="fw-semibold mb-0 text-login-time"><?= date('d/m/Y', strtotime($log->created_at)) ?></h6>
+                      <span class="d-block fw-normal text-muted text-login-time"><?= date('H:i:s', strtotime($log->created_at)) ?></span>
                     </td>
                     <td>
                       <span class="fw-semibold text-body">
@@ -145,7 +146,7 @@
                     <td>
                       <span class="small text-muted"><?= esc($log->description) ?></span>
                     </td>
-                    <td>
+                    <td class="text-end">
                       <code class="small text-muted"><?= esc($log->ip_address) ?></code>
                     </td>
                   </tr>
@@ -165,9 +166,10 @@
                       <?= esc($meta['label']) ?>
                     </span>
                   </div>
-                  <small class="text-muted fs-2">
-                    <?= date('d/m/Y H:i', strtotime($log->created_at)) ?>
-                  </small>
+                  <div class="text-end">
+                    <span class="fw-semibold d-block text-login-time"><?= date('d/m/Y', strtotime($log->created_at)) ?></span>
+                    <span class="fw-normal text-muted text-login-time"><?= date('H:i:s', strtotime($log->created_at)) ?></span>
+                  </div>
                 </div>
                 <div class="mobile-card-body">
                   <?php if (!empty($log->description)): ?>

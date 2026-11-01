@@ -103,13 +103,13 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP en la Red</span>
-              <code class="fw-semibold text-primary"><?= esc($device->ip_address) ?></code>
+              <span class="net-mono text-body fw-medium"><?= esc($device->ip_address) ?></span>
             </div>
           </div>
           <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">CIDR</span>
-              <code class="fw-semibold text-primary"><?= esc($network->cidr) ?></code>
+              <span class="net-mono text-body fw-medium"><?= esc($network->cidr) ?></span>
             </div>
           </div>
           <div class="col-12 col-md-4">
@@ -221,14 +221,14 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP Pública</span>
-              <code class="fw-semibold text-primary"><?= $wg['public_ip'] ? esc($wg['public_ip']) : '—' ?></code>
+              <span class="net-mono text-body fw-medium"><?= $wg['public_ip'] ? esc($wg['public_ip']) : '—' ?></span>
             </div>
           </div>
 
           <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Puerto</span>
-              <code class="fw-semibold text-primary"><?= $wg['port'] ? esc($wg['port']) : '—' ?></code>
+              <span class="net-mono text-body fw-medium"><?= $wg['port'] ? esc($wg['port']) : '—' ?></span>
             </div>
           </div>
 
@@ -367,7 +367,7 @@ function pingDevice(deviceId) {
         if (data.status === 'success') {
             Swal.fire({
                 title: 'Ping Exitoso',
-                html: `<pre class="text-start bg-dark text-success p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${safeOutput}</pre>`,
+                html: `<pre class="swal-output text-start bg-dark text-success p-3 rounded mt-3">${safeOutput}</pre>`,
                 icon: 'success',
                 confirmButtonColor: '#34c759',
                 width: '600px'
@@ -375,7 +375,7 @@ function pingDevice(deviceId) {
         } else {
             Swal.fire({
                 title: 'Ping Fallido',
-                html: `<p class="mb-2">${safeMessage}</p><pre class="text-start bg-dark text-danger p-3 rounded mt-3" style="font-size: 13px; white-space: pre-wrap; overflow-x: auto;">${safeOutput}</pre>`,
+                html: `<p class="mb-2">${safeMessage}</p><pre class="swal-output text-start bg-dark text-danger p-3 rounded mt-3">${safeOutput}</pre>`,
                 icon: 'error',
                 confirmButtonColor: '#b31b34',
                 width: '600px'

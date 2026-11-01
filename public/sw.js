@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netcrew-pwa-v1';
+const CACHE_NAME = 'netcrew-pwa-v15';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

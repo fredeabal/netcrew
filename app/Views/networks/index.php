@@ -44,62 +44,47 @@
         </div>
 
         <?php if (empty($networks)): ?>
-          <div class="alert alert-dark text-center py-4" role="alert">
-            <?= !empty($search) ? 'No se encontraron redes para tu búsqueda.' : 'No tienes ninguna red registrada.' ?>
+          <div class="text-center py-5">
+            <h6 class="fw-medium mb-1"><?= !empty($search) ? 'Sin resultados' : 'Aún no hay redes' ?></h6>
+            <p class="text-muted fs-3 mb-0"><?= !empty($search) ? 'Ninguna red coincide con tu búsqueda' : 'Crea la primera red para empezar a añadir nodos' ?></p>
           </div>
         <?php else: ?>
 
         <div class="table-responsive overflow-visible d-none d-md-block">
-          <table class="table table-hover align-middle text-nowrap text-center" id="networks-table">
+          <table class="table table-hover align-middle text-nowrap net-table" id="networks-table">
             <thead>
               <tr class="text-muted fw-semibold">
-                <th scope="col" class="text-start">Nombre</th>
+                <th scope="col">Nombre</th>
                 <th scope="col" class="text-center">Rango CIDR</th>
                 <th scope="col" class="text-center">Propietario</th>
                 <th scope="col" class="text-center">Nodos</th>
-                <th scope="col" class="text-center">Fecha de Creación</th>
-                <th scope="col" class="text-end">Acciones</th>
+                <th scope="col" class="text-center">Creada</th>
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody class="border-top">
               <?php foreach ($networks as $net): ?>
                 <?php $canViewDevices = auth()->user()->can('devices.view') || auth()->user()->inGroup('superadmin'); ?>
                 <tr <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'" class="cursor-pointer"' : '' ?>>
-                   <td class="text-start">
-                     <div class="d-flex align-items-center">
-                       <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle me-3 network-icon-circle">
+                   <td>
+                     <div class="d-flex align-items-center gap-3">
+                       <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle network-icon-circle flex-shrink-0" title="<?= $net->active ? 'Activa' : 'Inactiva' ?>">
                          <i class="ti ti-network fs-5"></i>
                        </div>
-                       <div>
-                         <h6 class="fw-semibold mb-1">
-                           <?php if ($canViewDevices): ?>
-                             <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="text-reset text-primary-hover text-decoration-none">
-                               <?= esc($net->name) ?>
-                             </a>
-                           <?php else: ?>
-                             <span class="text-reset">
-                               <?= esc($net->name) ?>
-                             </span>
-                           <?php endif; ?>
-                         </h6>
-                       </div>
+                       <?php if ($canViewDevices): ?>
+                         <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="net-name text-decoration-none"><?= esc($net->name) ?></a>
+                       <?php else: ?>
+                         <span class="net-name"><?= esc($net->name) ?></span>
+                       <?php endif; ?>
                      </div>
                    </td>
-                  <td class="text-center text-muted">
-                    <code class="text-primary"><?= esc($net->cidr) ?></code>
-                  </td>
-                  <td class="text-center text-muted">
-                    <?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
-                      <?= esc($net->device_count) ?>
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <h6 class="fs-3 fw-semibold mb-0"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
-                    <span class="fw-normal text-muted text-login-time"><?= date('H:i', strtotime($net->created_at)) ?></span>
-                  </td>
+                   <td class="text-center"><span class="net-mono"><?= esc($net->cidr) ?></span></td>
+                   <td class="text-center text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></td>
+                   <td class="text-center"><span class="net-mono text-body"><?= esc($net->device_count) ?></span></td>
+                   <td class="text-center">
+                     <h6 class="fw-semibold mb-0 text-login-time"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
+                     <span class="d-block fw-normal text-muted text-login-time"><?= date('H:i', strtotime($net->created_at)) ?></span>
+                   </td>
                   <td class="text-end" onclick="event.stopPropagation();">
                     <div class="dropdown">
                       <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
@@ -146,12 +131,12 @@
             <div class="mobile-card-item network-card-item" <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'"' : '' ?>>
               <div class="mobile-card-header">
                 <div class="d-flex align-items-center gap-2">
-                  <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle network-icon-circle flex-shrink-0">
+                  <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle network-icon-circle flex-shrink-0" title="<?= $net->active ? 'Activa' : 'Inactiva' ?>">
                     <i class="ti ti-network fs-5"></i>
                   </div>
                   <div>
-                    <h6 class="mobile-card-title"><?= esc($net->name) ?></h6>
-                    <code class="text-primary fs-2"><?= esc($net->cidr) ?></code>
+                    <h6 class="mobile-card-title mb-0"><?= esc($net->name) ?></h6>
+                    <span class="net-mono"><?= esc($net->cidr) ?></span>
                   </div>
                 </div>
                 <div class="d-flex align-items-center" onclick="event.stopPropagation();">
@@ -190,20 +175,16 @@
               </div>
               <div class="mobile-card-body">
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label"><i class="ti ti-user"></i> Propietario:</span>
+                  <span class="mobile-card-label">Propietario</span>
                   <span class="mobile-card-value text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label"><i class="ti ti-devices"></i> Nodos:</span>
-                  <span class="mobile-card-value">
-                    <span class="badge bg-primary-subtle text-primary fw-semibold fs-2 px-2.5 py-1">
-                      <?= esc($net->device_count) ?>
-                    </span>
-                  </span>
+                  <span class="mobile-card-label">Nodos</span>
+                  <span class="mobile-card-value net-mono text-body"><?= esc($net->device_count) ?></span>
                 </div>
                 <div class="mobile-card-row">
-                  <span class="mobile-card-label"><i class="ti ti-calendar"></i> Creado:</span>
-                  <span class="mobile-card-value text-muted"><?= date('d/m/Y H:i', strtotime($net->created_at)) ?></span>
+                  <span class="mobile-card-label">Creada</span>
+                  <span class="mobile-card-value net-mono"><?= date('d/m/Y H:i', strtotime($net->created_at)) ?></span>
                 </div>
               </div>
             </div>

@@ -38,7 +38,7 @@
             <img src="<?= $avatarUrl ?>" class="rounded-circle border border-2 border-primary mb-3 shadow-sm object-fit-cover" width="120" height="120" alt="Avatar" id="avatar-preview" />
             
             <div class="mt-2">
-              <label for="profile_pic" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+              <label for="profile_pic" class="btn btn-primary btn-sm px-3 shadow-sm">
                 <i class="ti ti-upload me-1"></i> Seleccionar Nueva Foto
               </label>
               <input class="form-control d-none" type="file" id="profile_pic" name="profile_pic" accept="image/*" onchange="previewImage(event)">
@@ -95,7 +95,7 @@
           </div>
 
           <div class="d-flex justify-content-center mt-5">
-            <a href="<?= base_url('dashboard') ?>" class="btn btn-danger px-4 me-2">Cancelar</a>
+            <a href="<?= base_url('dashboard') ?>" class="btn btn-dark px-4 me-2">Cancelar</a>
             <button type="submit" class="btn btn-primary px-4 shadow-sm">Guardar Cambios</button>
           </div>
         </form>

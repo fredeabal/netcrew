@@ -40,12 +40,11 @@
                     <!-- SECCIÓN 1: ACCESO ADMINISTRATIVO SSH -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <span class="badge bg-primary-subtle text-primary p-2">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
                                 <i class="ti ti-server fs-5"></i>
-                            </span>
+                            </div>
                             <div>
-                                <h6 class="fw-semibold mb-0">Conexión SSH con el Servidor</h6>
-                                <small class="text-muted">Credenciales administrativas para gestionar el túnel WireGuard en el host.</small>
+                                <h6 class="fw-semibold mb-0">Conexión SSH con el servidor</h6>
                             </div>
                         </div>
 
@@ -53,14 +52,14 @@
                             <div class="col-12 col-md-8">
                                 <label for="wg_ssh_host" class="form-label fw-semibold">IP o Host del Servidor</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-world"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-world"></i></span>
                                     <input type="text" class="form-control" id="wg_ssh_host" name="wg_ssh_host" value="<?= old('wg_ssh_host', esc($wg_ssh_host ?? '')) ?>" placeholder="Ej: 192.168.0.123">
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
                                 <label for="wg_ssh_port" class="form-label fw-semibold">Puerto SSH</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-hash"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-hash"></i></span>
                                     <input type="number" class="form-control" id="wg_ssh_port" name="wg_ssh_port" value="<?= old('wg_ssh_port', esc($wg_ssh_port ?? '22')) ?>" placeholder="22">
                                 </div>
                             </div>
@@ -75,7 +74,7 @@
                             <div class="col-12 col-md-6">
                                 <label for="wg_ssh_user" class="form-label fw-semibold">Usuario SSH</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-user"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-user"></i></span>
                                     <input type="text" class="form-control" id="wg_ssh_user" name="wg_ssh_user" value="<?= old('wg_ssh_user', esc($wg_ssh_user ?? '')) ?>" placeholder="Ej: root">
                                 </div>
                             </div>
@@ -83,7 +82,7 @@
                             <div class="col-12" id="auth_password_row">
                                 <label for="wg_ssh_password" class="form-label fw-semibold">Contraseña SSH</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-lock"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-lock"></i></span>
                                     <input type="password" class="form-control" id="wg_ssh_password" name="wg_ssh_password" placeholder="<?= !empty($wg_ssh_password) ? '•••••••• (Dejar en blanco para mantener la actual)' : 'Introduce la contraseña SSH' ?>">
                                 </div>
                             </div>
@@ -95,17 +94,15 @@
                         </div>
                     </div>
 
-                    <hr class="my-4 opacity-10">
 
                     <!-- SECCIÓN 2: RED Y PARÁMETROS WIREGUARD -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <span class="badge bg-primary-subtle text-primary p-2">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
                                 <i class="ti ti-shield-lock fs-5"></i>
-                            </span>
+                            </div>
                             <div>
-                                <h6 class="fw-semibold mb-0">Parámetros del Servicio WireGuard</h6>
-                                <small class="text-muted">Configuración de interfaz del túnel y direccionamiento público para clientes.</small>
+                                <h6 class="fw-semibold mb-0">Parámetros del servicio WireGuard</h6>
                             </div>
                         </div>
 
@@ -113,14 +110,14 @@
                             <div class="col-12 col-md-6">
                                 <label for="wg_interface" class="form-label fw-semibold">Interfaz WireGuard</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-network"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-network"></i></span>
                                     <input type="text" class="form-control" id="wg_interface" name="wg_interface" value="<?= old('wg_interface', esc($wg_interface ?? 'wg0')) ?>" placeholder="Ej: wg0">
                                 </div>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label for="wg_endpoint" class="form-label fw-semibold">Endpoint Público del Servidor</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-antenna"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-antenna"></i></span>
                                     <input type="text" class="form-control" id="wg_endpoint" name="wg_endpoint" value="<?= old('wg_endpoint', esc($wg_endpoint ?? '')) ?>" placeholder="vpn.tudominio.com:51820">
                                 </div>
                                 <div class="form-text text-muted mt-1 fs-2">
@@ -130,13 +127,10 @@
 
                             <?php if (!empty($wg_public_key)): ?>
                                 <div class="col-12">
-                                    <label class="form-label fw-semibold">Clave Pública del Servidor WireGuard</label>
+                                    <label class="form-label fw-semibold">Clave pública del servidor WireGuard</label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="ti ti-key"></i></span>
+                                        <span class="input-group-text bg-transparent text-muted"><i class="ti ti-key"></i></span>
                                         <input type="text" class="form-control font-monospace fs-2" value="<?= esc($wg_public_key) ?>" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('<?= esc($wg_public_key) ?>'); if(typeof Toast !== 'undefined') { Toast.fire({ icon: 'success', title: 'Clave pública copiada' }); }">
-                                            <i class="ti ti-copy"></i>
-                                        </button>
                                     </div>
                                 </div>
                             <?php endif; ?>
@@ -144,32 +138,32 @@
                             <div class="col-12">
                                 <label for="wg_restricted_cidrs" class="form-label fw-semibold">Redes Restringidas (Bloqueadas)</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="ti ti-ban"></i></span>
+                                    <span class="input-group-text bg-transparent text-muted"><i class="ti ti-ban"></i></span>
                                     <input type="text" class="form-control" id="wg_restricted_cidrs" name="wg_restricted_cidrs" value="<?= old('wg_restricted_cidrs', esc($wg_restricted_cidrs ?? '')) ?>" placeholder="Ej: 192.168.0.0, 192.168.1.0, 172.16.0.0">
                                 </div>
-                                <div class="form-text text-muted mt-2 d-flex align-items-center gap-1 fs-2">
-                                    <i class="ti ti-info-circle text-primary"></i>
+                                <div class="form-text text-muted mt-2 d-flex align-items-start gap-1 fs-2">
+                                    <i class="ti ti-info-circle text-primary flex-shrink-0 mt-1"></i>
                                     <span>Separa por comas las redes a las que no se debe conceder acceso (ej: <code>192.168.1.0, 10.0.0.0</code>).</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- BOTONES DE ACCIÓN: RESPONSIVE Y JERÁRQUICOS -->
-                    <div class="pt-3 mt-4 border-top border-opacity-10">
-                        <div class="row g-2 justify-content-end align-items-center">
-                            <div class="col-6 col-sm-auto order-2 order-sm-1">
-                                <a href="<?= base_url('dashboard') ?>" class="btn btn-outline-secondary w-100 py-2 px-3">
+                    <!-- BOTONES DE ACCIÓN: RESPONSIVE Y CENTRADOS -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="row g-2 justify-content-center align-items-center">
+                            <div class="col-6 col-sm-auto">
+                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-x me-1"></i>Cancelar
                                 </a>
                             </div>
-                            <div class="col-6 col-sm-auto order-3 order-sm-2">
-                                <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-outline-primary w-100 py-2 px-3 fw-semibold">
-                                    <i class="ti ti-plug-connected me-1"></i>Probar Conexión
+                            <div class="col-6 col-sm-auto">
+                                <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
+                                    <i class="ti ti-plug-connected me-1"></i>Probar
                                 </button>
                             </div>
-                            <div class="col-12 col-sm-auto order-1 order-sm-3">
-                                <button type="submit" class="btn btn-primary w-100 py-2 px-4 fw-semibold shadow-sm">
+                            <div class="col-12 col-sm-auto">
+                                <button type="submit" class="btn btn-primary w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
                                 </button>
                             </div>

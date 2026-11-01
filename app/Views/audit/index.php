@@ -17,7 +17,7 @@
         <form method="get" action="<?= site_url('audit-logs') ?>" class="d-flex w-100 w-md-auto">
           <div class="input-group">
             <input type="text" name="q" class="form-control" placeholder="Buscar por usuario, acción, IP..." value="<?= esc($search ?? '') ?>">
-            <button class="btn btn-primary" type="submit"><i class="ti ti-search"></i></button>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="ti ti-search"></i></button>
           </div>
         </form>
       </div>

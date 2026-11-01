@@ -1292,7 +1292,7 @@ class DeviceController extends BaseController
                 $lastSeen = $this->updateLastSeenFromHandshake($device, $peer['latest_handshake']);
 
                 $peers[$device->public_key] = [
-                    'connected' => $peer['connected'],
+                    'connected' => ((int) $device->active === 1) && !empty($peer['connected']),
                     'endpoint' => $peer['endpoint'],
                     'latest_handshake' => $peer['latest_handshake'],
                     'last_seen' => $lastSeen,

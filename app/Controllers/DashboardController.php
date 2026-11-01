@@ -112,7 +112,7 @@ class DashboardController extends BaseController
                 $peer        = $peers[$dev->public_key] ?? null;
                 $rx          = (int) ($peer['rx_bytes'] ?? 0);
                 $tx          = (int) ($peer['tx_bytes'] ?? 0);
-                $isConnected = ! empty($peer['connected']);
+                $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
 
                 if ($isConnected) {
                     $onlineCount++;

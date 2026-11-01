@@ -20,11 +20,12 @@
         </div>
         <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center mt-3 mt-md-0">
           <div class="d-flex align-items-center gap-2">
-            <a href="<?= site_url('networks') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none">
-              <i class="ti ti-arrow-left fs-5"></i>
+            <a href="<?= site_url('networks') ?>" class="btn btn-sm bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a Redes">
+              <i class="ti ti-arrow-left"></i>
             </a>
-            <a href="<?= site_url('networks/' . $network->id . '/devices/create') ?>" class="btn btn-primary border-0 d-flex align-items-center gap-2 px-4 shadow-none">
-              <i class="ti ti-plus fs-5"></i> Nuevo Nodo
+            <a href="<?= site_url('networks/' . $network->id . '/devices/create') ?>" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-1 shadow-none">
+              <i class="ti ti-plus"></i>
+              <span>Nuevo Nodo</span>
             </a>
           </div>
         </div>
@@ -325,13 +326,13 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-          <button type="button" class="btn btn-dark border-0" id="btn-copy-share-link">
+          <button type="button" class="btn btn-dark btn-sm border-0" id="btn-copy-share-link">
             <i class="ti ti-link me-1"></i> Copiar Enlace Temporal
           </button>
-          <button type="button" class="btn btn-info border-0" id="btn-send-email-config">
+          <button type="button" class="btn btn-info btn-sm border-0" id="btn-send-email-config">
             <i class="ti ti-mail me-1"></i> Enviar por Email
           </button>
-          <a href="#" class="btn btn-primary border-0 d-flex align-items-center gap-2" id="btn-download-config-modal">
+          <a href="#" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-2" id="btn-download-config-modal">
             <i class="ti ti-download"></i> Descargar .conf
           </a>
         </div>

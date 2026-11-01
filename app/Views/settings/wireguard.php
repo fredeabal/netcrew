@@ -66,7 +66,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="wg_ssh_auth_type" class="form-label fw-semibold">Método de Autenticación</label>
-                                <select class="form-select" id="wg_ssh_auth_type" name="wg_ssh_auth_type" onchange="toggleAuthFields()">
+                                <select class="select2 form-control custom-select" id="wg_ssh_auth_type" name="wg_ssh_auth_type" onchange="toggleAuthFields()">
                                     <option value="password" <?= old('wg_ssh_auth_type', $wg_ssh_auth_type ?? 'password') === 'password' ? 'selected' : '' ?>>Contraseña</option>
                                     <option value="key" <?= old('wg_ssh_auth_type', $wg_ssh_auth_type ?? 'password') === 'key' ? 'selected' : '' ?>>Llave Privada SSH</option>
                                 </select>
@@ -153,17 +153,17 @@
                     <div class="mt-4 pt-3 border-top">
                         <div class="row g-2 justify-content-center align-items-center">
                             <div class="col-6 col-sm-auto">
-                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
+                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-x me-1"></i>Cancelar
                                 </a>
                             </div>
                             <div class="col-6 col-sm-auto">
-                                <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
+                                <button type="submit" formaction="<?= base_url('settings/wireguard/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-plug-connected me-1"></i>Probar
                                 </button>
                             </div>
                             <div class="col-12 col-sm-auto">
-                                <button type="submit" class="btn btn-primary w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
                                 </button>
                             </div>
@@ -191,5 +191,10 @@ function toggleAuthFields() {
 }
 
 // Ejecutar al cargar la página para reflejar el estado actual
-document.addEventListener('DOMContentLoaded', toggleAuthFields);
+document.addEventListener('DOMContentLoaded', function() {
+    toggleAuthFields();
+    if (window.jQuery) {
+        $('#wg_ssh_auth_type').on('select2:select change', toggleAuthFields);
+    }
+});
 </script>

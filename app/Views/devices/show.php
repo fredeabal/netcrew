@@ -24,7 +24,7 @@ $typeIcons  = [
 // Asignación de valores por defecto y verificación de estado
 // ---------------------------------------------------------------------
 $deviceType  = $device->device_type ?? 'pc';
-$wgConnected = $wg && $wg['connected'];
+$wgConnected = ((int)$device->active === 1) && $wg && !empty($wg['connected']);
 
 // ---------------------------------------------------------------------
 // Función auxiliar (helper) para formatear bytes a un formato legible
@@ -77,12 +77,13 @@ $timeAgoView = static function (?int $ts, int $ref): string {
       </div>
       <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center mt-3 mt-md-0">
         <div class="d-flex align-items-center gap-2">
-          <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a la red">
-            <i class="ti ti-arrow-left fs-5"></i>
+          <a href="<?= site_url('networks/' . $network->id . '/devices') ?>" class="btn btn-sm bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a la red">
+            <i class="ti ti-arrow-left"></i>
           </a>
           <?php if (auth()->user()->can('devices.edit') || auth()->user()->inGroup('superadmin')): ?>
-            <a href="<?= site_url('devices/edit/' . $device->id) ?>" class="btn btn-primary border-0 d-flex align-items-center gap-2 px-4 shadow-none">
-              <i class="ti ti-pencil fs-5"></i> Editar Nodo
+            <a href="<?= site_url('devices/edit/' . $device->id) ?>" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-1 shadow-none">
+              <i class="ti ti-pencil"></i>
+              <span>Editar Nodo</span>
             </a>
           <?php endif; ?>
         </div>
@@ -211,10 +212,16 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           <div class="col-12 col-md-4">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Estado</span>
-              <span class="fw-semibold <?= $wgConnected ? 'text-success' : 'text-danger' ?>">
-                <i class="ti <?= $wgConnected ? 'ti-circle-check' : 'ti-circle-x' ?> me-1"></i>
-                <?= $wgConnected ? 'En línea' : 'Offline' ?>
-              </span>
+              <?php if ((int)($device->active ?? 1) !== 1): ?>
+                <span class="fw-semibold text-muted">
+                  <i class="ti ti-power me-1"></i>Inactivo
+                </span>
+              <?php else: ?>
+                <span class="fw-semibold <?= $wgConnected ? 'text-success' : 'text-danger' ?>">
+                  <i class="ti <?= $wgConnected ? 'ti-circle-check' : 'ti-circle-x' ?> me-1"></i>
+                  <?= $wgConnected ? 'En línea' : 'Offline' ?>
+                </span>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -278,7 +285,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
         <div class="row g-2 justify-content-center">
 
           <div class="col-6 col-md-auto">
-            <button type="button" class="btn btn-dark border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap" onclick="pingDevice(<?= $device->id ?>)">
+            <button type="button" class="btn btn-dark btn-sm border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap" onclick="pingDevice(<?= $device->id ?>)">
               <i class="ti ti-wifi me-1"></i>
               <span>Hacer Ping</span>
             </button>
@@ -292,7 +299,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <?= csrf_field() ?>
 
               <button type="submit"
-                      class="btn btn-warning border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                      class="btn btn-warning btn-sm border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
                 <i class="ti ti-refresh me-1"></i>
                 <span>Regenerar Llaves</span>
               </button>
@@ -307,7 +314,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <?= csrf_field() ?>
 
               <button type="submit"
-                      class="btn btn-primary border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                      class="btn btn-primary btn-sm border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
                 <i class="ti <?= $device->active ? 'ti-power' : 'ti-circle-check' ?> me-1"></i>
                 <span><?= $device->active ? 'Desactivar' : 'Activar' ?></span>
               </button>
@@ -322,7 +329,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <?= csrf_field() ?>
 
               <button type="submit"
-                      class="btn btn-danger border-0 shadow-none w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
+                      class="btn btn-danger btn-sm border-0 shadow-none w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap">
                 <i class="ti ti-trash me-1"></i>
                 <span>Eliminar</span>
               </button>

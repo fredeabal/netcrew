@@ -16,7 +16,7 @@
         </nav>
       </div>
       <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center mt-3 mt-md-0">
-        <a href="<?= site_url('users/create') ?>" class="btn btn-primary border-0 d-flex align-items-center gap-1">
+        <a href="<?= site_url('users/create') ?>" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-1 shadow-none">
           <i class="ti ti-plus"></i>
           <span>Nuevo Usuario</span>
         </a>

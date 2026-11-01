@@ -25,7 +25,7 @@
         </nav>
       </div>
       <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end mt-3 mt-md-0">
-        <a href="<?= site_url('devices/show/' . $device->id) ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a Detalles">
+        <a href="<?= site_url('devices/show/' . $device->id) ?>" class="btn btn-sm bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver a Detalles">
           <i class="ti ti-arrow-left fs-5"></i>
         </a>
       </div>
@@ -91,13 +91,19 @@
             </select>
           </div>
 
-          <div class="d-flex justify-content-center gap-2 mt-4">
-            <a href="<?= site_url('devices/show/' . $device->id) ?>" class="btn btn-dark px-4">
-              <i class="ti ti-x me-1"></i>Cancelar
-            </a>
-            <button type="submit" class="btn btn-primary px-4">
-              <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
-            </button>
+          <div class="mt-4 pt-3 border-top">
+            <div class="row g-2 justify-content-center align-items-center">
+              <div class="col-6 col-sm-auto">
+                <a href="<?= site_url('devices/show/' . $device->id) ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                  <i class="ti ti-x me-1"></i>Cancelar
+                </a>
+              </div>
+              <div class="col-6 col-sm-auto">
+                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                  <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" dir="ltr" data-color-theme="Blue_Theme" data-layout="vertical">
+<html lang="es" dir="ltr" data-color-theme="Blue_Theme" data-layout="vertical" class="auth-no-scroll">
 <head>
   <script>
     (function() {
@@ -10,20 +10,20 @@
   </script>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>NetCrew | Revisa tu correo</title>
   <link rel="shortcut icon" type="image/png" href="<?= base_url('assets/images/logos/favicon.png') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>" />
 </head>
-<body>
+<body class="auth-no-scroll">
 
-  <div id="main-wrapper" class="auth-customizer-none">
-    <div class="position-relative overflow-hidden min-vh-100 w-100">
-      <div class="position-relative z-index-5">
-        <div class="row min-vh-100">
+  <div id="main-wrapper" class="auth-customizer-none auth-screen-fit">
+    <div class="position-relative overflow-hidden w-100 h-100">
+      <div class="position-relative z-index-5 h-100">
+        <div class="row g-0 h-100">
           <!-- Columna izquierda: Fondo Naranja y Partículas -->
-          <div class="col-xl-7 col-xxl-8 d-none d-xl-flex flex-column justify-content-center align-items-center bg-primary-gradient position-relative">
+          <div class="col-xl-7 col-xxl-8 d-none d-xl-flex flex-column justify-content-center align-items-center bg-primary-gradient position-relative h-100">
             
             <!-- Animación de fondo: Red de nodos (Particles.js) -->
             <div id="particles-js" class="position-absolute w-100 h-100 top-0 start-0 z-index-1"></div>
@@ -40,7 +40,7 @@
           </div>
           
           <!-- Columna derecha: Mensaje de confirmación -->
-          <div class="col-xl-5 col-xxl-4 bg-body d-flex justify-content-center align-items-center p-4">
+          <div class="col-12 col-xl-5 col-xxl-4 bg-body d-flex justify-content-center align-items-center p-4 h-100">
             <div class="auth-max-width w-100 col-sm-8 col-md-6 col-xl-9 px-4 text-center">
               
               <!-- Logo visible en todas las pantallas encima del contenido -->
@@ -62,8 +62,8 @@
                 <i class="ti ti-info-circle me-1"></i> No olvides revisar la carpeta de <strong>spam o correo no deseado</strong> si no lo ves en unos minutos.
               </div>
               
-              <a href="<?= url_to('login') ?>" class="btn btn-primary w-100 py-8 mb-2 rounded-2">
-                Volver al inicio de sesión
+              <a href="<?= url_to('login') ?>" class="btn btn-primary w-100 py-2 fs-4 fw-semibold rounded-2 mb-2 d-flex align-items-center justify-content-center shadow-none">
+                <i class="ti ti-login me-2"></i>Volver al inicio de sesión
               </a>
 
             </div>
@@ -81,6 +81,11 @@
   <script src="<?= base_url('assets/libs/particles.js/particles.min.js') ?>"></script>
 
   <script>
+    // Bloquear el arrastre vertical / rebote elástico en iPhone y Android
+    document.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+
     document.addEventListener("DOMContentLoaded", function() {
       if (document.getElementById('particles-js')) {
         particlesJS("particles-js", {

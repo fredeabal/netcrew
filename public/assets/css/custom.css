@@ -683,14 +683,37 @@ body .select2-container {
     background-color: rgba(var(--bs-primary-rgb), 0.03);
 }
 
-/* --- Botón cuadrado --- */
-.btn-square {
-    width: 38px;
-    height: 38px;
-    padding: 0;
+/* --- Botones pequeños y botón cuadrado perfectamente sincronizados --- */
+.btn-sm,
+.btn.btn-sm {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 0.65rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1 !important;
+    border-radius: 6px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.btn-square,
+.btn-square.btn-sm,
+.btn-sm.btn-square {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    max-width: 30px !important;
+    max-height: 30px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+    font-size: 0.875rem !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
 }
 
 /* --- Contenedor de caja de búsqueda con icono --- */
@@ -1042,6 +1065,25 @@ body .select2-container {
     margin: 0 auto;
 }
 
+html.auth-no-scroll,
+body.auth-no-scroll {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+}
+
+.auth-screen-fit {
+    height: 100vh;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+}
+
 .bg-primary-gradient {
     background: linear-gradient(-45deg, #d35400, #F38020, #e67e22, #f39c12);
     background-size: 400% 400%;
@@ -1337,16 +1379,51 @@ body {
 
     /* Botones touch-friendly y estilizados */
     .btn:not(.btn-sm) {
-        min-height: 40px;
+        min-height: 44px;
         border-radius: 10px !important;
         font-weight: 600;
     }
 
     .btn.btn-sm {
-        min-height: 32px;
-        padding: 0.25rem 0.65rem !important;
-        font-size: 0.78rem !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        padding: 0 0.75rem !important;
+        font-size: 0.8rem !important;
         border-radius: 8px !important;
+    }
+
+    .btn-square,
+    .btn-square.btn-sm,
+    .btn-sm.btn-square {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        max-width: 36px !important;
+        max-height: 36px !important;
+        border-radius: 8px !important;
+    }
+
+    /* Touch target mínimo de 44x44px para botones de acción e iconos en móvil (WCAG 2.5.5) */
+    .mobile-card-item .dropdown > .btn,
+    .mobile-card-header .dropdown > .btn,
+    .mobile-card-item .btn-sm.p-1,
+    .table td .dropdown > .btn,
+    .table td .btn-sm.p-1,
+    .btn-touch-target {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 !important;
+    }
+
+    /* Prevención de auto-zoom no deseado en iOS Safari al enfocar inputs */
+    input.form-control,
+    select.form-select,
+    textarea.form-control {
+        font-size: 16px !important;
     }
 }
 

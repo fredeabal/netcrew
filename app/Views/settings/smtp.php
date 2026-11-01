@@ -119,7 +119,7 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label for="smtp_crypto" class="form-label fw-semibold">Cifrado (Crypto)</label>
-                                <select class="form-select" id="smtp_crypto" name="smtp_crypto">
+                                <select class="select2 form-control custom-select" id="smtp_crypto" name="smtp_crypto">
                                     <option value="" <?= old('smtp_crypto', $smtp_crypto ?? '') === '' ? 'selected' : '' ?>>Ninguno</option>
                                     <option value="tls" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'tls' ? 'selected' : '' ?>>TLS</option>
                                     <option value="ssl" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
@@ -137,17 +137,17 @@
                     <div class="mt-4 pt-3 border-top">
                         <div class="row g-2 justify-content-center align-items-center">
                             <div class="col-6 col-sm-auto">
-                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
+                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-x me-1"></i>Cancelar
                                 </a>
                             </div>
                             <div class="col-6 col-sm-auto">
-                                <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
+                                <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-send me-1"></i>Probar
                                 </button>
                             </div>
                             <div class="col-12 col-sm-auto">
-                                <button type="submit" class="btn btn-primary w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
                                 </button>
                             </div>

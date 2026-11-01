@@ -111,7 +111,7 @@
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/clear-all') ?>" method="POST" data-confirm="¿Estás seguro de que deseas ejecutar el mantenimiento completo del sistema? Se limpiarán temporales, caché y se optimizará la base de datos.">
                         <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-primary py-2 shadow-none">
+                        <button type="submit" class="btn btn-primary btn-sm py-2 shadow-none">
                             <i class="ti ti-wand me-1"></i> Ejecutar Mantenimiento Completo
                         </button>
                     </form>
@@ -145,7 +145,7 @@
                                 <p class="text-muted fs-3 mb-4">Genera una instantánea consistente e inmutable de la base de datos para conservarla en un lugar seguro.</p>
                             </div>
                             <div>
-                                <a href="<?= base_url('settings/maintenance/backup/download') ?>" class="btn btn-outline-primary px-4 py-2">
+                                <a href="<?= base_url('settings/maintenance/backup/download') ?>" class="btn btn-outline-primary btn-sm px-3 py-2">
                                     <i class="ti ti-download me-1"></i> Descargar Respaldo DB
                                 </a>
                             </div>
@@ -162,11 +162,11 @@
                                     <?= csrf_field() ?>
                                     <div class="d-flex flex-wrap align-items-center gap-2">
                                         <input type="file" name="backup_file" id="backup_file" class="d-none" accept=".db,.sqlite">
-                                        <label for="backup_file" class="btn btn-primary px-4 mb-0 py-2 cursor-pointer shadow-none">
+                                        <label for="backup_file" class="btn btn-primary btn-sm px-3 mb-0 py-2 cursor-pointer shadow-none">
                                             <i class="ti ti-upload me-1"></i> Seleccionar Archivo
                                         </label>
                                         <span id="file-name" class="text-muted fs-3">Ningún archivo seleccionado</span>
-                                        <button type="submit" class="btn btn-danger px-4 py-2 d-none shadow-none" id="btn-submit-restore">
+                                        <button type="submit" class="btn btn-danger btn-sm px-3 py-2 d-none shadow-none" id="btn-submit-restore">
                                             <i class="ti ti-restore me-1"></i> Confirmar Restauración
                                         </button>
                                     </div>
@@ -197,7 +197,7 @@
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/clear-ghost-peers') ?>" method="POST" data-confirm="¿Deseas reconciliar los peers con el servidor WireGuard? Se eliminarán los nodos inactivos y se restaurarán los activos.">
                         <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-primary w-100 shadow-none">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 shadow-none">
                             <i class="ti ti-refresh me-1"></i> Sincronizar Peers
                         </button>
                     </form>
@@ -222,7 +222,7 @@
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/sync-firewall') ?>" method="POST" data-confirm="¿Deseas reconstruir y reaplicar las reglas de firewall y reenvío de paquetes en el servidor WireGuard?">
                         <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-primary w-100 shadow-none">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 shadow-none">
                             <i class="ti ti-shield-check me-1"></i> Reparar Firewall
                         </button>
                     </form>
@@ -247,7 +247,7 @@
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/restart-wireguard') ?>" method="POST" data-confirm="¿Estás seguro de que deseas reiniciar el servicio WireGuard? Las conexiones activas se reconectarán brevemente.">
                         <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-danger w-100 shadow-none">
+                        <button type="submit" class="btn btn-danger btn-sm w-100 shadow-none">
                             <i class="ti ti-power me-1"></i> Reiniciar WireGuard
                         </button>
                     </form>

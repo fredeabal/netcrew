@@ -19,7 +19,7 @@
         </nav>
       </div>
       <div class="col-4 d-flex justify-content-end align-items-center">
-        <a href="<?= base_url('users') ?>" class="btn bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver al listado">
+        <a href="<?= base_url('users') ?>" class="btn btn-sm bg-primary-subtle text-primary border-0 btn-square shadow-none" title="Volver al listado">
           <i class="ti ti-arrow-left fs-5"></i>
         </a>
       </div>
@@ -163,12 +163,12 @@
                     <div class="mt-4 pt-3 border-top">
                         <div class="row g-2 justify-content-center align-items-center">
                             <div class="col-6 col-sm-auto">
-                                <a href="<?= url_to('\App\Controllers\UsersController::index') ?>" class="btn btn-dark w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                                <a href="<?= url_to('\App\Controllers\UsersController::index') ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-x me-1"></i>Cancelar
                                 </a>
                             </div>
                             <div class="col-6 col-sm-auto">
-                                <button type="submit" class="btn btn-primary w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
                                 </button>
                             </div>

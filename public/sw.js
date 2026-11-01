@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netcrew-pwa-v15';
+const CACHE_NAME = 'netcrew-pwa-v25';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -20,7 +20,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       // Intentar cachear los recursos estáticos principales; si alguno falla no bloquear la instalación
       return Promise.allSettled(
-        STATIC_ASSETS.map((url) => cache.add(url).catch(() => {}))
+        STATIC_ASSETS.map((url) => cache.add(url).catch(() => { }))
       );
     }).then(() => self.skipWaiting())
   );

@@ -141,15 +141,15 @@ code,
     min-width: 8px;
 }
 
-/* --- Paginación personalizada --- */
+/* --- Paginación personalizada (estandarizada a tamaño sm 30px / 6px radius) --- */
 .pagination .page-link {
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     padding: 0;
-    margin: 0 4px;
-    font-size: 0.85rem;
+    margin: 0 3px;
+    font-size: 0.8125rem;
     border: none;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -161,17 +161,27 @@ code,
 .pagination .page-item.active .page-link {
     background-color: var(--bs-primary) !important;
     color: #fff !important;
-    box-shadow: 0 4px 9px rgba(var(--bs-primary-rgb), 0.2);
+    box-shadow: 0 2px 6px rgba(var(--bs-primary-rgb), 0.25);
 }
 
 .pagination .page-item.disabled .page-link {
     background-color: transparent !important;
-    opacity: 0.5;
+    opacity: 0.4;
 }
 
 .pagination .page-link:hover:not(.disabled) {
     background-color: var(--bs-primary-bg-subtle);
     color: var(--bs-primary);
+}
+
+@media (max-width: 767.98px) {
+    .pagination .page-link {
+        width: 34px;
+        height: 34px;
+        font-size: 0.875rem;
+        margin: 0 2px;
+        border-radius: 6px !important;
+    }
 }
 
 /* ==========================================================================

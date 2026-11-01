@@ -1020,7 +1020,7 @@ class DeviceController extends BaseController
                                 </tr>
                                 <tr>
                                     <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #64748b; font-weight: 600;">IP Asignada</td>
-                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #0284c7; font-weight: 600; text-align: right; font-family: monospace;">' . esc($device->ip_address) . '</td>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #F38020; font-weight: 600; text-align: right; font-family: monospace;">' . esc($device->ip_address) . '</td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 10px 16px; color: #64748b; font-weight: 600;">Enrutamiento</td>

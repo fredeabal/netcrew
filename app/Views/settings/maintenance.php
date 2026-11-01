@@ -14,7 +14,7 @@
                 </nav>
             </div>
             <div class="flex-shrink-0 text-end">
-                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
                     <span class="status-indicator-dot <?= ($stats['isWgUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
                     <span class="d-none d-sm-inline">WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
                     <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Activo' : 'Off' ?></span>

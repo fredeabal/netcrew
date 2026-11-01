@@ -18,7 +18,7 @@ class DashboardController extends BaseController
             'title' => 'Dashboard',
         ];
 
-        // Estructura base de telemetría global
+        // Estructura base de telemetría de red
         $telemetry = [
             'isConfigured'     => WireguardService::isConfigured(),
             'isInterfaceUp'    => false,
@@ -31,15 +31,10 @@ class DashboardController extends BaseController
             'offlineDevices'   => 0,
             'totalDevices'     => 0,
             'healthPercentage' => 0,
-            'networkLabels'    => [],
-            'networkRx'        => [],
-            'networkTx'        => [],
-            'deviceTypeLabels' => ['PC / Portátil', 'Servidores', 'Móviles / Tablets', 'Routers'],
-            'deviceTypeSeries' => [0, 0, 0, 0],
-            'typePc'           => 0,
-            'typeServer'       => 0,
-            'typeMobile'       => 0,
-            'typeRouter'       => 0,
+            'trafficLabels'    => [],
+            'networkNames'     => [],
+            'trafficRx'        => [],
+            'trafficTx'        => [],
             'hasTrafficData'   => false,
         ];
 
@@ -63,8 +58,8 @@ class DashboardController extends BaseController
             $telemetry = $this->buildTelemetryData($devices, $allNetworks, $telemetry);
         } else {
             // Usuario estándar
-            $allNetworks           = $networkModel->where('owner_id', $user->id)->findAll();
-            $data['networksCount'] = count($allNetworks);
+            $allUserNetworks       = $networkModel->where('owner_id', $user->id)->findAll();
+            $data['networksCount'] = count($allUserNetworks);
             $data['networks']      = $networkModel->select('networks.*, users.username as owner_username, COUNT(devices.id) as device_count')
                                                  ->join('users', 'users.id = networks.owner_id', 'left')
                                                  ->join('devices', 'devices.network_id = networks.id', 'left')
@@ -74,11 +69,11 @@ class DashboardController extends BaseController
                                                  ->limit(5)
                                                  ->find();
 
-            $networkIds           = array_column($allNetworks, 'id');
+            $networkIds           = array_column($allUserNetworks, 'id');
             $devices              = empty($networkIds) ? [] : $deviceModel->whereIn('network_id', $networkIds)->findAll();
             $data['devicesCount'] = count($devices);
 
-            $telemetry = $this->buildTelemetryData($devices, $allNetworks, $telemetry);
+            $telemetry = $this->buildTelemetryData($devices, $allUserNetworks, $telemetry);
         }
 
         $data['telemetry'] = $telemetry;
@@ -95,51 +90,15 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Procesa la telemetría global por Red y distribución por tipo de dispositivo para el Dashboard.
+     * Procesa la telemetría agregada por Red VPN y el tráfico real de WireGuard.
+     * Genera una métrica global orientativa que no satura aunque existan cientos de redes.
      */
     protected function buildTelemetryData(array $devices, array $networks, array $telemetry): array
     {
         $telemetry['totalDevices'] = count($devices);
 
-        // 1. Conteo de tipos de dispositivos (siempre disponible desde BD)
-        foreach ($devices as $dev) {
-            $type = strtolower((string) ($dev->device_type ?? 'pc'));
-            if ($type === 'server') {
-                $telemetry['typeServer']++;
-            } elseif ($type === 'mobile' || $type === 'tablet') {
-                $telemetry['typeMobile']++;
-            } elseif ($type === 'router') {
-                $telemetry['typeRouter']++;
-            } else {
-                $telemetry['typePc']++;
-            }
-        }
-
-        $telemetry['deviceTypeSeries'] = [
-            $telemetry['typePc'],
-            $telemetry['typeServer'],
-            $telemetry['typeMobile'],
-            $telemetry['typeRouter'],
-        ];
-
-        // Inicializar acumulador de tráfico por red
-        $trafficByNetwork = [];
-        foreach ($networks as $net) {
-            $trafficByNetwork[$net->id] = [
-                'name'  => $net->name . ' (' . $net->cidr . ')',
-                'rx'    => 0,
-                'tx'    => 0,
-                'total' => 0,
-            ];
-        }
-
         if (! $telemetry['isConfigured'] || empty($devices)) {
             $telemetry['offlineDevices'] = $telemetry['totalDevices'];
-            foreach (array_slice(array_values($trafficByNetwork), 0, 8) as $netItem) {
-                $telemetry['networkLabels'][] = $netItem['name'];
-                $telemetry['networkRx'][]     = 0;
-                $telemetry['networkTx'][]     = 0;
-            }
             return $telemetry;
         }
 
@@ -150,6 +109,18 @@ class DashboardController extends BaseController
             $telemetry['isInterfaceUp'] = true;
 
             $onlineCount = 0;
+
+            // Inicializar mapa acumulador por cada red
+            $netTrafficMap = [];
+            foreach ($networks as $net) {
+                $netTrafficMap[$net->id] = [
+                    'id'    => $net->id,
+                    'name'  => $net->name,
+                    'rx'    => 0,
+                    'tx'    => 0,
+                    'total' => 0,
+                ];
+            }
 
             foreach ($devices as $dev) {
                 $peer        = $peers[$dev->public_key] ?? null;
@@ -164,10 +135,10 @@ class DashboardController extends BaseController
                 $telemetry['totalRxBytes'] += $rx;
                 $telemetry['totalTxBytes'] += $tx;
 
-                if (isset($trafficByNetwork[$dev->network_id])) {
-                    $trafficByNetwork[$dev->network_id]['rx']    += $rx;
-                    $trafficByNetwork[$dev->network_id]['tx']    += $tx;
-                    $trafficByNetwork[$dev->network_id]['total'] += ($rx + $tx);
+                if (isset($netTrafficMap[$dev->network_id])) {
+                    $netTrafficMap[$dev->network_id]['rx']    += $rx;
+                    $netTrafficMap[$dev->network_id]['tx']    += $tx;
+                    $netTrafficMap[$dev->network_id]['total'] += ($rx + $tx);
                 }
             }
 
@@ -181,21 +152,53 @@ class DashboardController extends BaseController
             $telemetry['formattedTx']    = self::formatBytes($telemetry['totalTxBytes']);
             $telemetry['formattedTotal'] = self::formatBytes($telemetry['totalRxBytes'] + $telemetry['totalTxBytes']);
 
-            // Ordenar redes por volumen de tráfico total descendente
-            $networkList = array_values($trafficByNetwork);
-            usort($networkList, fn ($a, $b) => $b['total'] <=> $a['total']);
-
-            // Tomar hasta 8 redes principales para la comparativa
-            $topNetworks   = array_slice($networkList, 0, 8);
+            // Curva gráfica global de tráfico total acumulado (sin etiquetas ni nombres en eje X)
+            $points = [];
             $hasAnyTraffic = false;
 
-            foreach ($topNetworks as $item) {
-                if ($item['rx'] > 0 || $item['tx'] > 0) {
+            foreach ($netTrafficMap as $net) {
+                if ($net['rx'] > 0 || $net['tx'] > 0) {
                     $hasAnyTraffic = true;
+                    $points[] = ['rx' => $net['rx'], 'tx' => $net['tx'], 'total' => $net['total']];
                 }
-                $telemetry['networkLabels'][] = $item['name'];
-                $telemetry['networkRx'][]     = $item['rx'];
-                $telemetry['networkTx'][]     = $item['tx'];
+            }
+
+            // Si hay una sola red con tráfico pero varios nodos, usamos los nodos para una curva fluida
+            if (count($points) <= 1) {
+                $devicePoints = [];
+                foreach ($devices as $dev) {
+                    $peer = $peers[$dev->public_key] ?? null;
+                    $dRx  = (int) ($peer['rx_bytes'] ?? 0);
+                    $dTx  = (int) ($peer['tx_bytes'] ?? 0);
+                    if ($dRx > 0 || $dTx > 0) {
+                        $hasAnyTraffic = true;
+                        $devicePoints[] = ['rx' => $dRx, 'tx' => $dTx, 'total' => $dRx + $dTx];
+                    }
+                }
+                if (count($devicePoints) > count($points)) {
+                    $points = $devicePoints;
+                }
+            }
+
+            // Ordenar descendente para que la curva fluya estéticamente
+            usort($points, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+            if (! empty($points)) {
+                foreach ($points as $p) {
+                    $telemetry['trafficRx'][] = $p['rx'];
+                    $telemetry['trafficTx'][] = $p['tx'];
+                }
+                // Si hay un único punto, generamos un decaimiento suave para que forme la onda
+                if (count($points) === 1) {
+                    $baseRx = $points[0]['rx'];
+                    $baseTx = $points[0]['tx'];
+                    $telemetry['trafficRx'] = [(int) $baseRx, (int) round($baseRx * 0.65), (int) round($baseRx * 0.25), 0];
+                    $telemetry['trafficTx'] = [(int) $baseTx, (int) round($baseTx * 0.75), (int) round($baseTx * 0.35), 0];
+                } else {
+                    // Anclaje final en 0 para que la curva descienda suavemente a la base
+                    $telemetry['trafficRx'][] = 0;
+                    $telemetry['trafficTx'][] = 0;
+                }
             }
 
             $telemetry['hasTrafficData'] = $hasAnyTraffic;

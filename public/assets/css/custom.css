@@ -190,12 +190,24 @@ code,
    - Esquinas Moderadas como Botones: border-radius: 6px (nunca rounded-pill)
    - Alto contraste en Modo Claro (Light Mode) y fondos sutiles en Modo Oscuro
    ========================================================================== */
+/* ==========================================================================
+   BADGES Y PILLS DEL SISTEMA - UNIFICACIÓN TOTAL CON BORDES
+   - Bordes de 1px a juego con el color del texto (opacidad 0.35)
+   - Fondos sutiles (rgba con opacidad 0.12)
+   - Color oficial NetCrew:
+     * Success: #34c759 (el verde unificado de toda la web)
+     * Primary: #F38020
+     * Warning: #FAAD14
+     * Danger:  #b31b34
+     * Info:    #539bff
+     * Dark/Secondary: #7c8fac (dark) / #475569 (light)
+   ========================================================================== */
 .badge {
     font-size: 0.6875rem !important; /* ~11px texto pequeño unificado como en la app */
     font-weight: 600 !important;
     letter-spacing: 0.2px;
     border-radius: 6px !important;
-    padding: 0.2rem 0.5rem !important;
+    padding: 0.25rem 0.55rem !important;
     line-height: 1.2 !important;
     display: inline-flex;
     align-items: center;
@@ -209,7 +221,7 @@ code,
     justify-content: center !important;
     text-align: center !important;
     font-size: 0.6875rem !important; /* ~11px texto pequeño como en la app */
-    padding: 0.2rem 0.45rem !important;
+    padding: 0.25rem 0.5rem !important;
     font-weight: 600 !important;
     border-radius: 6px !important;
     white-space: nowrap !important;
@@ -227,80 +239,56 @@ code,
     border-radius: 6px !important;
 }
 
-/* --- MODO CLARO (LIGHT MODE) - ALTO CONTRASTE Y BORDES SUTILES --- */
+/* --- BADGES Y PILLS: TODOS CON BORDE DEL COLOR DEL TEXTO --- */
+.badge.bg-success-subtle,
+.status-pill-success {
+    background-color: rgba(52, 199, 89, 0.12) !important;
+    color: #34c759 !important;
+    border: 1px solid rgba(52, 199, 89, 0.35) !important;
+}
+
+.badge.bg-primary-subtle,
+.status-pill-primary {
+    background-color: rgba(243, 128, 32, 0.12) !important;
+    color: #F38020 !important;
+    border: 1px solid rgba(243, 128, 32, 0.35) !important;
+}
+
+.badge.bg-warning-subtle,
+.status-pill-warning {
+    background-color: rgba(243, 128, 32, 0.12) !important;
+    color: #F38020 !important;
+    border: 1px solid rgba(243, 128, 32, 0.35) !important;
+}
+
+.badge.bg-danger-subtle,
+.status-pill-danger {
+    background-color: rgba(179, 27, 52, 0.12) !important;
+    color: #b31b34 !important;
+    border: 1px solid rgba(179, 27, 52, 0.35) !important;
+}
+
+.badge.bg-info-subtle,
+.status-pill-info {
+    background-color: rgba(83, 155, 255, 0.12) !important;
+    color: #539bff !important;
+    border: 1px solid rgba(83, 155, 255, 0.35) !important;
+}
+
+.badge.bg-dark-subtle,
+.badge.bg-secondary-subtle,
+.status-pill-secondary {
+    background-color: rgba(124, 143, 172, 0.12) !important;
+    color: #7c8fac !important;
+    border: 1px solid rgba(124, 143, 172, 0.3) !important;
+}
+
 [data-bs-theme="light"] .badge.bg-dark-subtle,
-[data-bs-theme="light"] .badge.bg-secondary-subtle {
+[data-bs-theme="light"] .badge.bg-secondary-subtle,
+[data-bs-theme="light"] .status-pill-secondary {
     background-color: #f1f5f9 !important;
     color: #475569 !important;
-    border: 1px solid rgba(71, 85, 105, 0.2) !important;
-}
-
-[data-bs-theme="light"] .badge.bg-success-subtle {
-    background-color: #ecfdf5 !important;
-    color: #047857 !important;
-    border: 1px solid rgba(4, 120, 87, 0.2) !important;
-}
-
-[data-bs-theme="light"] .badge.bg-danger-subtle {
-    background-color: #fef2f2 !important;
-    color: #b91c1c !important;
-    border: 1px solid rgba(185, 28, 28, 0.2) !important;
-}
-
-[data-bs-theme="light"] .badge.bg-warning-subtle {
-    background-color: #fffbeb !important;
-    color: #b45309 !important;
-    border: 1px solid rgba(180, 83, 9, 0.2) !important;
-}
-
-[data-bs-theme="light"] .badge.bg-info-subtle {
-    background-color: #f0f9ff !important;
-    color: #0369a1 !important;
-    border: 1px solid rgba(3, 105, 161, 0.2) !important;
-}
-
-[data-bs-theme="light"] .badge.bg-primary-subtle {
-    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
-    color: var(--bs-primary) !important;
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.2) !important;
-}
-
-/* --- MODO OSCURO (DARK MODE) - FONDOS TRASLÚCIDOS SUTILES --- */
-[data-bs-theme="dark"] .badge.bg-dark-subtle,
-[data-bs-theme="dark"] .badge.bg-secondary-subtle {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    color: #94a3b8 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-}
-
-[data-bs-theme="dark"] .badge.bg-success-subtle {
-    background-color: rgba(19, 222, 185, 0.15) !important;
-    color: #13deb9 !important;
-    border: 1px solid rgba(19, 222, 185, 0.25) !important;
-}
-
-[data-bs-theme="dark"] .badge.bg-danger-subtle {
-    background-color: rgba(250, 137, 107, 0.15) !important;
-    color: #fa896b !important;
-    border: 1px solid rgba(250, 137, 107, 0.25) !important;
-}
-
-[data-bs-theme="dark"] .badge.bg-warning-subtle {
-    background-color: rgba(255, 174, 31, 0.15) !important;
-    color: #ffae1f !important;
-    border: 1px solid rgba(255, 174, 31, 0.25) !important;
-}
-
-[data-bs-theme="dark"] .badge.bg-info-subtle {
-    background-color: rgba(83, 155, 255, 0.15) !important;
-    color: #539bff !important;
-    border: 1px solid rgba(83, 155, 255, 0.25) !important;
-}
-
-[data-bs-theme="dark"] .badge.bg-primary-subtle {
-    background-color: rgba(var(--bs-primary-rgb), 0.18) !important;
-    color: var(--bs-primary) !important;
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.3) !important;
+    border: 1px solid rgba(71, 85, 105, 0.25) !important;
 }
 
 /* --- Barra de búsqueda mejorada --- */
@@ -764,7 +752,7 @@ body .select2-container {
 
 .status-indicator-dot.status-online {
     background-color: var(--bs-success);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
     animation: status-pulse-green 1.8s infinite;
 }
 
@@ -781,15 +769,15 @@ body .select2-container {
 @keyframes status-pulse-green {
     0% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7);
     }
     70% {
         transform: scale(1);
-        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+        box-shadow: 0 0 0 5px rgba(52, 199, 89, 0);
     }
     100% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        box-shadow: 0 0 0 0 rgba(52, 199, 89, 0);
     }
 }
 
@@ -829,8 +817,8 @@ body .select2-container {
 }
 
 .status-dot.online {
-    background-color: #13deb9; /* Success Green */
-    box-shadow: 0 0 8px rgba(19, 222, 185, 0.6);
+    background-color: #34c759; /* Success Green */
+    box-shadow: 0 0 8px rgba(52, 199, 89, 0.6);
 }
 
 .status-dot.offline {
@@ -1453,7 +1441,7 @@ body {
 }
 
 .net-dot-on {
-    background-color: #16a34a;
+    background-color: #34c759;
 }
 
 .net-dot-off {
@@ -1462,7 +1450,7 @@ body {
 }
 
 [data-bs-theme="dark"] .net-dot-on {
-    background-color: #4cc38a;
+    background-color: #34c759;
 }
 
 .net-name {

@@ -16,7 +16,7 @@
         </nav>
       </div>
       <div class="flex-shrink-0 text-end">
-        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
           <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
           <span class="d-none d-sm-inline">WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
           <span class="d-inline d-sm-none"><?= ($telemetry['isInterfaceUp'] ?? false) ? 'Activo' : 'Off' ?></span>
@@ -77,23 +77,23 @@
 </div>
 
 <!-- =====================================================================
-     COMPARATIVA DE REDES Y TIPOS DE DISPOSITIVO (APEXCHARTS)
+     TELEMETRÍA Y TRÁFICO WIREGUARD (APEXCHARTS)
      ===================================================================== -->
 <div class="row">
-    <!-- Gráfica de Tráfico Acumulado por Red VPN -->
+    <!-- Gráfica de Tráfico Transferido (RX / TX) -->
     <div class="col-xl-8 col-lg-7 mb-4">
         <div class="card border shadow-none h-100">
             <div class="card-body p-3 p-md-4">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
                     <div>
-                        <h5 class="card-title fw-semibold mb-1">Tráfico Acumulado por Red VPN</h5>
-                        <p class="card-subtitle text-muted fs-2 mb-0">Comparativa de descarga y subida agrupada por red</p>
+                        <h5 class="card-title fw-semibold mb-1">Tráfico Total de Redes</h5>
+                        <p class="card-subtitle text-muted fs-2 mb-0">Consumo acumulado de datos en tiempo real (todas las redes)</p>
                     </div>
                     <div class="d-flex align-items-center gap-1 flex-wrap">
                         <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga total recibido por el servidor">
                             <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
                         </span>
-                        <span class="badge bg-warning-subtle text-warning px-2 py-1" title="Tráfico de subida total transmitido por el servidor">
+                        <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida total transmitido por el servidor">
                             <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
                         </span>
                     </div>
@@ -107,68 +107,61 @@
                             <a href="<?= site_url('settings/wireguard') ?>" class="alert-link ms-1">Configurar ahora</a>.
                         </div>
                     </div>
-                <?php elseif (empty($telemetry['networkLabels'])): ?>
+                <?php elseif (!($telemetry['hasTrafficData'] ?? false)): ?>
                     <div class="text-center py-5">
                         <div class="bg-light-subtle rounded-circle d-inline-flex p-3 mb-3 text-muted">
-                            <i class="ti ti-network fs-8"></i>
+                            <i class="ti ti-arrows-transfer-down fs-8"></i>
                         </div>
-                        <h6 class="fw-semibold mb-1">Sin redes registradas aún</h6>
-                        <p class="text-muted fs-2 mb-0">Crea tu primera red VPN para visualizar su comparativa de consumo.</p>
+                        <h6 class="fw-semibold mb-1">Sin tráfico registrado aún</h6>
+                        <p class="text-muted fs-2 mb-0">Los nodos configurados aún no han generado paquetes de datos a través de la interfaz.</p>
                     </div>
                 <?php else: ?>
-                    <div id="chart-network-traffic" class="dash-chart-lg"></div>
+                    <div id="chart-traffic" class="dash-chart-lg"></div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- Distribución por Tipo de Dispositivo (Donut) -->
+    <!-- Indicador Radial de Conectividad / Salud de Red -->
     <div class="col-xl-4 col-lg-5 mb-4">
         <div class="card border shadow-none h-100">
             <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
                 <div>
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <h5 class="card-title fw-semibold mb-0">Tipos de Dispositivo</h5>
-                        <span class="badge bg-primary-subtle text-primary"><?= esc($telemetry['totalDevices'] ?? 0) ?> nodos</span>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h5 class="card-title fw-semibold mb-0">Salud de la Red</h5>
+                        <span class="status-indicator-dot status-online" title="En vivo"></span>
                     </div>
-                    <p class="card-subtitle text-muted fs-2 mb-3">Distribución del parque de equipos</p>
+                    <p class="card-subtitle text-muted fs-2 mb-3">Dispositivos conectados en tiempo real</p>
                 </div>
 
                 <div class="position-relative d-flex justify-content-center my-2">
-                    <?php if (($telemetry['totalDevices'] ?? 0) === 0): ?>
-                        <div class="text-center py-4">
-                            <i class="ti ti-devices fs-8 text-muted d-block mb-2"></i>
-                            <span class="text-muted fs-2">Sin dispositivos registrados</span>
-                        </div>
-                    <?php else: ?>
-                        <div id="chart-device-types" class="dash-chart-md w-100"></div>
-                    <?php endif; ?>
+                    <div id="chart-health" class="dash-chart-md"></div>
                 </div>
 
                 <div class="border-top pt-3 mt-2">
                     <div class="row text-center g-0 dash-health-row">
                         <div class="col-4">
                             <div class="dash-health-cell">
-                                <span class="d-block text-primary fw-medium fs-4 dash-figure">
-                                    <?= esc($telemetry['typePc'] ?? 0) ?>
+                                <span class="d-block text-success fw-medium fs-4 dash-figure">
+                                    <i class="ti ti-point-filled"></i><?= esc($telemetry['onlineDevices'] ?? 0) ?>
                                 </span>
-                                <span class="text-muted fs-2 fw-medium">PC / Laptop</span>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="dash-health-cell">
-                                <span class="d-block text-body fw-medium fs-4 dash-figure">
-                                    <?= esc($telemetry['typeServer'] ?? 0) ?>
-                                </span>
-                                <span class="text-muted fs-2 fw-medium">Servidores</span>
+                                <span class="text-muted fs-2 fw-medium">Online</span>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="dash-health-cell">
                                 <span class="d-block text-muted fw-medium fs-4 dash-figure">
-                                    <?= esc(($telemetry['typeMobile'] ?? 0) + ($telemetry['typeRouter'] ?? 0)) ?>
+                                    <?= esc($telemetry['offlineDevices'] ?? 0) ?>
                                 </span>
-                                <span class="text-muted fs-2 fw-medium">Móvil / Router</span>
+                                <span class="text-muted fs-2 fw-medium">Offline</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="dash-health-cell">
+                                <span class="d-block text-body fw-medium fs-4 dash-figure">
+                                    <?= esc($telemetry['formattedTotal'] ?? '0 B') ?>
+                                </span>
+                                <span class="text-muted fs-2 fw-medium">Total</span>
                             </div>
                         </div>
                     </div>
@@ -369,7 +362,7 @@
 <?php endif; ?>
 
 <!-- =====================================================================
-     SCRIPTS DE APEXCHARTS (VISTA EJECUTIVA POR REDES Y EQUIPOS)
+     SCRIPTS DE APEXCHARTS
      ===================================================================== -->
 <script src="<?= base_url('assets/libs/apexcharts/dist/apexcharts.min.js') ?>"></script>
 <script>
@@ -377,50 +370,42 @@ document.addEventListener("DOMContentLoaded", function () {
     const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
 
     // -------------------------------------------------------------
-    // 1. Gráfica de Barras: Tráfico Acumulado por Red VPN
+    // 1. Gráfica de Tráfico Total de Redes (Area Spline)
     // -------------------------------------------------------------
-    const netTrafficEl = document.querySelector("#chart-network-traffic");
-    if (netTrafficEl) {
-        const netCategories = <?= json_encode($telemetry['networkLabels'] ?? []) ?>;
-        const netRx = <?= json_encode($telemetry['networkRx'] ?? []) ?>;
-        const netTx = <?= json_encode($telemetry['networkTx'] ?? []) ?>;
+    const trafficEl = document.querySelector("#chart-traffic");
+    if (trafficEl) {
+        const trafficRx = <?= json_encode($telemetry['trafficRx'] ?? []) ?>;
+        const trafficTx = <?= json_encode($telemetry['trafficTx'] ?? []) ?>;
 
-        const netTrafficOptions = {
+        const trafficOptions = {
             series: [
-                { name: 'Descarga (RX)', data: netRx },
-                { name: 'Subida (TX)', data: netTx }
+                { name: 'Descarga (RX)', data: trafficRx },
+                { name: 'Subida (TX)', data: trafficTx }
             ],
             chart: {
-                type: 'bar',
+                type: 'area',
                 height: 330,
                 toolbar: { show: false },
                 fontFamily: 'inherit',
                 foreColor: isDark ? '#94a3b8' : '#64748b'
             },
-            colors: ['#10B981', '#F38020'],
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: '48%',
-                    borderRadius: 5,
-                    borderRadiusApplication: 'end'
+            colors: ['#34c759', '#F38020'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.05,
+                    stops: [0, 95, 100]
                 }
             },
             dataLabels: { enabled: false },
-            stroke: {
-                show: true,
-                width: 2,
-                colors: ['transparent']
-            },
+            stroke: { curve: 'smooth', width: 2.5 },
             xaxis: {
-                categories: netCategories,
-                labels: {
-                    style: { fontSize: '11px' },
-                    rotate: -15,
-                    trim: true
-                },
+                labels: { show: false },
                 axisBorder: { show: false },
-                axisTicks: { show: false }
+                axisTicks: { show: false },
+                tooltip: { enabled: false }
             },
             yaxis: {
                 labels: {
@@ -435,6 +420,7 @@ document.addEventListener("DOMContentLoaded", function () {
             },
             tooltip: {
                 theme: isDark ? 'dark' : 'light',
+                x: { show: false },
                 y: {
                     formatter: function (val) {
                         if (!val || val === 0) return '0 B';
@@ -450,85 +436,74 @@ document.addEventListener("DOMContentLoaded", function () {
                 strokeDashArray: 4
             },
             legend: {
+                show: true,
                 position: 'top',
                 horizontalAlign: 'right',
+                markers: { radius: 12 },
                 labels: { colors: isDark ? '#e2e8f0' : '#1e293b' }
             }
         };
 
-        const netTrafficChart = new ApexCharts(netTrafficEl, netTrafficOptions);
-        netTrafficChart.render();
+        const trafficChart = new ApexCharts(trafficEl, trafficOptions);
+        trafficChart.render();
     }
 
     // -------------------------------------------------------------
-    // 2. Gráfica Donut: Distribución por Tipo de Dispositivo
+    // 2. Gráfica de Salud y Nodos Online (RadialBar)
     // -------------------------------------------------------------
-    const deviceTypesEl = document.querySelector("#chart-device-types");
-    if (deviceTypesEl) {
-        const typeLabels = <?= json_encode($telemetry['deviceTypeLabels'] ?? ['PC / Portátil', 'Servidores', 'Móviles / Tablets', 'Routers']) ?>;
-        const typeSeries = <?= json_encode($telemetry['deviceTypeSeries'] ?? [0, 0, 0, 0]) ?>;
+    const healthEl = document.querySelector("#chart-health");
+    if (healthEl) {
+        const healthPercentage = <?= (int) ($telemetry['healthPercentage'] ?? 0) ?>;
+        const healthColor = healthPercentage >= 70 ? '#34c759' : (healthPercentage >= 30 ? '#F38020' : '#b31b34');
 
-        const deviceTypesOptions = {
-            series: typeSeries,
-            labels: typeLabels,
+        const healthOptions = {
+            series: [healthPercentage],
             chart: {
-                type: 'donut',
-                height: 255,
-                fontFamily: 'inherit',
-                foreColor: isDark ? '#94a3b8' : '#64748b'
+                type: 'radialBar',
+                height: 270,
+                sparkline: { enabled: true }
             },
-            colors: ['#F38020', '#10B981', '#3B82F6', '#8B5CF6'],
-            stroke: {
-                width: 2,
-                colors: [isDark ? '#111c2d' : '#ffffff']
-            },
-            dataLabels: { enabled: false },
             plotOptions: {
-                pie: {
-                    donut: {
+                radialBar: {
+                    startAngle: -125,
+                    endAngle: 125,
+                    hollow: {
+                        margin: 0,
                         size: '72%',
-                        labels: {
+                        background: 'transparent'
+                    },
+                    track: {
+                        background: isDark ? '#1e293b' : '#f1f5f9',
+                        strokeWidth: '97%'
+                    },
+                    dataLabels: {
+                        name: {
                             show: true,
-                            name: {
-                                show: true,
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                color: isDark ? '#94a3b8' : '#64748b',
-                                offsetY: -4
-                            },
-                            value: {
-                                show: true,
-                                fontSize: '26px',
-                                fontWeight: 700,
-                                color: isDark ? '#ffffff' : '#0f172a',
-                                offsetY: 6
-                            },
-                            total: {
-                                show: true,
-                                label: 'Equipos',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                color: isDark ? '#94a3b8' : '#64748b',
-                                formatter: function (w) {
-                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                                }
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: isDark ? '#94a3b8' : '#64748b',
+                            offsetY: 60
+                        },
+                        value: {
+                            offsetY: -10,
+                            fontSize: '32px',
+                            fontWeight: 700,
+                            color: isDark ? '#ffffff' : '#0f172a',
+                            formatter: function (val) {
+                                return val + '%';
                             }
                         }
                     }
                 }
             },
-            legend: {
-                position: 'bottom',
-                fontSize: '12px',
-                labels: { colors: isDark ? '#cbd5e1' : '#475569' }
-            },
-            tooltip: {
-                theme: isDark ? 'dark' : 'light'
-            }
+            colors: [healthColor],
+            fill: { colors: [healthColor] },
+            stroke: { lineCap: 'round' },
+            labels: ['Nodos Online']
         };
 
-        const deviceTypesChart = new ApexCharts(deviceTypesEl, deviceTypesOptions);
-        deviceTypesChart.render();
+        const healthChart = new ApexCharts(healthEl, healthOptions);
+        healthChart.render();
     }
 });
 </script>

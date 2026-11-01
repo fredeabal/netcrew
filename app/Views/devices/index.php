@@ -94,7 +94,7 @@
               <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga recibido por el servidor">
                 <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
               </span>
-              <span class="badge bg-warning-subtle text-warning px-2 py-1" title="Tráfico de subida transmitido por el servidor">
+              <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida transmitido por el servidor">
                 <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
               </span>
             </div>
@@ -815,7 +815,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 fontFamily: 'inherit',
                 foreColor: isDark ? '#94a3b8' : '#64748b'
             },
-            colors: ['#10B981', '#F38020'],
+            colors: ['#34c759', '#F38020'],
             fill: {
                 type: 'gradient',
                 gradient: {
@@ -881,7 +881,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const healthEl = document.querySelector("#chart-health");
     if (healthEl) {
         const healthPercentage = <?= (int) ($telemetry['healthPercentage'] ?? 0) ?>;
-        const healthColor = healthPercentage >= 70 ? '#10B981' : (healthPercentage >= 30 ? '#F38020' : '#EF4444');
+        const healthColor = healthPercentage >= 70 ? '#34c759' : (healthPercentage >= 30 ? '#F38020' : '#b31b34');
 
         const healthOptions = {
             series: [healthPercentage],

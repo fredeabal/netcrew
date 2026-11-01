@@ -91,10 +91,10 @@
               <p class="card-subtitle text-muted fs-2 mb-0">Consumo de datos en tiempo real por dispositivo en esta red</p>
             </div>
             <div class="d-flex align-items-center gap-1 flex-wrap">
-              <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga recibido por el servidor">
+              <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga (hacia los dispositivos)">
                 <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
               </span>
-              <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida transmitido por el servidor">
+              <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida (desde los dispositivos)">
                 <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
               </span>
             </div>

@@ -123,22 +123,25 @@ class DashboardController extends BaseController
             }
 
             foreach ($devices as $dev) {
-                $peer        = $peers[$dev->public_key] ?? null;
-                $rx          = (int) ($peer['rx_bytes'] ?? 0);
-                $tx          = (int) ($peer['tx_bytes'] ?? 0);
+                $peer = $peers[$dev->public_key] ?? null;
+                // En WireGuard (servidor):
+                // tx_bytes = bytes transmitidos hacia el nodo -> Descarga (Download / RX cliente)
+                // rx_bytes = bytes recibidos desde el nodo   -> Subida (Upload / TX cliente)
+                $download = (int) ($peer['tx_bytes'] ?? 0);
+                $upload   = (int) ($peer['rx_bytes'] ?? 0);
                 $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
 
                 if ($isConnected) {
                     $onlineCount++;
                 }
 
-                $telemetry['totalRxBytes'] += $rx;
-                $telemetry['totalTxBytes'] += $tx;
+                $telemetry['totalRxBytes'] += $download; // Total Descarga
+                $telemetry['totalTxBytes'] += $upload;   // Total Subida
 
                 if (isset($netTrafficMap[$dev->network_id])) {
-                    $netTrafficMap[$dev->network_id]['rx']    += $rx;
-                    $netTrafficMap[$dev->network_id]['tx']    += $tx;
-                    $netTrafficMap[$dev->network_id]['total'] += ($rx + $tx);
+                    $netTrafficMap[$dev->network_id]['rx']    += $download;
+                    $netTrafficMap[$dev->network_id]['tx']    += $upload;
+                    $netTrafficMap[$dev->network_id]['total'] += ($download + $upload);
                 }
             }
 
@@ -168,11 +171,11 @@ class DashboardController extends BaseController
                 $devicePoints = [];
                 foreach ($devices as $dev) {
                     $peer = $peers[$dev->public_key] ?? null;
-                    $dRx  = (int) ($peer['rx_bytes'] ?? 0);
-                    $dTx  = (int) ($peer['tx_bytes'] ?? 0);
-                    if ($dRx > 0 || $dTx > 0) {
+                    $dDownload = (int) ($peer['tx_bytes'] ?? 0);
+                    $dUpload   = (int) ($peer['rx_bytes'] ?? 0);
+                    if ($dDownload > 0 || $dUpload > 0) {
                         $hasAnyTraffic = true;
-                        $devicePoints[] = ['rx' => $dRx, 'tx' => $dTx, 'total' => $dRx + $dTx];
+                        $devicePoints[] = ['rx' => $dDownload, 'tx' => $dUpload, 'total' => $dDownload + $dUpload];
                     }
                 }
                 if (count($devicePoints) > count($points)) {

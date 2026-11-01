@@ -97,13 +97,13 @@ if (!empty($networks)) {
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
                     <div>
                         <h5 class="card-title fw-semibold mb-1">Tráfico Total de Redes</h5>
-                        <p class="card-subtitle text-muted fs-2 mb-0">Consumo acumulado de datos en tiempo real (todas las redes)</p>
+                        <p class="card-subtitle text-muted fs-2 mb-0">Consumo acumulado de datos en tiempo real</p>
                     </div>
                     <div class="d-flex align-items-center gap-1 flex-wrap">
-                        <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga total recibido por el servidor">
+                        <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga total (hacia los dispositivos)">
                             <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
                         </span>
-                        <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida total transmitido por el servidor">
+                        <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida total (desde los dispositivos)">
                             <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
                         </span>
                     </div>

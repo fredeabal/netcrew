@@ -1442,23 +1442,26 @@ class DeviceController extends BaseController
             $trafficByDevice = [];
 
             foreach ($devices as $dev) {
-                $peer        = $peers[$dev->public_key] ?? null;
-                $rx          = (int) ($peer['rx_bytes'] ?? 0);
-                $tx          = (int) ($peer['tx_bytes'] ?? 0);
+                $peer = $peers[$dev->public_key] ?? null;
+                // En WireGuard (servidor):
+                // tx_bytes = servidor transmite al nodo -> Descarga (Download / RX cliente)
+                // rx_bytes = servidor recibe del nodo   -> Subida (Upload / TX cliente)
+                $download = (int) ($peer['tx_bytes'] ?? 0);
+                $upload   = (int) ($peer['rx_bytes'] ?? 0);
                 $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
 
                 if ($isConnected) {
                     $onlineCount++;
                 }
 
-                $telemetry['totalRxBytes'] += $rx;
-                $telemetry['totalTxBytes'] += $tx;
+                $telemetry['totalRxBytes'] += $download; // Total Descarga
+                $telemetry['totalTxBytes'] += $upload;   // Total Subida
 
                 $trafficByDevice[] = [
                     'name'  => $dev->name . ' (' . $dev->ip_address . ')',
-                    'rx'    => $rx,
-                    'tx'    => $tx,
-                    'total' => $rx + $tx,
+                    'rx'    => $download, // Descarga
+                    'tx'    => $upload,   // Subida
+                    'total' => $download + $upload,
                 ];
             }
 

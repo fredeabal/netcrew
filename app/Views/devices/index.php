@@ -421,7 +421,7 @@
 <!-- =====================================================================
      MODAL: VER CONFIGURACIÓN / QR
      ===================================================================== -->
-<div class="modal fade" id="modal-view-config" tabindex="-1" aria-labelledby="modalViewConfigLabel" aria-hidden="true">
+<div class="modal fade" id="modal-view-config" data-bs-focus="false" aria-labelledby="modalViewConfigLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0">
       <div class="modal-header border-bottom-0 pb-0">
@@ -438,9 +438,6 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-          <button type="button" class="btn btn-dark btn-sm border-0" id="btn-copy-share-link">
-            <i class="ti ti-link me-1"></i> Copiar Enlace Temporal
-          </button>
           <button type="button" class="btn btn-info btn-sm border-0" id="btn-send-email-config">
             <i class="ti ti-mail me-1"></i> Enviar por Email
           </button>
@@ -466,45 +463,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const btnDownloadConfigModal = document.getElementById("btn-download-config-modal");
   
   const modalViewConfigEl = document.getElementById('modal-view-config');
-  const modalViewConfig = modalViewConfigEl ? new bootstrap.Modal(modalViewConfigEl) : null;
+  const modalViewConfig = modalViewConfigEl ? new bootstrap.Modal(modalViewConfigEl, { focus: false }) : null;
 
   let currentActiveDeviceId = null;
-  const btnShareLink = document.getElementById("btn-copy-share-link");
   const btnSendEmail = document.getElementById("btn-send-email-config");
-
-  if (btnShareLink) {
-    btnShareLink.addEventListener("click", function() {
-      if (!currentActiveDeviceId) return;
-      btnShareLink.disabled = true;
-      btnShareLink.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Generando...`;
-
-      fetch(`<?= site_url('devices/generate-share-link/') ?>${currentActiveDeviceId}`, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
-      .then(r => r.json())
-      .then(res => {
-        btnShareLink.disabled = false;
-        btnShareLink.innerHTML = `<i class="ti ti-link me-1"></i> Copiar Enlace Temporal`;
-        if (res.success) {
-          navigator.clipboard.writeText(res.share_url).then(() => {
-            Swal.fire({
-              icon: 'success',
-              title: '¡Enlace Copiado al Portapapeles!',
-              html: `<p class="mb-2">El destinatario puede abrir este enlace para ver el QR o descargar el .conf sin iniciar sesión:</p><input type="text" class="form-control text-center text-primary" value="${res.share_url}" readonly><small class="text-muted d-block mt-2">Válido durante 60 minutos.</small>`,
-              confirmButtonColor: '#F38020'
-            });
-          });
-        } else {
-          Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'No se pudo generar enlace' });
-        }
-      })
-      .catch(() => {
-        btnShareLink.disabled = false;
-        btnShareLink.innerHTML = `<i class="ti ti-link me-1"></i> Copiar Enlace Temporal`;
-      });
-    });
-  }
 
   if (btnSendEmail) {
     btnSendEmail.addEventListener("click", function() {
@@ -520,18 +482,46 @@ document.addEventListener("DOMContentLoaded", function () {
         confirmButtonColor: '#F38020',
         cancelButtonColor: '#dc3545',
         showLoaderOnConfirm: true,
+        didOpen: () => {
+          setTimeout(() => {
+            const input = Swal.getInput();
+            if (input) {
+              input.focus();
+            }
+          }, 100);
+        },
         preConfirm: (email) => {
           let formData = new FormData();
           formData.append('email', email);
+          formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+          // Adjuntar imagen del código QR en base64 si está renderizado
+          let qrCanvas = qrcodeContainer ? qrcodeContainer.querySelector('canvas') : null;
+          let qrImg = qrcodeContainer ? qrcodeContainer.querySelector('img') : null;
+          let qrData = '';
+          if (qrImg && qrImg.src && qrImg.src.startsWith('data:image/')) {
+            qrData = qrImg.src;
+          } else if (qrCanvas) {
+            try {
+              qrData = qrCanvas.toDataURL('image/png');
+            } catch (e) {}
+          }
+          if (qrData) {
+            formData.append('qr_image', qrData);
+          }
+
           return fetch(`<?= site_url('devices/send-email/') ?>${currentActiveDeviceId}`, {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              '<?= csrf_header() ?>': '<?= csrf_hash() ?>'
+            },
             body: formData
           })
-          .then(response => response.json())
-          .then(data => {
-            if (!data.success) {
-              throw new Error(data.message || 'Error al enviar');
+          .then(async response => {
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data || !data.success) {
+              throw new Error((data && data.message) ? data.message : 'Error al enviar el correo');
             }
             return data;
           })

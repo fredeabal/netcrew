@@ -906,19 +906,170 @@ class DeviceController extends BaseController
         $filename = url_title($device->name, '-', true) . '.conf';
 
         try {
+            $settings = service('settings');
             $emailService = \Config\Services::email();
+
+            $host = $settings->get('Email.SMTPHost');
+            $userSmtp = $settings->get('Email.SMTPUser');
+            $port = $settings->get('Email.SMTPPort') ?: 587;
+            $crypto = $settings->get('Email.SMTPCrypto') ?: 'tls';
+            $encryptedPass = $settings->get('Email.SMTPPass');
+            $decryptedPass = '';
+            if (!empty($encryptedPass)) {
+                try {
+                    $decryptedPass = \Config\Services::encrypter()->decrypt(base64_decode($encryptedPass));
+                } catch (\Throwable $e) {
+                    log_message('error', 'Error al desencriptar contraseña SMTP: ' . $e->getMessage());
+                }
+            }
+
+            if (!empty($host)) {
+                $config = [
+                    'protocol'   => 'smtp',
+                    'SMTPHost'   => $host,
+                    'SMTPUser'   => $userSmtp,
+                    'SMTPPass'   => $decryptedPass,
+                    'SMTPPort'   => (int) $port,
+                    'SMTPCrypto' => $crypto,
+                    'mailType'   => 'html',
+                    'charset'    => 'utf-8',
+                    'newline'    => "\r\n",
+                ];
+                $emailService->initialize($config);
+            }
+
+            $fromEmail = $settings->get('Email.fromEmail') ?: ($userSmtp ?: 'no-reply@tudominio.com');
+            $fromName  = $settings->get('Email.fromName') ?: 'NetCrew WireGuard';
+            $emailService->setFrom($fromEmail, $fromName);
             $emailService->setTo($targetEmail);
             $emailService->setSubject('Configuración VPN WireGuard - ' . $device->name);
-            $emailService->setMessage("Hola,\n\nAdjunto encontrarás el archivo de configuración WireGuard para el nodo: {$device->name}.\nRed: {$network->name} ({$device->ip_address})\n\nGuarda el archivo .conf e impórtalo en tu cliente oficial de WireGuard.\n\nSaludos,\nEquipo NetCrew");
+
+            // Adjuntar archivo .conf de WireGuard
             $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
+
+            // Procesar y adjuntar código QR en memoria si fue recibido desde el cliente
+            $qrCid = null;
+            $qrBase64 = (string) $this->request->getPost('qr_image');
+            if (!empty($qrBase64) && preg_match('/^data:image\/(\w+);base64,/', $qrBase64)) {
+                $rawBase64 = substr($qrBase64, strpos($qrBase64, ',') + 1);
+                $qrDecoded = base64_decode($rawBase64);
+                if (!empty($qrDecoded)) {
+                    $qrAttachmentName = url_title($device->name, '-', true) . '-qr.png';
+                    $emailService->attach($qrDecoded, 'inline', $qrAttachmentName, 'image/png');
+                    $qrCid = $emailService->setAttachmentCID($qrAttachmentName);
+                }
+            }
+
+            // Datos para la plantilla HTML
+            $logoUrl = base_url('assets/images/logos/dark-logo.svg');
+            $appUrl = base_url();
+            $year = date('Y');
+            $routingModeLabel = ($device->routing_mode ?? 'split') === 'full' 
+                ? 'Túnel Completo (Todo el tráfico)' 
+                : 'Túnel Dividido (Solo red VPN)';
+
+            $qrSection = '';
+            if (!empty($qrCid)) {
+                $qrSection = '
+                <div style="text-align: center; margin: 25px 0 10px 0;">
+                    <div style="display: inline-block; background-color: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                        <img src="cid:' . $qrCid . '" alt="Código QR WireGuard" width="210" height="210" style="display: block; margin: 0 auto; width: 210px; height: 210px; border-radius: 4px;">
+                    </div>
+                    <p style="color: #64748b; font-size: 13px; font-weight: 500; margin-top: 10px; margin-bottom: 0;">
+                        Escanea este código con la app móvil oficial de WireGuard
+                    </p>
+                </div>';
+            }
+
+            $htmlMessage = '
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <style>
+        :root { color-scheme: light; }
+    </style>
+</head>
+<body style="background-color: #ffffff; margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; background-image: linear-gradient(#ffffff, #ffffff); margin: 0; padding: 40px 20px; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif;">
+        <tr>
+            <td align="center">
+                <img src="' . $logoUrl . '" alt="NetCrew" style="max-width: 180px; margin-bottom: 25px; display: block;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #f8f9fa; background-image: linear-gradient(#f8f9fa, #f8f9fa); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e9ecef; overflow: hidden;">
+                    <tr>
+                        <td align="left" style="padding: 35px 30px;">
+                            <h2 style="color: #333f52; -webkit-text-fill-color: #333f52; margin-top: 0; margin-bottom: 8px; text-align: center; font-weight: 600; font-size: 22px;">
+                                Configuración de WireGuard
+                            </h2>
+                            <p style="color: #5a6a85; -webkit-text-fill-color: #5a6a85; font-size: 14px; line-height: 1.5; text-align: center; margin-top: 0; margin-bottom: 25px;">
+                                Te enviamos los parámetros de conexión VPN para tu dispositivo en la red de NetCrew.
+                            </p>
+
+                            <!-- Tarjeta de Detalles del Dispositivo -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; font-size: 13px;">
+                                <tr>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #64748b; font-weight: 600; width: 40%;">Dispositivo</td>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #1e293b; font-weight: 600; text-align: right;">' . esc($device->name) . '</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #64748b; font-weight: 600;">Red VPN</td>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #1e293b; font-weight: 600; text-align: right;">' . esc($network->name) . '</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #64748b; font-weight: 600;">IP Asignada</td>
+                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #0284c7; font-weight: 600; text-align: right; font-family: monospace;">' . esc($device->ip_address) . '</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 16px; color: #64748b; font-weight: 600;">Enrutamiento</td>
+                                    <td style="padding: 10px 16px; color: #1e293b; font-weight: 600; text-align: right;">' . esc($routingModeLabel) . '</td>
+                                </tr>
+                            </table>
+
+                            ' . $qrSection . '
+
+                            <!-- Aviso de archivos adjuntos -->
+                            <div style="margin-top: 20px; padding: 12px 14px; background-color: #edf2f7; border-radius: 8px; color: #475569; font-size: 13px; text-align: center;">
+                                📎 <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en WireGuard.
+                            </div>
+
+                            <div style="text-align: center; margin-top: 25px;">
+                                <a href="' . $appUrl . '" style="display: inline-block; padding: 11px 22px; background-color: #F38020; background-image: linear-gradient(#F38020, #F38020); color: #ffffff; -webkit-text-fill-color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+                                    Acceder a NetCrew
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; margin-top: 20px;">
+                    <tr>
+                        <td align="center" style="padding: 0 20px;">
+                            <p style="color: #8c98a4; -webkit-text-fill-color: #8c98a4; font-size: 12px; line-height: 1.5; margin: 0;">
+                                &copy; ' . $year . ' NetCrew &bull; Gestión Segura de Redes WireGuard
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+
+            $emailService->setMessage($htmlMessage);
 
             if ($emailService->send()) {
                 return $this->response->setJSON(['success' => true, 'message' => 'Configuración enviada exitosamente a ' . esc($targetEmail)]);
             } else {
-                log_message('error', 'Fallo al enviar correo de configuración: ' . $emailService->printDebugger(['headers']));
-                return $this->response->setJSON(['success' => false, 'message' => 'No se pudo enviar el correo. Revisa los Ajustes SMTP.'])->setStatusCode(500);
+                $debugger = $emailService->printDebugger(['headers']);
+                log_message('error', 'Fallo al enviar correo de configuración: ' . $debugger);
+                return $this->response->setJSON(['success' => false, 'message' => 'No se pudo enviar el correo. Revisa la configuración SMTP en Ajustes.'])->setStatusCode(500);
             }
         } catch (\Throwable $e) {
+            log_message('error', 'Excepción al enviar correo de configuración: ' . $e->getMessage());
             return $this->response->setJSON(['success' => false, 'message' => 'Error al enviar: ' . $e->getMessage()])->setStatusCode(500);
         }
     }

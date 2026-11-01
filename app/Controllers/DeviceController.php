@@ -1032,7 +1032,7 @@ class DeviceController extends BaseController
 
                             <!-- Aviso de archivos adjuntos -->
                             <div style="margin-top: 20px; padding: 12px 14px; background-color: #edf2f7; border-radius: 8px; color: #475569; font-size: 13px; text-align: center;">
-                                📎 <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en WireGuard.
+                                <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en WireGuard.
                             </div>
 
                             <div style="text-align: center; margin-top: 25px;">

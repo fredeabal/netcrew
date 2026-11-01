@@ -42,7 +42,8 @@
       <div class="card">
         <div class="card-body">
           <!-- Detalles de la Red -->
-          <div class="row g-3 mb-4">
+          <?php $netDevicesCount = $totalDevicesCount ?? count($devices); ?>
+          <div class="row g-3">
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Rango CIDR</span>
@@ -59,7 +60,7 @@
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Total Nodos</span>
-                <span class="net-mono text-body fw-medium"><?= count($devices) ?></span>
+                <span class="net-mono text-body fw-medium"><?= $netDevicesCount ?></span>
               </div>
             </div>
 
@@ -67,12 +68,117 @@
             <div class="col-12 col-sm-6 col-md-3">
               <div class="border p-3 rounded">
                 <span class="text-muted d-block small mb-1">Capacidad (/24)</span>
-                <span class="net-mono text-body fw-medium"><?= count($devices) ?> / 254</span>
+                <span class="net-mono text-body fw-medium"><?= $netDevicesCount ?> / 254</span>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          <!-- Tabla de Nodos / Dispositivos -->
+  <!-- =====================================================================
+       TELEMETRÍA Y TRÁFICO DE LA RED (APEXCHARTS)
+       ===================================================================== -->
+  <div class="row">
+    <!-- Gráfica de Tráfico Transferido (RX / TX) -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+      <div class="card border shadow-none h-100">
+        <div class="card-body p-3 p-md-4">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+            <div>
+              <h5 class="card-title fw-semibold mb-1">Tráfico de Red Transferido</h5>
+              <p class="card-subtitle text-muted fs-2 mb-0">Consumo de datos en tiempo real por dispositivo en esta red</p>
+            </div>
+            <div class="d-flex align-items-center gap-1 flex-wrap">
+              <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga recibido por el servidor">
+                <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
+              </span>
+              <span class="badge bg-warning-subtle text-warning px-2 py-1" title="Tráfico de subida transmitido por el servidor">
+                <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
+              </span>
+            </div>
+          </div>
+
+          <?php if (!($telemetry['isConfigured'] ?? false)): ?>
+            <div class="alert alert-warning d-flex align-items-center py-3" role="alert">
+              <i class="ti ti-alert-triangle fs-6 me-3"></i>
+              <div>
+                <strong>Servidor WireGuard no configurado:</strong> El host SSH central no está enlazado aún.
+                <a href="<?= site_url('settings/wireguard') ?>" class="alert-link ms-1">Configurar ahora</a>.
+              </div>
+            </div>
+          <?php elseif (empty($telemetry['trafficLabels'])): ?>
+            <div class="text-center py-5">
+              <div class="bg-light-subtle rounded-circle d-inline-flex p-3 mb-3 text-muted">
+                <i class="ti ti-arrows-transfer-down fs-8"></i>
+              </div>
+              <h6 class="fw-semibold mb-1">Sin tráfico registrado aún</h6>
+              <p class="text-muted fs-2 mb-0">Los nodos de esta red aún no han generado paquetes de datos a través de la interfaz.</p>
+            </div>
+          <?php else: ?>
+            <div id="chart-traffic" class="dash-chart-lg"></div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicador Radial de Conectividad / Salud de Red -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+      <div class="card border shadow-none h-100">
+        <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h5 class="card-title fw-semibold mb-0">Salud de la Red</h5>
+              <span class="status-indicator-dot status-online" title="En vivo"></span>
+            </div>
+            <p class="card-subtitle text-muted fs-2 mb-3">Dispositivos conectados en tiempo real</p>
+          </div>
+
+          <div class="position-relative d-flex justify-content-center my-2">
+            <div id="chart-health" class="dash-chart-md"></div>
+          </div>
+
+          <div class="border-top pt-3 mt-2">
+            <div class="row text-center g-0 dash-health-row">
+              <div class="col-4">
+                <div class="dash-health-cell">
+                  <span class="d-block text-success fw-medium fs-4 dash-figure">
+                    <i class="ti ti-point-filled"></i><?= esc($telemetry['onlineDevices'] ?? 0) ?>
+                  </span>
+                  <span class="text-muted fs-2 fw-medium">Online</span>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="dash-health-cell">
+                  <span class="d-block text-muted fw-medium fs-4 dash-figure">
+                    <?= esc($telemetry['offlineDevices'] ?? 0) ?>
+                  </span>
+                  <span class="text-muted fs-2 fw-medium">Offline</span>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="dash-health-cell">
+                  <span class="d-block text-body fw-medium fs-4 dash-figure">
+                    <?= esc($telemetry['formattedTotal'] ?? '0 B') ?>
+                  </span>
+                  <span class="text-muted fs-2 fw-medium">Total</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       TABLA DE NODOS / DISPOSITIVOS
+       ===================================================================== -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
           <div class="d-flex align-items-center gap-2 mb-3">
             <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle">
               <i class="ti ti-devices fs-6"></i>
@@ -677,5 +783,153 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener('beforeunload', () => {
     clearInterval(statusInterval);
   });
+});
+</script>
+
+<!-- =====================================================================
+     SCRIPTS DE APEXCHARTS (TELEMETRÍA DE RED)
+     ===================================================================== -->
+<script src="<?= base_url('assets/libs/apexcharts/dist/apexcharts.min.js') ?>"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+
+    // -------------------------------------------------------------
+    // 1. Gráfica de Tráfico de Red (Area Spline)
+    // -------------------------------------------------------------
+    const trafficEl = document.querySelector("#chart-traffic");
+    if (trafficEl) {
+        const trafficCategories = <?= json_encode($telemetry['trafficLabels'] ?? []) ?>;
+        const trafficRx = <?= json_encode($telemetry['trafficRx'] ?? []) ?>;
+        const trafficTx = <?= json_encode($telemetry['trafficTx'] ?? []) ?>;
+
+        const trafficOptions = {
+            series: [
+                { name: 'Descarga (RX)', data: trafficRx },
+                { name: 'Subida (TX)', data: trafficTx }
+            ],
+            chart: {
+                type: 'area',
+                height: 330,
+                toolbar: { show: false },
+                fontFamily: 'inherit',
+                foreColor: isDark ? '#94a3b8' : '#64748b'
+            },
+            colors: ['#10B981', '#F38020'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.05,
+                    stops: [0, 95, 100]
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: { curve: 'smooth', width: 2.5 },
+            xaxis: {
+                categories: trafficCategories,
+                labels: {
+                    style: { fontSize: '11px' },
+                    rotate: -15,
+                    trim: true
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: {
+                    formatter: function (val) {
+                        if (!val || val === 0) return '0 B';
+                        const k = 1024;
+                        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                        const i = Math.floor(Math.log(val) / Math.log(k));
+                        return parseFloat((val / Math.pow(k, i)).toFixed(1)) + ' ' + (sizes[i] || 'B');
+                    }
+                }
+            },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                y: {
+                    formatter: function (val) {
+                        if (!val || val === 0) return '0 B';
+                        const k = 1024;
+                        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                        const i = Math.floor(Math.log(val) / Math.log(k));
+                        return parseFloat((val / Math.pow(k, i)).toFixed(2)) + ' ' + (sizes[i] || 'B');
+                    }
+                }
+            },
+            grid: {
+                borderColor: isDark ? '#1e293b' : '#e2e8f0',
+                strokeDashArray: 4
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                labels: { colors: isDark ? '#e2e8f0' : '#1e293b' }
+            }
+        };
+
+        const trafficChart = new ApexCharts(trafficEl, trafficOptions);
+        trafficChart.render();
+    }
+
+    // -------------------------------------------------------------
+    // 2. Gráfica de Salud y Nodos Online (RadialBar)
+    // -------------------------------------------------------------
+    const healthEl = document.querySelector("#chart-health");
+    if (healthEl) {
+        const healthPercentage = <?= (int) ($telemetry['healthPercentage'] ?? 0) ?>;
+        const healthColor = healthPercentage >= 70 ? '#10B981' : (healthPercentage >= 30 ? '#F38020' : '#EF4444');
+
+        const healthOptions = {
+            series: [healthPercentage],
+            chart: {
+                type: 'radialBar',
+                height: 270,
+                sparkline: { enabled: true }
+            },
+            plotOptions: {
+                radialBar: {
+                    startAngle: -125,
+                    endAngle: 125,
+                    hollow: {
+                        margin: 0,
+                        size: '72%',
+                        background: 'transparent'
+                    },
+                    track: {
+                        background: isDark ? '#1e293b' : '#f1f5f9',
+                        strokeWidth: '97%'
+                    },
+                    dataLabels: {
+                        name: {
+                            show: true,
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: isDark ? '#94a3b8' : '#64748b',
+                            offsetY: 60
+                        },
+                        value: {
+                            offsetY: -10,
+                            fontSize: '32px',
+                            fontWeight: 700,
+                            color: isDark ? '#ffffff' : '#0f172a',
+                            formatter: function (val) {
+                                return val + '%';
+                            }
+                        }
+                    }
+                }
+            },
+            colors: [healthColor],
+            stroke: { lineCap: 'round' },
+            labels: ['Nodos Online']
+        };
+
+        const healthChart = new ApexCharts(healthEl, healthOptions);
+        healthChart.render();
+    }
 });
 </script>

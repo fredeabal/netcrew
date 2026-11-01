@@ -59,9 +59,9 @@
       </div>
 
       <div class="card-footer bg-transparent border-top-0 px-4 pb-4 pt-0 mt-auto">
-        <div class="p-3 rounded-2 bg-primary-subtle d-flex gap-2 align-items-start">
+        <div class="p-3 rounded-2 border border-primary-subtle d-flex gap-2 align-items-start">
           <i class="ti ti-info-circle text-primary fs-5 flex-shrink-0 mt-1"></i>
-          <span class="fs-2 text-primary">
+          <span class="fs-2 text-muted">
             Evita rangos que coincidan con tu red local (LAN) para prevenir conflictos de enrutamiento.
           </span>
         </div>
@@ -100,9 +100,9 @@
       </div>
 
       <div class="card-footer bg-transparent border-top-0 px-4 pb-4 pt-0 mt-auto">
-        <div class="p-3 rounded-2 bg-primary-subtle d-flex gap-2 align-items-start">
+        <div class="p-3 rounded-2 border border-primary-subtle d-flex gap-2 align-items-start">
           <i class="ti ti-key text-primary fs-5 flex-shrink-0 mt-1"></i>
-          <span class="fs-2 text-primary">
+          <span class="fs-2 text-muted">
             Las claves criptográficas se gestionan y aíslan de forma segura en cada nodo.
           </span>
         </div>
@@ -141,9 +141,9 @@
       </div>
 
       <div class="card-footer bg-transparent border-top-0 px-4 pb-4 pt-0 mt-auto">
-        <div class="p-3 rounded-2 bg-primary-subtle d-flex gap-2 align-items-start">
+        <div class="p-3 rounded-2 border border-primary-subtle d-flex gap-2 align-items-start">
           <i class="ti ti-circle-check text-primary fs-5 flex-shrink-0 mt-1"></i>
-          <span class="fs-2 text-primary">
+          <span class="fs-2 text-muted">
             Listo. El nodo aparecerá conectado y con tráfico en tiempo real.
           </span>
         </div>

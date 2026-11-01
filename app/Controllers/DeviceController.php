@@ -51,11 +51,15 @@ class DeviceController extends BaseController
             $pagerLinks = $pager->makeLinks($page, $perPage, $total, 'premium', 1, 'devices');
         }
 
+        $telemetry = $this->buildNetworkTelemetry($allDevices);
+
         $data = [
-            'title'      => 'Administrar Nodos - ' . $network->name,
-            'network'    => $network,
-            'devices'    => $devices,
-            'pagerLinks' => $pagerLinks,
+            'title'             => 'Administrar Nodos - ' . $network->name,
+            'network'           => $network,
+            'devices'           => $devices,
+            'totalDevicesCount' => $total,
+            'pagerLinks'        => $pagerLinks,
+            'telemetry'         => $telemetry,
         ];
 
         echo view('template/header', $data);
@@ -1400,5 +1404,108 @@ class DeviceController extends BaseController
         }
 
         return 'vpn.tudominio.com:51820';
+    }
+
+    /**
+     * Construye los datos de telemetría y tráfico de WireGuard para los nodos de la red.
+     */
+    protected function buildNetworkTelemetry(array $devices): array
+    {
+        $telemetry = [
+            'isConfigured'     => WireguardService::isConfigured(),
+            'isInterfaceUp'    => false,
+            'totalRxBytes'     => 0,
+            'totalTxBytes'     => 0,
+            'formattedRx'      => '0 B',
+            'formattedTx'      => '0 B',
+            'formattedTotal'   => '0 B',
+            'onlineDevices'    => 0,
+            'offlineDevices'   => count($devices),
+            'totalDevices'     => count($devices),
+            'healthPercentage' => 0,
+            'trafficLabels'    => [],
+            'trafficRx'        => [],
+            'trafficTx'        => [],
+            'hasTrafficData'   => false,
+        ];
+
+        if (! $telemetry['isConfigured'] || empty($devices)) {
+            return $telemetry;
+        }
+
+        try {
+            $dump  = WireguardService::cachedDump(5, 3);
+            $peers = $dump['peers'] ?? [];
+            $telemetry['isInterfaceUp'] = true;
+
+            $onlineCount     = 0;
+            $trafficByDevice = [];
+
+            foreach ($devices as $dev) {
+                $peer        = $peers[$dev->public_key] ?? null;
+                $rx          = (int) ($peer['rx_bytes'] ?? 0);
+                $tx          = (int) ($peer['tx_bytes'] ?? 0);
+                $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
+
+                if ($isConnected) {
+                    $onlineCount++;
+                }
+
+                $telemetry['totalRxBytes'] += $rx;
+                $telemetry['totalTxBytes'] += $tx;
+
+                $trafficByDevice[] = [
+                    'name'  => $dev->name . ' (' . $dev->ip_address . ')',
+                    'rx'    => $rx,
+                    'tx'    => $tx,
+                    'total' => $rx + $tx,
+                ];
+            }
+
+            $telemetry['onlineDevices']    = $onlineCount;
+            $telemetry['offlineDevices']   = max(0, $telemetry['totalDevices'] - $onlineCount);
+            $telemetry['healthPercentage'] = $telemetry['totalDevices'] > 0
+                ? (int) round(($onlineCount / $telemetry['totalDevices']) * 100)
+                : 0;
+
+            $telemetry['formattedRx']    = self::formatBytes($telemetry['totalRxBytes']);
+            $telemetry['formattedTx']    = self::formatBytes($telemetry['totalTxBytes']);
+            $telemetry['formattedTotal'] = self::formatBytes($telemetry['totalRxBytes'] + $telemetry['totalTxBytes']);
+
+            usort($trafficByDevice, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+            $topDevices    = array_slice($trafficByDevice, 0, 8);
+            $hasAnyTraffic = false;
+
+            foreach ($topDevices as $item) {
+                if ($item['rx'] > 0 || $item['tx'] > 0) {
+                    $hasAnyTraffic = true;
+                }
+                $telemetry['trafficLabels'][] = $item['name'];
+                $telemetry['trafficRx'][]     = $item['rx'];
+                $telemetry['trafficTx'][]     = $item['tx'];
+            }
+
+            $telemetry['hasTrafficData'] = $hasAnyTraffic;
+        } catch (\Throwable $e) {
+            log_message('notice', 'Network telemetry notice: ' . $e->getMessage());
+        }
+
+        return $telemetry;
+    }
+
+    /**
+     * Formatea bytes a unidades legibles.
+     */
+    protected static function formatBytes(int $bytes): string
+    {
+        if ($bytes <= 0) {
+            return '0 B';
+        }
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $pow   = (int) floor(log($bytes, 1024));
+        $pow   = min($pow, count($units) - 1);
+
+        return round($bytes / (1024 ** $pow), 2) . ' ' . $units[$pow];
     }
 }

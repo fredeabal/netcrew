@@ -13,13 +13,7 @@
           </ol>
         </nav>
       </div>
-      <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end mt-3 mt-md-0">
-        <form method="get" action="<?= site_url('audit-logs') ?>" class="d-flex w-100 w-md-auto">
-          <div class="input-group">
-            <input type="text" name="q" class="form-control" placeholder="Buscar por usuario, acción, IP..." value="<?= esc($search ?? '') ?>">
-            <button class="btn btn-primary btn-sm" type="submit"><i class="ti ti-search"></i></button>
-          </div>
-        </form>
+      <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center mt-3 mt-md-0">
       </div>
     </div>
   </div>
@@ -29,11 +23,22 @@
   <div class="col-12">
     <div class="card">
       <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-end align-items-center mb-4 gap-3">
+          <div class="d-flex align-items-center gap-2 w-100 w-md-auto search-form-responsive ms-auto">
+            <form method="get" action="<?= site_url('audit-logs') ?>" class="w-100">
+              <div class="position-relative w-100 search-box-container">
+                <input type="text" name="q" id="search-audit" class="form-control" placeholder="Buscar por usuario, acción, IP..." value="<?= esc($search ?? '') ?>" autocomplete="off">
+                <i class="ti ti-search search-icon text-muted"></i>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <?php if (empty($logs)): ?>
           <div class="text-center py-5">
             <i class="ti ti-history fs-8 text-muted d-block mb-2"></i>
-            <h6 class="fw-semibold">No hay registros de auditoría aún</h6>
-            <p class="text-muted mb-0 small">Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.</p>
+            <h6 class="fw-semibold"><?= !empty($search) ? 'Sin resultados' : 'No hay registros de auditoría aún' ?></h6>
+            <p class="text-muted mb-0 small"><?= !empty($search) ? 'Ningún registro coincide con tu búsqueda' : 'Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.' ?></p>
           </div>
         <?php else: ?>
           <?php
@@ -115,7 +120,7 @@
 
           <!-- VISTA ESCRITORIO: TABLA (d-none d-md-block) -->
           <div class="table-responsive d-none d-md-block">
-            <table class="table table-hover align-middle net-table">
+            <table class="table table-hover align-middle net-table" id="audit-table">
               <thead>
                 <tr class="text-muted fw-semibold">
                   <th>Fecha</th>
@@ -159,7 +164,7 @@
           <div class="d-block d-md-none" id="auditCardsContainer">
             <?php foreach ($logs as $log): ?>
               <?php $meta = $getAuditBadgeMeta($log->action); ?>
-              <div class="mobile-card-item">
+              <div class="mobile-card-item audit-card-item">
                 <div class="mobile-card-header">
                   <div class="d-flex align-items-center gap-2">
                     <span class="badge <?= $meta['class'] ?> fw-semibold badge-action">
@@ -190,12 +195,40 @@
             <?php endforeach; ?>
           </div>
 
-          <div class="mt-4">
+          <?php if (isset($pager) && $pager->getPageCount('audit') > 1): ?>
+          <div class="mt-4 d-flex justify-content-center">
             <?= $pager->links('audit', 'premium') ?>
           </div>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
     </div>
   </div>
 </div>
+
+<!-- =====================================================================
+     SCRIPT DE BÚSQUEDA EN TIEMPO REAL
+     ===================================================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-audit');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const filter = this.value.toLowerCase().trim();
+      const rows = document.querySelectorAll('#audit-table tbody tr');
+      const cards = document.querySelectorAll('.audit-card-item');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.classList.toggle('d-none', !text.includes(filter));
+      });
+
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.classList.toggle('d-none', !text.includes(filter));
+      });
+    });
+  }
+});
+</script>
 

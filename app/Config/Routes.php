@@ -88,8 +88,8 @@ $routes->group('devices', ['filter' => 'session'], static function ($routes) {
 });
 
 // Ruta pública para enlace temporal compartido de configuración WireGuard (One-Time Link)
-$routes->get('connect/(:alphanumeric)', 'DeviceController::connectShare/$1');
-$routes->get('connect/(:alphanumeric)/download', 'DeviceController::downloadShare/$1');
+$routes->get('connect/(:alphanum)', 'DeviceController::connectShare/$1');
+$routes->get('connect/(:alphanum)/download', 'DeviceController::downloadShare/$1');
 
 // Ruta para cerrar sesión tras activar la cuenta
 $routes->get('auth/logout-activated', static function () {

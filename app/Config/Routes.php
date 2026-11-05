@@ -83,8 +83,8 @@ $routes->group('devices', ['filter' => 'session'], static function ($routes) {
     $routes->get('realtime-status/(:num)', 'DeviceController::realtimeStatus/$1', ['filter' => 'permission:devices.view']);
     $routes->get('node-details/(:num)', 'DeviceController::nodeDetails/$1', ['filter' => 'permission:devices.view']);
     $routes->get('show/(:num)', 'DeviceController::show/$1', ['filter' => 'permission:devices.view']);
-    $routes->post('generate-share-link/(:num)', 'DeviceController::generateShareLink/$1', ['filter' => 'permission:devices.view']);
-    $routes->post('send-email/(:num)', 'DeviceController::sendConfigEmail/$1', ['filter' => 'permission:devices.view']);
+    $routes->post('generate-share-link/(:num)', 'DeviceController::generateShareLink/$1', ['filter' => 'permission:devices.edit']);
+    $routes->post('send-email/(:num)', 'DeviceController::sendConfigEmail/$1', ['filter' => 'permission:devices.edit']);
 });
 
 // Ruta pública para enlace temporal compartido de configuración WireGuard (One-Time Link)

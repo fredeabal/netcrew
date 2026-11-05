@@ -7,7 +7,7 @@
   <link rel="shortcut icon" type="image/png" href="<?= base_url('assets/images/logos/favicon.png') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZepKmjzdRNO39UnUq205AC9041zguTkFcUcLhy5F5GyUH4ud55xqdXY2NWKRh6936UO32UQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="connect-page">
 
@@ -43,9 +43,10 @@
     </div>
 
     <div class="d-grid gap-2">
-      <a href="<?= site_url('connect/' . $token . '/download') ?>" class="btn btn-primary py-2 fw-semibold">
+      <button type="button" id="btnDownloadConf" class="btn btn-primary py-2 fw-semibold">
         <i class="ti ti-download me-1"></i> Descargar archivo .conf
-      </a>
+      </button>
+      <a id="lnkFallbackDownload" href="<?= site_url('connect/' . $token . '/download') ?>" class="d-none"></a>
     </div>
 
     <div class="mt-4">
@@ -57,13 +58,32 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      const configText = <?= json_encode($config) ?>;
+      const fileName = <?= json_encode(url_title($device->name, '-', true) . '.conf') ?>;
+
       new QRCode(document.getElementById("qrcode"), {
-        text: <?= json_encode($config) ?>,
+        text: configText,
         width: 220,
         height: 220,
         colorDark : "#000000",
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.M
+      });
+
+      document.getElementById("btnDownloadConf").addEventListener("click", function () {
+        try {
+          const blob = new Blob([configText], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          window.location.href = document.getElementById("lnkFallbackDownload").href;
+        }
       });
     });
   </script>

@@ -619,9 +619,10 @@ class DeviceController extends BaseController
         }
 
         $oldPublicKey = $device->public_key;
+        $isDeviceExpired = !empty($device->expires_at) && strtotime($device->expires_at) < time();
 
-        // 2. Si el dispositivo está activo, aplicar rotación en el servidor WireGuard
-        if ($device->active) {
+        // 2. Si el dispositivo y la red están activos y vigentes, aplicar rotación en el servidor WireGuard
+        if ($device->active && $network->active && !$isDeviceExpired) {
             try {
                 $wg = WireguardService::fromSettings(5);
                 $wg->setTimeout(30);
@@ -633,6 +634,16 @@ class DeviceController extends BaseController
                 log_message('error', 'Fallo al rotar peer en servidor WireGuard: ' . $e->getMessage());
                 return redirect()->back()->with('error', 'No se pudo actualizar la clave en el servidor VPN: ' . esc($e->getMessage()));
             }
+        } elseif ($device->active && (!$network->active || $isDeviceExpired)) {
+            // Asegurar que la clave antigua no permanezca registrada en el servidor VPN
+            try {
+                $wg = WireguardService::fromSettings(5);
+                $wg->setTimeout(30);
+                $wg->removePeer($oldPublicKey);
+                $wg->saveConfig();
+            } catch (\Throwable $e) {
+                // Silenciar fallo si el peer ya no existía
+            }
         }
 
         // 3. Persistir nuevas llaves en la base de datos (DeviceModel se encarga de cifrar la private_key)
@@ -642,11 +653,12 @@ class DeviceController extends BaseController
         ];
 
         if ($this->deviceModel->update($id, $updateData)) {
+            \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó llaves criptográficas del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
             return redirect()->to("devices/show/{$id}")->with('message', '¡Llaves regeneradas con éxito! Recuerda descargar la nueva configuración o escanear el nuevo código QR.');
         }
 
         // Revertir cambio en servidor WireGuard en caso de fallo en BD
-        if ($device->active) {
+        if ($device->active && $network->active && !$isDeviceExpired) {
             $this->bestEffort(function() use ($device, $oldPublicKey, $newPublicKey) {
                 $wg = WireguardService::fromSettings(5);
                 $wg->removePeer($newPublicKey);
@@ -685,6 +697,18 @@ class DeviceController extends BaseController
 
         $newActiveStatus = !$device->active;
 
+        // Si se intenta activar, validar que la red esté activa y el dispositivo no haya expirado
+        if ($newActiveStatus) {
+            if (!$network->active) {
+                return redirect()->to("networks/{$networkId}/devices")
+                    ->with('error', 'No se puede activar el nodo porque la red a la que pertenece está desactivada.');
+            }
+            if (!empty($device->expires_at) && strtotime($device->expires_at) < time()) {
+                return redirect()->to("networks/{$networkId}/devices")
+                    ->with('error', 'No se puede activar el nodo porque su vigencia ha expirado. Edita la fecha de expiración primero.');
+            }
+        }
+
         // Aplicar primero en el servidor. Si falla, no se cambia el estado en la BD.
         try {
             $this->pushPeer($device, $newActiveStatus);
@@ -696,6 +720,7 @@ class DeviceController extends BaseController
 
         if ($this->deviceModel->update($id, ['active' => $newActiveStatus ? 1 : 0])) {
             $status = $newActiveStatus ? 'activado' : 'desactivado';
+            \App\Models\AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}");
             return redirect()->to("networks/{$networkId}/devices")->with('message', "Nodo {$status}.");
         }
 
@@ -762,6 +787,8 @@ class DeviceController extends BaseController
             $device->routing_mode ?? 'split'
         );
 
+        \App\Models\AuditLogModel::log('DEVICE_VIEW_KEYS', "Visualizó configuración y claves del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+
         return $this->response->setJSON([
             'success' => true,
             'device'  => [
@@ -793,6 +820,14 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Acceso denegado.');
         }
 
+        if (!$network->active) {
+            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se puede descargar la configuración de una red desactivada.');
+        }
+
+        if (!$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se puede descargar la configuración de un nodo inactivo o expirado.');
+        }
+
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
         if (empty($decryptedPrivateKey)) {
             return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se pudo desencriptar la llave privada del nodo.');
@@ -817,8 +852,12 @@ class DeviceController extends BaseController
 
         $filename = url_title($device->name, '-', true) . '.conf';
 
+        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó configuración .conf del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+
         return $this->response->setHeader('Content-Type', 'text/plain')
                                 ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                                ->setHeader('Pragma', 'no-cache')
                                 ->setBody($configString);
     }
 
@@ -837,14 +876,29 @@ class DeviceController extends BaseController
         }
 
         $network = $this->networkModel->find($device->network_id);
-        if (!$network || !$this->hasNetworkAccess($network, 'view')) {
+        if (!$network || !$this->hasNetworkAccess($network, 'edit')) {
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado'])->setStatusCode(403);
+        }
+
+        if (!$network->active) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No se puede compartir un nodo perteneciente a una red desactivada'])->setStatusCode(400);
+        }
+
+        if (!$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No se puede compartir un nodo inactivo o expirado'])->setStatusCode(400);
         }
 
         $token = bin2hex(random_bytes(24));
         $expiresAt = date('Y-m-d H:i:s', strtotime('+60 minutes'));
 
         $db = \Config\Database::connect();
+
+        // Limpiar tokens anteriores no utilizados para este nodo para reducir la superficie de exposición
+        $db->table('device_share_tokens')
+           ->where('device_id', $device->id)
+           ->where('used', 0)
+           ->delete();
+
         $db->table('device_share_tokens')->insert([
             'device_id'  => $device->id,
             'token'      => $token,
@@ -852,6 +906,8 @@ class DeviceController extends BaseController
             'used'       => 0,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+
+        \App\Models\AuditLogModel::log('DEVICE_SHARE_LINK', "Generó enlace temporal compartido para el nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
 
         $shareUrl = site_url('connect/' . $token);
 
@@ -871,6 +927,16 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Método no permitido'])->setStatusCode(405);
         }
 
+        // Limitación de tasa (Rate Limiting): Máximo 5 peticiones por minuto por usuario/IP
+        $throttler = service('throttler');
+        $throttleKey = 'send_config_email_' . (auth()->id() ?? 'ip_' . $this->request->getIPAddress());
+        if ($throttler->check(md5($throttleKey), 5, MINUTE) === false) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Has alcanzado el límite de envíos por minuto. Por favor, espera unos instantes.'
+            ])->setStatusCode(429);
+        }
+
         $targetEmail = trim((string) $this->request->getPost('email'));
         if (empty($targetEmail) || filter_var($targetEmail, FILTER_VALIDATE_EMAIL) === false) {
             return $this->response->setJSON(['success' => false, 'message' => 'Por favor, introduce un correo electrónico válido'])->setStatusCode(400);
@@ -882,8 +948,16 @@ class DeviceController extends BaseController
         }
 
         $network = $this->networkModel->find($device->network_id);
-        if (!$network || !$this->hasNetworkAccess($network, 'view')) {
+        if (!$network || !$this->hasNetworkAccess($network, 'edit')) {
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado'])->setStatusCode(403);
+        }
+
+        if (!$network->active) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No se puede enviar la configuración de un nodo en una red desactivada'])->setStatusCode(400);
+        }
+
+        if (!$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No se puede enviar la configuración de un nodo inactivo o expirado'])->setStatusCode(400);
         }
 
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
@@ -947,16 +1021,19 @@ class DeviceController extends BaseController
             // Adjuntar archivo .conf de WireGuard
             $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
 
-            // Procesar y adjuntar código QR en memoria si fue recibido desde el cliente
+            // Procesar y adjuntar código QR en memoria si fue recibido desde el cliente con validación estricta de firma y tamaño
             $qrCid = null;
             $qrBase64 = (string) $this->request->getPost('qr_image');
-            if (!empty($qrBase64) && preg_match('/^data:image\/(\w+);base64,/', $qrBase64)) {
+            if (!empty($qrBase64) && preg_match('/^data:image\/png;base64,/', $qrBase64)) {
                 $rawBase64 = substr($qrBase64, strpos($qrBase64, ',') + 1);
-                $qrDecoded = base64_decode($rawBase64);
-                if (!empty($qrDecoded)) {
-                    $qrAttachmentName = url_title($device->name, '-', true) . '-qr.png';
-                    $emailService->attach($qrDecoded, 'inline', $qrAttachmentName, 'image/png');
-                    $qrCid = $emailService->setAttachmentCID($qrAttachmentName);
+                $qrDecoded = base64_decode($rawBase64, true);
+                if ($qrDecoded !== false && strlen($qrDecoded) <= 150000 && strncmp($qrDecoded, "\x89PNG\r\n\x1a\n", 8) === 0) {
+                    $imgSize = @getimagesizefromstring($qrDecoded);
+                    if ($imgSize !== false && $imgSize[2] === IMAGETYPE_PNG && $imgSize[0] <= 1024 && $imgSize[1] <= 1024) {
+                        $qrAttachmentName = url_title($device->name, '-', true) . '-qr.png';
+                        $emailService->attach($qrDecoded, 'inline', $qrAttachmentName, 'image/png');
+                        $qrCid = $emailService->setAttachmentCID($qrAttachmentName);
+                    }
                 }
             }
 
@@ -1062,6 +1139,7 @@ class DeviceController extends BaseController
             $emailService->setMessage($htmlMessage);
 
             if ($emailService->send()) {
+                \App\Models\AuditLogModel::log('DEVICE_SEND_EMAIL', "Envió configuración del nodo '{$device->name}' (ID: {$id}) por correo a: {$targetEmail}");
                 return $this->response->setJSON(['success' => true, 'message' => 'Configuración enviada exitosamente a ' . esc($targetEmail)]);
             } else {
                 $debugger = $emailService->printDebugger(['headers']);
@@ -1070,7 +1148,7 @@ class DeviceController extends BaseController
             }
         } catch (\Throwable $e) {
             log_message('error', 'Excepción al enviar correo de configuración: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error al enviar: ' . $e->getMessage()])->setStatusCode(500);
+            return $this->response->setJSON(['success' => false, 'message' => 'Error al procesar el envío de correo.'])->setStatusCode(500);
         }
     }
 
@@ -1079,6 +1157,15 @@ class DeviceController extends BaseController
     // ---------------------------------------------------------------------
     public function connectShare($token)
     {
+        // 1. Detección de bots y rastreadores de vista previa para evitar que consuman o filtren el secreto
+        $userAgent = (string) $this->request->getUserAgent();
+        if (preg_match('/(facebookexternalhit|Twitterbot|Slackbot|TelegramBot|WhatsApp|Discordbot|SkypeUriPreview|Google-Read-Aloud|meta-externalagent)/i', $userAgent)) {
+            return $this->response
+                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+                ->setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+                ->setBody('<!DOCTYPE html><html><head><title>NetCrew VPN Link</title><meta name="robots" content="noindex,nofollow"></head><body>Enlace de conexión temporal NetCrew.</body></html>');
+        }
+
         $db = \Config\Database::connect();
         $row = $db->table('device_share_tokens')
                   ->where('token', $token)
@@ -1095,10 +1182,37 @@ class DeviceController extends BaseController
 
         $device = $this->deviceModel->find($row->device_id);
         if (!$device) {
-            return redirect()->to('/');
+            return view('errors/html/error_404', [
+                'message' => 'Dispositivo no encontrado.'
+            ]);
         }
 
         $network = $this->networkModel->find($device->network_id);
+        if (!$network) {
+            return view('errors/html/error_404', [
+                'message' => 'Red no encontrada.'
+            ]);
+        }
+
+        // Validar que la red y el dispositivo continúen activos y no hayan expirado
+        if (!$network->active || !$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return view('errors/html/error_404', [
+                'message' => 'El dispositivo o la red están inactivos o han expirado.'
+            ]);
+        }
+
+        // Consumir el token atómicamente en la primera visualización
+        $db->table('device_share_tokens')
+           ->where('id', $row->id)
+           ->where('used', 0)
+           ->update(['used' => 1]);
+
+        if ($db->affectedRows() !== 1) {
+            return view('errors/html/error_404', [
+                'message' => 'El enlace de conexión ya ha sido utilizado.'
+            ]);
+        }
+
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
         $serverPublicKey = service('settings')->get('WireGuard.publicKey');
         $serverEndpoint = $this->resolveServerEndpoint();
@@ -1120,6 +1234,12 @@ class DeviceController extends BaseController
             'config'  => $configString,
         ];
 
+        // Añadir cabeceras para prevenir almacenamiento en caché o indexación
+        $this->response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                       ->setHeader('Pragma', 'no-cache')
+                       ->setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+                       ->setHeader('Referrer-Policy', 'no-referrer');
+
         return view('devices/connect_share', $data);
     }
 
@@ -1129,26 +1249,47 @@ class DeviceController extends BaseController
     public function downloadShare($token)
     {
         $db = \Config\Database::connect();
-        $row = $db->table('device_share_tokens')
-                  ->where('token', $token)
-                  ->where('expires_at >', date('Y-m-d H:i:s'))
-                  ->where('used', 0)
-                  ->get()
-                  ->getRow();
 
-        if (!$row) {
+        // Consumo atómico condicional para evitar condiciones de carrera (TOCTOU)
+        $db->table('device_share_tokens')
+           ->where('token', $token)
+           ->where('expires_at >', date('Y-m-d H:i:s'))
+           ->where('used', 0)
+           ->update(['used' => 1]);
+
+        if ($db->affectedRows() !== 1) {
             return view('errors/html/error_404', [
                 'message' => 'El enlace de conexión ha expirado o ya ha sido utilizado.'
             ]);
         }
 
-        // Marcar token como consumido para garantizar que sea de un solo uso
-        $db->table('device_share_tokens')
-           ->where('id', $row->id)
-           ->update(['used' => 1]);
+        $row = $db->table('device_share_tokens')->where('token', $token)->get()->getRow();
+        if (!$row) {
+            return view('errors/html/error_404', [
+                'message' => 'El enlace de conexión no es válido.'
+            ]);
+        }
 
         $device = $this->deviceModel->find($row->device_id);
+        if (!$device) {
+            return view('errors/html/error_404', [
+                'message' => 'Dispositivo no encontrado.'
+            ]);
+        }
+
         $network = $this->networkModel->find($device->network_id);
+        if (!$network) {
+            return view('errors/html/error_404', [
+                'message' => 'Red no encontrada.'
+            ]);
+        }
+
+        if (!$network->active || !$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return view('errors/html/error_404', [
+                'message' => 'El dispositivo o la red están inactivos o han expirado.'
+            ]);
+        }
+
         $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
         $serverPublicKey = service('settings')->get('WireGuard.publicKey');
         $serverEndpoint = $this->resolveServerEndpoint();
@@ -1167,6 +1308,10 @@ class DeviceController extends BaseController
 
         return $this->response->setHeader('Content-Type', 'text/plain')
                                 ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                                ->setHeader('Pragma', 'no-cache')
+                                ->setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+                                ->setHeader('Referrer-Policy', 'no-referrer')
                                 ->setBody($configString);
     }
 
@@ -1325,6 +1470,13 @@ class DeviceController extends BaseController
         $wg->setTimeout(30);
 
         if ($add) {
+            $network = $this->networkModel->find($device->network_id);
+            if (!$network || !$network->active) {
+                throw new \RuntimeException('No se puede sincronizar el nodo con WireGuard porque la red está inactiva.');
+            }
+            if (!empty($device->expires_at) && strtotime($device->expires_at) < time()) {
+                throw new \RuntimeException('No se puede sincronizar el nodo con WireGuard porque ha expirado.');
+            }
             // Regenerar firewall/direcciones por si la red del nodo es nueva
             $wg->syncFirewall();
             $wg->addPeer($device->public_key, $device->ip_address);

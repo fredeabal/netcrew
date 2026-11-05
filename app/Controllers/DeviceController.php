@@ -1132,12 +1132,20 @@ class DeviceController extends BaseController
         $row = $db->table('device_share_tokens')
                   ->where('token', $token)
                   ->where('expires_at >', date('Y-m-d H:i:s'))
+                  ->where('used', 0)
                   ->get()
                   ->getRow();
 
         if (!$row) {
-            return redirect()->to('/');
+            return view('errors/html/error_404', [
+                'message' => 'El enlace de conexión ha expirado o ya ha sido utilizado.'
+            ]);
         }
+
+        // Marcar token como consumido para garantizar que sea de un solo uso
+        $db->table('device_share_tokens')
+           ->where('id', $row->id)
+           ->update(['used' => 1]);
 
         $device = $this->deviceModel->find($row->device_id);
         $network = $this->networkModel->find($device->network_id);

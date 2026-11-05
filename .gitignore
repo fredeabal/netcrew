@@ -73,6 +73,7 @@ Vagrantfile
 
 /public/uploads/*
 !/public/uploads/index.html
+!/public/uploads/.htaccess
 
 /writable/debugbar/*
 !/writable/debugbar/index.html

@@ -1,0 +1,19 @@
+# Bloquear ejecución de cualquier script o código ejecutable en subidas
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phps|phar|sh|pl|py|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Desactivar motor PHP si mod_php está cargado
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+Options -ExecCGI -Indexes
+

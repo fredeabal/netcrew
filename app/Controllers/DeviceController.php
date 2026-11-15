@@ -1302,11 +1302,24 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
-    // Helper: Estado en tiempo real de un peer (Nebula opera en modo P2P directo)
+    // Helper: Estado en tiempo real de un peer desde el Lighthouse Nebula
     // ---------------------------------------------------------------------
     protected function fetchPeerStatus(object $device): ?array
     {
-        return null;
+        $telemetry = NebulaService::getLighthousePeerTelemetry();
+        $fp        = strtolower((string) ($device->public_key ?? ''));
+        $ip        = (string) ($device->ip_address ?? '');
+
+        $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
+        if (! $peer) {
+            return null;
+        }
+
+        if (! empty($peer['latest_handshake'])) {
+            $this->updateLastSeenFromHandshake($device, (int) $peer['latest_handshake']);
+        }
+
+        return $peer;
     }
 
     // ---------------------------------------------------------------------
@@ -1331,37 +1344,63 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'No tienes permisos para esta red'])->setStatusCode(403);
         }
 
-        if (!NebulaService::isSshConfigured()) {
-            return $this->response->setJSON([
-                'status'  => 'error',
-                'message' => 'El acceso SSH remoto no está configurado en Ajustes > Nebula (P2P).',
-            ]);
-        }
-
-        try {
-            $ssh        = NebulaService::sshFromSettings(10);
-            $output     = (string) $ssh->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
-            $exitStatus = $ssh->getExitStatus();
-
-            if ($exitStatus === 0) {
-                return $this->response->setJSON([
-                    'status' => 'success',
-                    'output' => $output
-                ]);
+        // 1. Si el servidor local tiene la interfaz nebula1 activa, hacer ping directo
+        @exec('ip link show nebula1 >/dev/null 2>&1', $tunOut, $tunCode);
+        if ($tunCode === 0) {
+            @exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1', $pingOut, $pingCode);
+            $output = implode("\n", $pingOut);
+            if ($pingCode === 0) {
+                return $this->response->setJSON(['status' => 'success', 'output' => $output]);
             }
-
             return $this->response->setJSON([
                 'status'  => 'error',
                 'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
-                'output'  => $output
-            ]);
-        } catch (\Throwable $e) {
-            return $this->response->setJSON([
-                'status'  => 'error',
-                'message' => 'Error de conexión SSH con el servidor.',
-                'output'  => $e->getMessage()
+                'output'  => $output,
             ]);
         }
+
+        // 2. Si hay SSH configurado, intentar por SSH
+        if (NebulaService::isSshConfigured()) {
+            try {
+                $ssh        = NebulaService::sshFromSettings(10);
+                $output     = (string) $ssh->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
+                $exitStatus = $ssh->getExitStatus();
+
+                if ($exitStatus === 0) {
+                    return $this->response->setJSON([
+                        'status' => 'success',
+                        'output' => $output
+                    ]);
+                }
+
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
+                    'output'  => $output
+                ]);
+            } catch (\Throwable $e) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Error de conexión SSH con el servidor.',
+                    'output'  => $e->getMessage()
+                ]);
+            }
+        }
+
+        // 3. Lighthouse sin /dev/net/tun (modo descubrimiento/relay LXC): informar estado real del handshake
+        $peer = $this->fetchPeerStatus($device);
+        if ($peer && ! empty($peer['connected'])) {
+            $when = date('d/m/Y H:i:s', (int) $peer['latest_handshake']);
+            return $this->response->setJSON([
+                'status' => 'success',
+                'output' => "Nodo conectado al Lighthouse Nebula.\nIP VPN: {$device->ip_address}\nIP Pública: {$peer['endpoint']}\nÚltimo handshake: {$when}\n\n(El servidor opera en modo Lighthouse puro sin /dev/net/tun; los dispositivos P2P se comunican directamente entre sí).",
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'status'  => 'error',
+            'message' => 'El nodo aún no ha realizado handshake reciente con el Lighthouse.',
+        ]);
     }
 
     // ---------------------------------------------------------------------
@@ -1378,11 +1417,36 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado.'])->setStatusCode(403);
         }
 
+        $devices   = $this->deviceModel->where('network_id', $networkId)->findAll();
+        $telemetry = NebulaService::getLighthousePeerTelemetry();
+        $peers     = [];
+
+        foreach ($devices as $dev) {
+            $fp   = strtolower((string) ($dev->public_key ?? ''));
+            $ip   = (string) ($dev->ip_address ?? '');
+            $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
+
+            if ($peer) {
+                $ts = (int) ($peer['latest_handshake'] ?? 0);
+                if ($ts > 0) {
+                    $this->updateLastSeenFromHandshake($dev, $ts);
+                }
+                $peers[(string) $dev->public_key] = [
+                    'connected'      => (bool) ($peer['connected'] ?? false),
+                    'endpoint'       => (string) ($peer['endpoint'] ?? ''),
+                    'rx'             => (int) ($peer['rx_bytes'] ?? 0),
+                    'tx'             => (int) ($peer['tx_bytes'] ?? 0),
+                    'last_seen_date' => $ts > 0 ? date('d/m/Y', $ts) : null,
+                    'last_seen_time' => $ts > 0 ? date('H:i', $ts) : null,
+                ];
+            }
+        }
+
         return $this->response->setJSON([
             'success'    => true,
             'engine'     => 'nebula',
             'remoteTime' => time(),
-            'peers'      => [],
+            'peers'      => $peers,
         ]);
     }
 

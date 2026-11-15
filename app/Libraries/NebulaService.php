@@ -591,6 +591,94 @@ YAML;
     }
 
     /**
+     * Lee la telemetría de handshakes recientes del Lighthouse (journalctl -u nebula).
+     * Devuelve un mapa indexado por vpnIp y fingerprint.
+     *
+     * @return array{by_ip: array<string, array>, by_fp: array<string, array>}
+     */
+    public static function getLighthousePeerTelemetry(): array
+    {
+        $byIp = [];
+        $byFp = [];
+        $raw  = '';
+
+        if (is_executable('/usr/bin/journalctl') || is_executable('/bin/journalctl')) {
+            @exec('journalctl -u nebula -n 500 --no-pager 2>/dev/null', $lines, $code);
+            if ($code === 0 && ! empty($lines)) {
+                $raw = implode("\n", $lines);
+            }
+        }
+
+        if ($raw === '' && self::isSshConfigured()) {
+            try {
+                $ssh = self::sshFromSettings(6);
+                $raw = (string) $ssh->exec('journalctl -u nebula -n 500 --no-pager 2>/dev/null');
+            } catch (\Throwable $e) {
+                log_message('warning', 'No se pudo leer telemetría Nebula por SSH: ' . $e->getMessage());
+            }
+        }
+
+        if ($raw === '') {
+            return ['by_ip' => [], 'by_fp' => []];
+        }
+
+        $now = time();
+        foreach (preg_split("/\r\n|\n|\r/", $raw) as $line) {
+            if (strpos($line, 'Handshake message') === false) {
+                continue;
+            }
+            if (! preg_match('/time="([^"]+)"/', $line, $mTime)) {
+                continue;
+            }
+            $ts = strtotime($mTime[1]);
+            if (! $ts) {
+                continue;
+            }
+
+            $vpnIp = preg_match('/vpnIp=([0-9.]+)/', $line, $mIp) ? $mIp[1] : '';
+            $fp    = preg_match('/fingerprint=([a-f0-9]+)/i', $line, $mFp) ? strtolower($mFp[1]) : '';
+            $addr  = preg_match('/udpAddr="([^"]+)"/', $line, $mAddr) ? $mAddr[1] : '';
+
+            $publicIp = '';
+            $port     = '';
+            if ($addr !== '' && strpos($addr, ':') !== false) {
+                $lastColon = strrpos($addr, ':');
+                $publicIp  = substr($addr, 0, $lastColon);
+                $port      = substr($addr, $lastColon + 1);
+            }
+
+            $entry = [
+                'connected'        => ($now - $ts) <= 3600,
+                'endpoint'         => $addr,
+                'public_ip'        => $publicIp,
+                'port'             => $port,
+                'latest_handshake' => $ts,
+                'rx_bytes'         => 0,
+                'tx_bytes'         => 0,
+                'remote_time'      => $now,
+            ];
+
+            if ($vpnIp !== '' && (! isset($byIp[$vpnIp]) || $ts >= $byIp[$vpnIp]['latest_handshake'])) {
+                $byIp[$vpnIp] = $entry;
+            }
+            if ($fp !== '' && (! isset($byFp[$fp]) || $ts >= $byFp[$fp]['latest_handshake'])) {
+                $byFp[$fp] = $entry;
+            }
+        }
+
+        return ['by_ip' => $byIp, 'by_fp' => $byFp];
+    }
+
+    /**
+     * Comprueba si el servicio nebula está corriendo en el servidor local.
+     */
+    public static function isLighthouseRunning(): bool
+    {
+        @exec('systemctl is-active --quiet nebula 2>/dev/null', $out, $code);
+        return $code === 0;
+    }
+
+    /**
      * Sincroniza automáticamente la configuración del Lighthouse local (/etc/nebula/config.yml)
      * y reinicia el servicio systemd nebula si el servidor está preparado.
      */

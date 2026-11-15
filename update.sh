@@ -161,6 +161,7 @@ EOF
 chmod 755 /usr/local/sbin/netcrew-lighthouse
 echo "www-data ALL=(root) NOPASSWD: /usr/local/sbin/netcrew-lighthouse" > /etc/sudoers.d/netcrew-nebula
 chmod 440 /etc/sudoers.d/netcrew-nebula
+usermod -aG systemd-journal www-data >/dev/null 2>&1 || true
 
 echo -e "${YELLOW}⏳ [3/6] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1

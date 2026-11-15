@@ -124,6 +124,14 @@ class NetworkController extends BaseController
         }
 
         if ($this->networkModel->save($data)) {
+            $newId   = $this->networkModel->getInsertID();
+            $created = $newId ? $this->networkModel->find($newId) : null;
+            if ($created) {
+                $plainCaKey = $this->networkModel->decryptCaKey((string) $created->nebula_ca_key);
+                if ($plainCaKey !== '') {
+                    NebulaService::syncLocalLighthouse($created, $plainCaKey);
+                }
+            }
             return redirect()->to('/networks')->with('message', 'Red Nebula P2P creada.');
         }
 

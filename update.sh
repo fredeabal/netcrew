@@ -145,12 +145,27 @@ EOF
     systemctl enable nebula > /dev/null 2>&1 || true
 fi
 
+cat > /usr/local/sbin/netcrew-lighthouse <<'EOF'
+#!/bin/bash
+set -e
+mkdir -p /etc/nebula
+chmod 700 /etc/nebula
+cat > /etc/nebula/config.yml
+chmod 600 /etc/nebula/config.yml
+systemctl enable nebula >/dev/null 2>&1 || true
+systemctl restart nebula
+EOF
+chmod 755 /usr/local/sbin/netcrew-lighthouse
+echo "www-data ALL=(root) NOPASSWD: /usr/local/sbin/netcrew-lighthouse" > /etc/sudoers.d/netcrew-nebula
+chmod 440 /etc/sudoers.d/netcrew-nebula
+
 echo -e "${YELLOW}⏳ [3/6] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader --no-interaction
 
 echo -e "${YELLOW}⏳ [3/5] Aplicando migraciones de base de datos...${NC}"
 php spark migrate --all
+php spark nebula:sync-lighthouse || true
 
 echo -e "${YELLOW}⏳ [4/5] Restaurando permisos y limpiando caché de la aplicación...${NC}"
 # Limpiar caché interno de CodeIgniter 4

@@ -591,6 +591,76 @@ YAML;
     }
 
     /**
+     * Sincroniza automáticamente la configuración del Lighthouse local (/etc/nebula/config.yml)
+     * y reinicia el servicio systemd nebula si el servidor está preparado.
+     */
+    public static function syncLocalLighthouse(object $network, string $caKey): bool
+    {
+        if (empty($network->nebula_ca_crt) || $caKey === '' || empty($network->cidr)) {
+            return false;
+        }
+
+        try {
+            $lighthouseIp = self::getLighthouseVpnIp($network->cidr) . '/24';
+            $cert         = self::signDeviceCert(
+                $network->nebula_ca_crt,
+                $caKey,
+                'lighthouse-' . $network->id,
+                $lighthouseIp,
+                'lighthouse,devices'
+            );
+            $yaml = self::buildLighthouseConfig($network, $cert['crt'], $cert['key']);
+        } catch (\Throwable $e) {
+            log_message('warning', 'No se pudo generar config Lighthouse local: ' . $e->getMessage());
+            return false;
+        }
+
+        $isRoot = function_exists('posix_geteuid') && posix_geteuid() === 0;
+        if ($isRoot) {
+            if (! is_dir('/etc/nebula')) {
+                @mkdir('/etc/nebula', 0700, true);
+            }
+            if (@file_put_contents('/etc/nebula/config.yml', $yaml) === false) {
+                return false;
+            }
+            @chmod('/etc/nebula/config.yml', 0600);
+            @exec('systemctl enable nebula >/dev/null 2>&1 || true');
+            @exec('systemctl restart nebula >/dev/null 2>&1', $out, $code);
+            return $code === 0;
+        }
+
+        $helper = '/usr/local/sbin/netcrew-lighthouse';
+        if (! is_file($helper)) {
+            return false;
+        }
+
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $proc = @proc_open('sudo -n ' . escapeshellarg($helper), $descriptors, $pipes);
+        if (! is_resource($proc)) {
+            return false;
+        }
+
+        fwrite($pipes[0], $yaml);
+        fclose($pipes[0]);
+        stream_get_contents($pipes[1]);
+        $err = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exit = proc_close($proc);
+
+        if ($exit !== 0) {
+            log_message('warning', 'netcrew-lighthouse falló (exit ' . $exit . '): ' . trim((string) $err));
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Indenta un certificado o llave PEM para insertarlo limpiamente en un bloque YAML literal `|`.
      */
     protected static function indentPem(string $pem, int $spaces = 4): string

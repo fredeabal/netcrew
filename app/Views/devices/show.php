@@ -301,14 +301,43 @@ $timeAgoView = static function (?int $ts, int $ref): string {
         </div>
 
         <div id="installMobileBox" class="install-mobile-steps mt-3 d-none">
-          <div class="d-flex flex-column gap-2 small text-muted">
-            <div class="d-flex align-items-start gap-2">
-              <span class="install-step-badge bg-primary-subtle text-primary">1</span>
-              <span>Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.</span>
+          <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+            <div class="d-flex flex-column gap-2 small text-muted flex-grow-1">
+              <div class="d-flex align-items-start gap-2">
+                <span class="install-step-badge bg-primary-subtle text-primary">1</span>
+                <span>Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.</span>
+              </div>
+              <div class="d-flex align-items-start gap-2">
+                <span class="install-step-badge bg-primary-subtle text-primary">2</span>
+                <span>Pulsa <strong>Generar QR</strong> y escanéalo con la cámara de tu móvil para abrir el enlace temporal de descarga (válido 60 min, un solo uso).</span>
+              </div>
+              <div class="d-flex align-items-start gap-2">
+                <span class="install-step-badge bg-primary-subtle text-primary">3</span>
+                <span>Descarga el archivo <code>.yml</code> en tu teléfono e impórtalo en la app de Nebula.</span>
+              </div>
+
+              <div id="mobileShareLinkRow" class="mt-2 d-none">
+                <div class="input-group input-group-sm">
+                  <input type="text" id="mobileShareUrlInput" class="form-control net-mono small" readonly aria-label="Enlace temporal móvil">
+                  <button type="button" id="btnCopyMobileShareUrl" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
+                    <i class="ti ti-copy" aria-hidden="true"></i>
+                    <span>Copiar</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="d-flex align-items-start gap-2">
-              <span class="install-step-badge bg-primary-subtle text-primary">2</span>
-              <span>Pulsa <strong>Descargar .yml</strong> e importa el archivo en la app.</span>
+
+            <div class="flex-shrink-0 text-center">
+              <div id="mobileQrPlaceholder" class="install-qr-placeholder text-muted">
+                <i class="ti ti-qrcode fs-1 opacity-50" aria-hidden="true"></i>
+                <span class="small">Pulsa <strong>Generar QR</strong> para mostrar el código</span>
+              </div>
+              <div id="mobileQrWrapper" class="d-none">
+                <div id="mobileQrContainer" class="install-qr-frame shadow-sm" aria-label="Código QR de descarga móvil"></div>
+                <div class="small text-muted mt-1">
+                  <i class="ti ti-clock me-1" aria-hidden="true"></i>Expira en 60 min
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -317,6 +346,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
   </div>
 </div>
 
+<script src="<?= base_url('assets/libs/qrcode/qrcode.min.js') ?>"></script>
 <script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   const selectEl = document.getElementById('installPlatformSelect');
@@ -328,12 +358,69 @@ document.addEventListener('DOMContentLoaded', function() {
   const btnInlineCopy = document.getElementById('btnInlineCopyCmd');
   const lnkDl = document.getElementById('lnkDownloadYml');
   const lblDl = document.getElementById('lblDownloadFile');
+  const btnGenLabel = btnGen ? btnGen.querySelector('span') : null;
+  const mobileQrPlaceholder = document.getElementById('mobileQrPlaceholder');
+  const mobileQrWrapper = document.getElementById('mobileQrWrapper');
+  const mobileQrContainer = document.getElementById('mobileQrContainer');
+  const mobileShareLinkRow = document.getElementById('mobileShareLinkRow');
+  const mobileShareUrlInput = document.getElementById('mobileShareUrlInput');
+  const btnCopyMobileShareUrl = document.getElementById('btnCopyMobileShareUrl');
 
   const baseConnect = <?= json_encode(rtrim(site_url('connect'), '/')) ?>;
   const baseDownload = <?= json_encode(site_url('devices/download/' . $device->id)) ?>;
   let activeToken = null;
+  let activeShareUrl = null;
   let lastCopyMessage = '';
   const copyTimers = new WeakMap();
+
+  function renderMobileQr(shareUrl) {
+    if (!mobileQrContainer || typeof window.qrcode !== 'function' || !shareUrl) {
+      return;
+    }
+    const qr = window.qrcode(0, 'M');
+    qr.addData(shareUrl);
+    qr.make();
+
+    const count = qr.getModuleCount();
+    const margin = 2;
+    const size = count + margin * 2;
+    let d = '';
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          d += `M${c + margin},${r + margin}h1v1h-1z`;
+        }
+      }
+    }
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Código QR de descarga móvil');
+    svg.setAttribute('shape-rendering', 'crispEdges');
+
+    const bg = document.createElementNS(svgNS, 'rect');
+    bg.setAttribute('width', String(size));
+    bg.setAttribute('height', String(size));
+    bg.setAttribute('fill', '#ffffff');
+    svg.appendChild(bg);
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', '#0b1114');
+    svg.appendChild(path);
+
+    mobileQrContainer.textContent = '';
+    mobileQrContainer.appendChild(svg);
+
+    if (mobileQrPlaceholder) mobileQrPlaceholder.classList.add('d-none');
+    if (mobileQrWrapper) mobileQrWrapper.classList.remove('d-none');
+    if (mobileShareUrlInput && mobileShareLinkRow) {
+      mobileShareUrlInput.value = shareUrl;
+      mobileShareLinkRow.classList.remove('d-none');
+    }
+  }
 
   function buildCommand(platform, token) {
     const t = token || 'TOKEN';
@@ -421,15 +508,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const p = selectEl.value;
     if (p === 'mobile') {
       cmdBox.classList.add('d-none');
-      btnGen.classList.add('d-none');
+      btnGen.classList.remove('d-none');
+      if (btnGenLabel) btnGenLabel.textContent = 'Generar QR';
       mobBox.classList.remove('d-none');
       lnkDl.href = baseDownload + '?platform=yml';
+      if (activeShareUrl) {
+        renderMobileQr(activeShareUrl);
+      } else if (activeToken) {
+        activeShareUrl = `${baseConnect}/${activeToken}`;
+        renderMobileQr(activeShareUrl);
+      }
       return;
     }
 
     mobBox.classList.add('d-none');
     cmdBox.classList.remove('d-none');
     btnGen.classList.remove('d-none');
+    if (btnGenLabel) btnGenLabel.textContent = 'Generar';
 
     if (p === 'mac') {
       cmdHint.textContent = 'Pega este comando en Terminal (macOS):';
@@ -448,9 +543,23 @@ document.addEventListener('DOMContentLoaded', function() {
   if (selectEl) {
     selectEl.addEventListener('change', updatePlatformUI);
     if (typeof jQuery !== 'undefined') {
-      jQuery(selectEl).on('change.select2', updatePlatformUI);
+      jQuery(selectEl).on('change select2:select', updatePlatformUI);
     }
     updatePlatformUI();
+  }
+
+  if (btnCopyMobileShareUrl && mobileShareUrlInput) {
+    btnCopyMobileShareUrl.addEventListener('click', function() {
+      const url = mobileShareUrlInput.value;
+      if (!url || !navigator.clipboard || !navigator.clipboard.writeText) return;
+      navigator.clipboard.writeText(url).then(() => {
+        const lbl = btnCopyMobileShareUrl.querySelector('span');
+        if (lbl) lbl.textContent = '¡Copiado!';
+        setTimeout(() => {
+          if (lbl) lbl.textContent = 'Copiar';
+        }, 2000);
+      });
+    });
   }
 
   if (btnGen) {
@@ -475,25 +584,44 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(data => {
         if (!data.success || !data.token) {
-          throw new Error(data.message || 'No se pudo generar el comando.');
+          throw new Error(data.message || 'No se pudo generar el enlace temporal.');
         }
         activeToken = data.token;
+        activeShareUrl = data.share_url || `${baseConnect}/${activeToken}`;
+
+        if (selectEl.value === 'mobile') {
+          renderMobileQr(activeShareUrl);
+          return { mode: 'mobile', copied: false };
+        }
+
         const cmd = buildCommand(selectEl.value, activeToken);
         renderCommandPreview(cmd, activeToken);
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          return navigator.clipboard.writeText(cmd).then(() => true).catch(() => false);
+          return navigator.clipboard.writeText(cmd).then(() => ({ mode: 'desktop', copied: true })).catch(() => ({ mode: 'desktop', copied: false }));
         }
-        return false;
+        return { mode: 'desktop', copied: false };
       })
-      .then(copied => {
-        if (copied && btnInlineCopy) {
+      .then(result => {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        if (result.mode === 'mobile') {
+          Swal.fire({
+            icon: 'success',
+            title: 'QR generado',
+            text: 'Escanea el código con tu móvil para descargar la configuración.',
+            timer: 3000,
+            showConfirmButton: false,
+            background: isDark ? '#0b1114' : '#f8f9fa',
+            color: isDark ? '#ffffff' : '#0b1114'
+          });
+          return;
+        }
+        if (result.copied && btnInlineCopy) {
           reportCopy(btnInlineCopy, true);
         }
-        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
         Swal.fire({
           icon: 'success',
-          title: copied ? 'Comando copiado' : 'Comando generado',
-          text: copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado en el recuadro.',
+          title: result.copied ? 'Comando copiado' : 'Comando generado',
+          text: result.copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado en el recuadro.',
           timer: 3000,
           showConfirmButton: false,
           background: isDark ? '#0b1114' : '#f8f9fa',
@@ -505,13 +633,15 @@ document.addEventListener('DOMContentLoaded', function() {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: err.message || 'No se pudo generar el comando.',
+          text: err.message || 'No se pudo generar el enlace temporal.',
           background: isDark ? '#0b1114' : '#f8f9fa',
           color: isDark ? '#ffffff' : '#0b1114',
           confirmButtonColor: '#F38020'
         });
       })
-      .finally(() => { btnGen.disabled = false; });
+      .finally(() => {
+        btnGen.disabled = false;
+      });
     });
   }
 });

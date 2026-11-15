@@ -1829,3 +1829,34 @@ a.net-name:hover {
     font-size: 0.75rem;
     font-weight: 600;
 }
+
+.install-qr-frame {
+    background-color: #ffffff;
+    padding: 0.625rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.install-qr-frame svg {
+    width: 156px;
+    height: 156px;
+    display: block;
+}
+
+.install-qr-placeholder {
+    width: 176px;
+    min-height: 176px;
+    border-radius: 12px;
+    border: 1px dashed var(--bs-border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+}

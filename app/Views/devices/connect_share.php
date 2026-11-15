@@ -38,15 +38,26 @@
       </div>
       <div class="d-flex justify-content-between">
         <span class="text-muted">Enrutamiento:</span>
-        <span class="text-info"><?= ($device->routing_mode ?? 'split') === 'full' ? 'Todo el Tráfico (Internet)' : 'Red Local' ?></span>
+        <span class="text-primary"><?= ($device->routing_mode ?? 'split') === 'full' ? 'Todo el Tráfico (Internet)' : 'Red Local' ?></span>
       </div>
     </div>
 
     <div class="d-grid gap-2">
-      <button type="button" id="btnDownloadConf" class="btn btn-primary py-2 fw-semibold">
-        <i class="ti ti-download me-1"></i> Descargar archivo .conf
-      </button>
-      <a id="lnkFallbackDownload" href="<?= site_url('connect/' . $token . '/download') ?>" class="d-none"></a>
+      <a id="btnPrimaryInstaller" href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+        <i class="ti ti-download" id="primaryInstallerIcon"></i>
+        <span id="primaryInstallerLabel">Descargar configuración (.yml)</span>
+      </a>
+      <small id="installerHint" class="text-muted d-block mt-1"></small>
+    </div>
+
+    <div class="mt-3 pt-3 border-top border-secondary border-opacity-25">
+      <span class="text-muted small d-block mb-2">¿Configurando otro dispositivo?</span>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="<?= site_url('connect/' . $token . '/download?platform=mac') ?>" class="btn btn-outline-primary btn-sm">macOS</a>
+        <a href="<?= site_url('connect/' . $token . '/download?platform=windows') ?>" class="btn btn-outline-primary btn-sm">Windows</a>
+        <a href="<?= site_url('connect/' . $token . '/download?platform=linux') ?>" class="btn btn-outline-primary btn-sm">Linux</a>
+        <a href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-outline-secondary btn-sm">.yml</a>
+      </div>
     </div>
 
     <div class="mt-4">
@@ -59,7 +70,7 @@
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const configText = <?= json_encode($config) ?>;
-      const fileName = <?= json_encode(url_title($device->name, '-', true) . '.conf') ?>;
+      const baseDownloadUrl = <?= json_encode(site_url('connect/' . $token . '/download')) ?>;
 
       new QRCode(document.getElementById("qrcode"), {
         text: configText,
@@ -70,21 +81,39 @@
         correctLevel : QRCode.CorrectLevel.M
       });
 
-      document.getElementById("btnDownloadConf").addEventListener("click", function () {
-        try {
-          const blob = new Blob([configText], { type: "text/plain;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } catch (e) {
-          window.location.href = document.getElementById("lnkFallbackDownload").href;
-        }
-      });
+      const ua = navigator.userAgent || '';
+      const platform = (navigator.platform || '').toLowerCase();
+      const btn = document.getElementById('btnPrimaryInstaller');
+      const lbl = document.getElementById('primaryInstallerLabel');
+      const ico = document.getElementById('primaryInstallerIcon');
+      const hint = document.getElementById('installerHint');
+
+      if (/iphone|ipad|ipod/i.test(ua)) {
+        btn.href = baseDownloadUrl + '?platform=yml';
+        ico.className = 'ti ti-brand-apple';
+        lbl.textContent = 'Descargar perfil para iPhone / iPad (.yml)';
+        hint.textContent = 'Instala la app gratuita Nebula en App Store e importa el archivo.';
+      } else if (/android/i.test(ua)) {
+        btn.href = baseDownloadUrl + '?platform=yml';
+        ico.className = 'ti ti-brand-android';
+        lbl.textContent = 'Descargar perfil para Android (.yml)';
+        hint.textContent = 'Instala la app gratuita Nebula en Google Play e importa el archivo.';
+      } else if (platform.includes('mac') || /macintosh|mac os x/i.test(ua)) {
+        btn.href = baseDownloadUrl + '?platform=mac';
+        ico.className = 'ti ti-brand-apple';
+        lbl.textContent = 'Descargar Configurador para Mac (.zip)';
+        hint.textContent = 'Abre el ZIP y haz doble clic en Instalar-NetCrew.';
+      } else if (platform.includes('win') || /windows/i.test(ua)) {
+        btn.href = baseDownloadUrl + '?platform=windows';
+        ico.className = 'ti ti-brand-windows';
+        lbl.textContent = 'Descargar Configurador para Windows (.bat)';
+        hint.textContent = 'Haz doble clic en el archivo descargado para instalar y conectar.';
+      } else if (platform.includes('linux') || /linux/i.test(ua)) {
+        btn.href = baseDownloadUrl + '?platform=linux';
+        ico.className = 'ti ti-brand-ubuntu';
+        lbl.textContent = 'Descargar Configurador para Linux (.sh)';
+        hint.textContent = 'Ejecuta: bash instalar-netcrew-*.sh';
+      }
     });
   </script>
 </body>

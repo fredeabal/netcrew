@@ -739,13 +739,17 @@ class DeviceController extends BaseController
             return redirect()->to('/networks/' . $network->id . '/devices')->with('error', $e->getMessage());
         }
 
-        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó configuración {$payload['filename']} del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+        $platform = (string) ($this->request->getGet('platform') ?: 'yml');
+        $slug     = url_title((string) $device->name, '-', true) ?: 'nodo-' . $device->id;
+        $bundle   = \App\Libraries\NebulaInstallerService::buildForPlatform($platform, $slug, $payload['content']);
 
-        return $this->response->setHeader('Content-Type', 'text/plain')
-                                ->setHeader('Content-Disposition', 'attachment; filename="' . $payload['filename'] . '"')
+        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó {$bundle['filename']} ({$platform}) del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+
+        return $this->response->setHeader('Content-Type', $bundle['contentType'])
+                                ->setHeader('Content-Disposition', 'attachment; filename="' . $bundle['filename'] . '"')
                                 ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
                                 ->setHeader('Pragma', 'no-cache')
-                                ->setBody($payload['content']);
+                                ->setBody($bundle['body']);
     }
 
     // ---------------------------------------------------------------------
@@ -1162,22 +1166,24 @@ class DeviceController extends BaseController
         }
 
         try {
-            $payload      = $this->buildDeviceConfigPayload($network, $device);
-            $configString = $payload['content'];
-            $filename     = $payload['filename'];
+            $payload = $this->buildDeviceConfigPayload($network, $device);
         } catch (\RuntimeException $e) {
             return view('errors/html/error_404', [
                 'message' => $e->getMessage()
             ]);
         }
 
-        return $this->response->setHeader('Content-Type', 'text/plain')
-                                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+        $platform = (string) ($this->request->getGet('platform') ?: 'yml');
+        $slug     = url_title((string) $device->name, '-', true) ?: 'nodo-' . $device->id;
+        $bundle   = \App\Libraries\NebulaInstallerService::buildForPlatform($platform, $slug, $payload['content']);
+
+        return $this->response->setHeader('Content-Type', $bundle['contentType'])
+                                ->setHeader('Content-Disposition', 'attachment; filename="' . $bundle['filename'] . '"')
                                 ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
                                 ->setHeader('Pragma', 'no-cache')
                                 ->setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
                                 ->setHeader('Referrer-Policy', 'no-referrer')
-                                ->setBody($configString);
+                                ->setBody($bundle['body']);
     }
 
     // ---------------------------------------------------------------------

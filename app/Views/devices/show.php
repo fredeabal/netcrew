@@ -276,6 +276,56 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 <?php endif; ?>
 
 <!-- =====================================================================
+     DESCARGAR CONFIGURADOR AUTOMÁTICO POR PLATAFORMA
+     ===================================================================== -->
+<?php if (!empty($device->active) && !empty($network->active)): ?>
+<div class="row">
+  <div class="col-12">
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
+            <i class="ti ti-download fs-5"></i>
+          </div>
+          <div>
+            <h5 class="fw-semibold mb-0">Configurador de Cliente</h5>
+            <small class="text-muted">Descarga el instalador automático según el sistema operativo o el archivo <code>.yml</code> para móvil.</small>
+          </div>
+        </div>
+
+        <div class="row g-2 justify-content-center">
+          <div class="col-6 col-md-auto">
+            <a href="<?= site_url('devices/download/' . $device->id . '?platform=mac') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
+              <i class="ti ti-brand-apple"></i>
+              <span>macOS (.zip)</span>
+            </a>
+          </div>
+          <div class="col-6 col-md-auto">
+            <a href="<?= site_url('devices/download/' . $device->id . '?platform=windows') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
+              <i class="ti ti-brand-windows"></i>
+              <span>Windows (.bat)</span>
+            </a>
+          </div>
+          <div class="col-6 col-md-auto">
+            <a href="<?= site_url('devices/download/' . $device->id . '?platform=linux') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
+              <i class="ti ti-brand-ubuntu"></i>
+              <span>Linux (.sh)</span>
+            </a>
+          </div>
+          <div class="col-6 col-md-auto">
+            <a href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
+              <i class="ti ti-file-code"></i>
+              <span>Archivo .yml</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- =====================================================================
      ACCIONES DEL DISPOSITIVO
      ===================================================================== -->
 <div class="row">

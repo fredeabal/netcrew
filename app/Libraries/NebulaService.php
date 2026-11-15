@@ -620,6 +620,15 @@ YAML;
             if (! is_dir('/etc/nebula')) {
                 @mkdir('/etc/nebula', 0700, true);
             }
+            $tunOk = false;
+            $fh    = @fopen('/dev/net/tun', 'r+');
+            if (is_resource($fh)) {
+                $tunOk = true;
+                fclose($fh);
+            }
+            if (! $tunOk) {
+                $yaml = preg_replace('/(^tun:\R\s+disabled:\s*)false/m', '$1true', $yaml) ?? $yaml;
+            }
             if (@file_put_contents('/etc/nebula/config.yml', $yaml) === false) {
                 return false;
             }

@@ -192,6 +192,9 @@ set -e
 mkdir -p /etc/nebula
 chmod 700 /etc/nebula
 cat > /etc/nebula/config.yml
+if ! (exec 3<>/dev/net/tun) 2>/dev/null; then
+    sed -i '/^tun:/,/^[^ ]/ s/disabled: false/disabled: true/' /etc/nebula/config.yml
+fi
 chmod 600 /etc/nebula/config.yml
 systemctl enable nebula >/dev/null 2>&1 || true
 systemctl restart nebula

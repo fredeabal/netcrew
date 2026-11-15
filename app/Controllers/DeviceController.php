@@ -51,15 +51,12 @@ class DeviceController extends BaseController
             $pagerLinks = $pager->makeLinks($page, $perPage, $total, 'premium', 1, 'devices');
         }
 
-        $telemetry = $this->buildNetworkTelemetry($allDevices);
-
         $data = [
             'title'             => 'Administrar Nodos - ' . $network->name,
             'network'           => $network,
             'devices'           => $devices,
             'totalDevicesCount' => $total,
             'pagerLinks'        => $pagerLinks,
-            'telemetry'         => $telemetry,
         ];
 
         echo view('template/header', $data);
@@ -902,22 +899,6 @@ class DeviceController extends BaseController
             // Adjuntar archivo .yml de Nebula
             $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
 
-            // Procesar y adjuntar código QR en memoria si fue recibido desde el cliente con validación estricta de firma y tamaño
-            $qrCid = null;
-            $qrBase64 = (string) $this->request->getPost('qr_image');
-            if (!empty($qrBase64) && preg_match('/^data:image\/png;base64,/', $qrBase64)) {
-                $rawBase64 = substr($qrBase64, strpos($qrBase64, ',') + 1);
-                $qrDecoded = base64_decode($rawBase64, true);
-                if ($qrDecoded !== false && strlen($qrDecoded) <= 150000 && strncmp($qrDecoded, "\x89PNG\r\n\x1a\n", 8) === 0) {
-                    $imgSize = @getimagesizefromstring($qrDecoded);
-                    if ($imgSize !== false && $imgSize[2] === IMAGETYPE_PNG && $imgSize[0] <= 1024 && $imgSize[1] <= 1024) {
-                        $qrAttachmentName = url_title($device->name, '-', true) . '-qr.png';
-                        $emailService->attach($qrDecoded, 'inline', $qrAttachmentName, 'image/png');
-                        $qrCid = $emailService->setAttachmentCID($qrAttachmentName);
-                    }
-                }
-            }
-
             // Datos para la plantilla HTML
             $logoUrl = base_url('assets/images/logos/dark-logo.svg');
             $appUrl = base_url();
@@ -925,19 +906,6 @@ class DeviceController extends BaseController
             $routingModeLabel = ($device->routing_mode ?? 'split') === 'full' 
                 ? 'Túnel Completo (Todo el tráfico)' 
                 : 'Túnel Dividido (Solo red VPN)';
-
-            $qrSection = '';
-            if (!empty($qrCid)) {
-                $qrSection = '
-                <div style="text-align: center; margin: 25px 0 10px 0;">
-                    <div style="display: inline-block; background-color: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                        <img src="cid:' . $qrCid . '" alt="Código QR Nebula" width="210" height="210" style="display: block; margin: 0 auto; width: 210px; height: 210px; border-radius: 4px;">
-                    </div>
-                    <p style="color: #64748b; font-size: 13px; font-weight: 500; margin-top: 10px; margin-bottom: 0;">
-                        Escanea este código o importa el archivo adjunto en la app oficial de Nebula
-                    </p>
-                </div>';
-            }
 
             $htmlMessage = '
 <!DOCTYPE html>
@@ -985,8 +953,6 @@ class DeviceController extends BaseController
                                     <td style="padding: 10px 16px; color: #1e293b; font-weight: 600; text-align: right;">' . esc($routingModeLabel) . '</td>
                                 </tr>
                             </table>
-
-                            ' . $qrSection . '
 
                             <!-- Aviso de archivos adjuntos -->
                             <div style="margin-top: 20px; padding: 12px 14px; background-color: #edf2f7; border-radius: 8px; color: #475569; font-size: 13px; text-align: center;">
@@ -1499,55 +1465,5 @@ class DeviceController extends BaseController
         }
 
         return (int) $network->owner_id === (int) $user->id;
-    }
-
-    /**
-     * Construye los datos de telemetría resumen para los nodos Nebula de la red.
-     */
-    protected function buildNetworkTelemetry(array $devices): array
-    {
-        $activeCount = 0;
-        $now         = time();
-        foreach ($devices as $dev) {
-            $expired = !empty($dev->expires_at) && strtotime($dev->expires_at) < $now;
-            if ((int) $dev->active === 1 && !$expired) {
-                $activeCount++;
-            }
-        }
-
-        $total = count($devices);
-
-        return [
-            'isConfigured'     => NebulaService::isConfigured(),
-            'isInterfaceUp'    => NebulaService::isConfigured(),
-            'totalRxBytes'     => 0,
-            'totalTxBytes'     => 0,
-            'formattedRx'      => '0 B',
-            'formattedTx'      => '0 B',
-            'formattedTotal'   => '0 B',
-            'onlineDevices'    => $activeCount,
-            'offlineDevices'   => max(0, $total - $activeCount),
-            'totalDevices'     => $total,
-            'healthPercentage' => $total > 0 ? (int) round(($activeCount / $total) * 100) : 0,
-            'trafficLabels'    => [],
-            'trafficRx'        => [],
-            'trafficTx'        => [],
-            'hasTrafficData'   => false,
-        ];
-    }
-
-    /**
-     * Formatea bytes a unidades legibles.
-     */
-    protected static function formatBytes(int $bytes): string
-    {
-        if ($bytes <= 0) {
-            return '0 B';
-        }
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $pow   = (int) floor(log($bytes, 1024));
-        $pow   = min($pow, count($units) - 1);
-
-        return round($bytes / (1024 ** $pow), 2) . ' ' . $units[$pow];
     }
 }

@@ -131,11 +131,11 @@
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">2</span>
-            <span>En la tabla de Nodos, abre el menú de opciones <i class="ti ti-dots-vertical text-muted"></i> del dispositivo para ver su código QR o archivo de configuración.</span>
+            <span>En la tabla de Nodos, abre el menú de opciones <i class="ti ti-dots-vertical text-muted"></i> para descargar el <code class="text-primary font-monospace">.yml</code>, enviarlo por correo o abrir los detalles del nodo.</span>
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">3</span>
-            <span><strong>Móviles:</strong> Escanea el QR con la cámara de la app. <strong>Desktop:</strong> Importa el archivo <code class="text-primary font-monospace">.conf</code> descargado.</span>
+            <span><strong>Móviles:</strong> Importa el archivo <code class="text-primary font-monospace">.yml</code> en la app oficial. <strong>Desktop:</strong> Usa el comando de instalación rápida desde los detalles del nodo o importa el <code class="text-primary font-monospace">.yml</code>.</span>
           </li>
         </ul>
       </div>

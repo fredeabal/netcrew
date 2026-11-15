@@ -27,16 +27,6 @@ $deviceType  = $device->device_type ?? 'pc';
 $wgConnected = ((int)$device->active === 1) && $wg && !empty($wg['connected']);
 
 // ---------------------------------------------------------------------
-// Función auxiliar (helper) para formatear bytes a un formato legible
-// ---------------------------------------------------------------------
-$formatBytesView = static function (int $bytes): string {
-    if ($bytes <= 0) return '0 B';
-    $sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $i = (int)floor(log($bytes, 1024));
-    return round($bytes / pow(1024, $i), 1) . ' ' . $sizes[$i];
-};
-
-// ---------------------------------------------------------------------
 // Función auxiliar (helper) para mostrar el tiempo transcurrido "Hace X..."
 // ---------------------------------------------------------------------
 $timeAgoView = static function (?int $ts, int $ref): string {
@@ -101,26 +91,26 @@ $timeAgoView = static function (?int $ts, int $ref): string {
       <div class="card-body">
 
         <div class="row g-3">
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP en la Red</span>
               <span class="net-mono text-body fw-medium"><?= esc($device->ip_address) ?></span>
             </div>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">CIDR</span>
               <span class="net-mono text-body fw-medium"><?= esc($network->cidr) ?></span>
             </div>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Red</span>
               <span class="fw-semibold small text-primary"><?= esc($network->name) ?></span>
             </div>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Tipo</span>
               <span class="fw-semibold small text-primary">
@@ -129,7 +119,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Enrutamiento</span>
               <span class="fw-semibold small <?= ($device->routing_mode ?? 'split') === 'full' ? 'text-danger' : 'text-primary' ?>">
@@ -138,14 +128,8 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-md-4">
-            <div class="border p-3 rounded h-100">
-              <span class="text-muted d-block small mb-1">Keepalive</span>
-              <span class="fw-semibold small text-primary">25 seg</span>
-            </div>
-          </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Última Conexión</span>
               <?php if ($device->last_seen): ?>
@@ -158,7 +142,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <?php endif; ?>
             </div>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Creado</span>
               <span class="d-flex justify-content-between align-items-center">
@@ -167,7 +151,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Expiración</span>
               <?php if (!empty($device->expires_at)): ?>
@@ -194,7 +178,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 <!-- =====================================================================
      ESTADO DE CONEXIÓN NEBULA P2P
      Esta sección solo se renderiza si existen datos de conexión ($wg).
-     Muestra IP pública, puerto, handshake y tráfico (subida/bajada).
+     Muestra estado, IP pública, puerto y último handshake.
      ===================================================================== -->
 <?php if ($wg !== null): ?>
 <div class="row">
@@ -202,14 +186,14 @@ $timeAgoView = static function (?int $ts, int $ref): string {
     <div class="card mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="bg-light-primary text-primary rounded d-flex align-items-center justify-content-center network-icon-circle">
-            <i class="ti ti-activity fs-6"></i>
+          <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
+            <i class="ti ti-activity fs-5"></i>
           </div>
           <h5 class="fw-semibold mb-0">Estado del nodo</h5>
         </div>
 
         <div class="row g-3">
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Estado</span>
               <?php if ((int)($device->active ?? 1) !== 1): ?>
@@ -225,45 +209,25 @@ $timeAgoView = static function (?int $ts, int $ref): string {
             </div>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">IP Pública</span>
               <span class="net-mono text-body fw-medium"><?= $wg['public_ip'] ? esc($wg['public_ip']) : '—' ?></span>
             </div>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Puerto</span>
               <span class="net-mono text-body fw-medium"><?= $wg['port'] ? esc($wg['port']) : '—' ?></span>
             </div>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Último Handshake</span>
               <span class="fw-semibold small text-primary">
                 <?= $timeAgoView($wg['latest_handshake'], $wg['remote_time']) ?>
-              </span>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <div class="border p-3 rounded h-100 text-center">
-              <i class="ti ti-arrow-down text-success d-block mb-1 fs-5"></i>
-              <span class="text-muted d-block small mb-1">Descarga (Recibido)</span>
-              <span class="fw-semibold text-success">
-                <?= $formatBytesView((int)$wg['tx_bytes']) ?>
-              </span>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <div class="border p-3 rounded h-100 text-center">
-              <i class="ti ti-arrow-up text-info d-block mb-1 fs-5"></i>
-              <span class="text-muted d-block small mb-1">Subida (Enviado)</span>
-              <span class="fw-semibold text-info">
-                <?= $formatBytesView((int)$wg['rx_bytes']) ?>
               </span>
             </div>
           </div>
@@ -281,7 +245,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 <?php if (!empty($device->active) && !empty($network->active)): ?>
 <div class="row">
   <div class="col-12">
-    <div class="card mb-4">
+    <div class="card mb-4 install-client-card">
       <div class="card-body">
         <div class="d-flex align-items-center gap-2 mb-3">
           <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
@@ -289,51 +253,65 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           </div>
           <div>
             <h5 class="fw-semibold mb-0">Instalar y Conectar Cliente</h5>
-            <small class="text-muted">Selecciona el sistema operativo del dispositivo para ver el comando de instalación rápida.</small>
+            <small class="text-muted">Selecciona el sistema operativo del dispositivo para obtener el comando o archivo de conexión.</small>
           </div>
         </div>
 
-        <div class="row g-3 align-items-end">
-          <div class="col-12 col-md-5">
+        <div class="install-controls-row">
+          <div>
             <label for="installPlatformSelect" class="form-label fw-semibold">Sistema Operativo</label>
-            <select class="select2 form-control custom-select" id="installPlatformSelect" style="width: 100%">
+            <select class="select2 form-control custom-select" id="installPlatformSelect">
               <option value="mac">macOS (Apple Silicon / Intel)</option>
               <option value="windows">Windows (10 / 11)</option>
               <option value="linux">Linux (Ubuntu / Debian / etc.)</option>
               <option value="mobile">iOS / Android (Móvil / Tablet)</option>
             </select>
           </div>
-          <div class="col-12 col-md-7">
-            <div class="row g-2 justify-content-center justify-content-md-start">
-              <div class="col-6 col-sm-auto" id="wrapBtnCopyCmd">
-                <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm w-100 px-sm-3 d-inline-flex align-items-center justify-content-center gap-1">
-                  <i class="ti ti-copy"></i>
-                  <span>Generar y Copiar Comando</span>
-                </button>
-              </div>
-              <div class="col-6 col-sm-auto">
-                <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm w-100 px-sm-3 d-inline-flex align-items-center justify-content-center gap-1">
-                  <i class="ti ti-download"></i>
-                  <span id="lblDownloadFile">Descargar .yml</span>
-                </a>
-              </div>
+
+          <div class="install-actions">
+            <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm install-action-btn">
+              <i class="ti ti-wand" aria-hidden="true"></i>
+              <span>Generar y Copiar Comando</span>
+            </button>
+            <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm install-action-btn">
+              <i class="ti ti-download" aria-hidden="true"></i>
+              <span id="lblDownloadFile">Descargar .yml</span>
+            </a>
+          </div>
+        </div>
+
+        <div id="installCommandBox" class="install-terminal mt-3">
+          <div class="install-terminal-header">
+            <small class="fw-semibold text-muted d-inline-flex align-items-center gap-1" id="installCommandHint">
+              <i class="ti ti-terminal text-primary" aria-hidden="true"></i>
+              <span>Pega este comando en Terminal (macOS):</span>
+            </small>
+            <span class="install-terminal-status" id="installCommandStatus">Enlace válido 60 min · 1 uso</span>
+          </div>
+          <div class="install-terminal-body">
+            <span class="install-terminal-prompt" aria-hidden="true">$</span>
+            <pre class="install-terminal-pre" tabindex="0"><code id="installCommandPreview">bash &lt;(curl -fsSL "<?= esc(site_url('connect/TOKEN/download?platform=mac-sh')) ?>")</code></pre>
+            <span class="copy">
+              <button type="button" id="btnInlineCopyCmd" class="copy-button" command="--copy" commandfor="installCommandPreview" aria-label="Copiar comando de instalación">
+                <i class="ti ti-copy icon-copy fs-5" aria-hidden="true"></i>
+                <i class="ti ti-check icon-check fs-5" aria-hidden="true"></i>
+              </button>
+              <span class="tip" role="status"></span>
+            </span>
+          </div>
+        </div>
+
+        <div id="installMobileBox" class="install-mobile-steps mt-3 d-none">
+          <div class="d-flex flex-column gap-2 small text-muted">
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">1</span>
+              <span>Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.</span>
+            </div>
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">2</span>
+              <span>Pulsa <strong>Descargar .yml</strong> e importa el archivo en la app.</span>
             </div>
           </div>
-        </div>
-
-        <div id="installCommandBox" class="mt-3 p-3 rounded border bg-body-tertiary">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <small class="fw-semibold text-muted" id="installCommandHint">Pega este comando en Terminal:</small>
-            <small class="text-muted" id="installCommandStatus">Pulsa "Generar y Copiar Comando" para obtener un enlace válido por 60 min.</small>
-          </div>
-          <pre class="mb-0 net-mono small text-break" style="white-space: pre-wrap;"><code id="installCommandPreview">bash &lt;(curl -fsSL "<?= esc(site_url('connect/TOKEN/download?platform=mac-sh')) ?>")</code></pre>
-        </div>
-
-        <div id="installMobileBox" class="mt-3 p-3 rounded border bg-body-tertiary d-none">
-          <p class="mb-0 small text-muted">
-            1. Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.<br>
-            2. Pulsa <strong>Descargar .yml</strong> e importa el archivo en la app.
-          </p>
         </div>
       </div>
     </div>
@@ -345,18 +323,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const selectEl = document.getElementById('installPlatformSelect');
   const cmdBox = document.getElementById('installCommandBox');
   const mobBox = document.getElementById('installMobileBox');
-  const wrapCopy = document.getElementById('wrapBtnCopyCmd');
   const cmdPreview = document.getElementById('installCommandPreview');
-  const cmdHint = document.getElementById('installCommandHint');
+  const cmdHint = document.getElementById('installCommandHint').querySelector('span');
   const cmdStatus = document.getElementById('installCommandStatus');
   const btnGen = document.getElementById('btnGenerateCommand');
+  const btnInlineCopy = document.getElementById('btnInlineCopyCmd');
   const lnkDl = document.getElementById('lnkDownloadYml');
   const lblDl = document.getElementById('lblDownloadFile');
 
-  const deviceId = <?= (int) $device->id ?>;
   const baseConnect = <?= json_encode(rtrim(site_url('connect'), '/')) ?>;
   const baseDownload = <?= json_encode(site_url('devices/download/' . $device->id)) ?>;
   let activeToken = null;
+  let lastCopyMessage = '';
+  const copyTimers = new WeakMap();
 
   function buildCommand(platform, token) {
     const t = token || 'TOKEN';
@@ -372,11 +351,79 @@ document.addEventListener('DOMContentLoaded', function() {
     return '';
   }
 
+  function renderCommandPreview(cmd, token) {
+    cmdPreview.textContent = '';
+    if (token) {
+      cmdPreview.textContent = cmd;
+      return;
+    }
+    const parts = cmd.split('TOKEN');
+    if (parts.length === 2) {
+      cmdPreview.append(document.createTextNode(parts[0]));
+      const tokSpan = document.createElement('span');
+      tokSpan.className = 'cmd-token-placeholder';
+      tokSpan.textContent = 'TOKEN';
+      cmdPreview.append(tokSpan);
+      cmdPreview.append(document.createTextNode(parts[1]));
+    } else {
+      cmdPreview.textContent = cmd;
+    }
+  }
+
+  function reportCopy(button, ok) {
+    const tip = button.nextElementSibling;
+    clearTimeout(copyTimers.get(button));
+    button.removeAttribute('data-copied');
+    button.removeAttribute('data-failed');
+    let message = ok ? 'Copiado' : 'Error al copiar';
+    if (message === lastCopyMessage) message += '\u00A0';
+    lastCopyMessage = message;
+    tip.textContent = '';
+    void button.offsetWidth;
+    button.setAttribute(ok ? 'data-copied' : 'data-failed', '');
+    requestAnimationFrame(() => (tip.textContent = message));
+    copyTimers.set(button, setTimeout(() => {
+      button.removeAttribute('data-copied');
+      button.removeAttribute('data-failed');
+      tip.textContent = '';
+    }, 2000));
+  }
+
+  async function copyFromTarget(button, target) {
+    if (!activeToken) {
+      if (btnGen) btnGen.click();
+      return;
+    }
+    const text = target.innerText.trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      reportCopy(button, true);
+    } catch {
+      reportCopy(button, false);
+    }
+  }
+
+  document.addEventListener('command', (event) => {
+    if (event.command === '--copy' && event.source === btnInlineCopy) {
+      copyFromTarget(event.source, event.target);
+    }
+  }, true);
+
+  if (!('CommandEvent' in window)) {
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('button[command="--copy"]');
+      if (!button || button !== btnInlineCopy) return;
+      const target = document.getElementById(button.getAttribute('commandfor'));
+      if (target) copyFromTarget(button, target);
+    });
+  }
+
   function updatePlatformUI() {
     const p = selectEl.value;
     if (p === 'mobile') {
       cmdBox.classList.add('d-none');
-      wrapCopy.classList.add('d-none');
+      btnGen.classList.add('d-none');
       mobBox.classList.remove('d-none');
       lnkDl.href = baseDownload + '?platform=yml';
       lblDl.textContent = 'Descargar .yml';
@@ -385,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     mobBox.classList.add('d-none');
     cmdBox.classList.remove('d-none');
-    wrapCopy.classList.remove('d-none');
+    btnGen.classList.remove('d-none');
 
     if (p === 'mac') {
       cmdHint.textContent = 'Pega este comando en Terminal (macOS):';
@@ -401,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
       lblDl.textContent = 'Descargar .sh';
     }
 
-    cmdPreview.textContent = buildCommand(p, activeToken);
+    renderCommandPreview(buildCommand(p, activeToken), activeToken);
   }
 
   if (selectEl) {
@@ -438,19 +485,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         activeToken = data.token;
         const cmd = buildCommand(selectEl.value, activeToken);
-        cmdPreview.textContent = cmd;
-        cmdStatus.textContent = 'Comando listo (válido por 60 min y 1 uso).';
+        renderCommandPreview(cmd, activeToken);
+        cmdStatus.textContent = 'Listo · 60 min (1 uso)';
+        cmdStatus.classList.add('is-ready');
         if (navigator.clipboard && navigator.clipboard.writeText) {
           return navigator.clipboard.writeText(cmd).then(() => true).catch(() => false);
         }
         return false;
       })
       .then(copied => {
+        if (copied && btnInlineCopy) {
+          reportCopy(btnInlineCopy, true);
+        }
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
         Swal.fire({
           icon: 'success',
           title: copied ? 'Comando copiado' : 'Comando generado',
-          text: copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado debajo del selector.',
+          text: copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado en el recuadro.',
           timer: 3000,
           showConfirmButton: false,
           background: isDark ? '#0b1114' : '#f8f9fa',
@@ -495,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <form action="<?= site_url('devices/rotate-keys/' . $device->id) ?>"
                   method="post"
                   class="h-100 m-0"
-                  data-confirm="¿Regenerar las llaves de este nodo? Esto invalidará la configuración y el código QR actuales. Tendrás que reconfigurar el cliente.">
+                  data-confirm="¿Regenerar las llaves de este nodo? Esto invalidará la configuración y los certificados actuales. Tendrás que reconfigurar el cliente.">
               <?= csrf_field() ?>
 
               <button type="submit"

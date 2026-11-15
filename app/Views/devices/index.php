@@ -78,101 +78,6 @@
   </div>
 
   <!-- =====================================================================
-       TELEMETRÍA Y TRÁFICO DE LA RED (APEXCHARTS)
-       ===================================================================== -->
-  <div class="row">
-    <!-- Gráfica de Tráfico Transferido (RX / TX) -->
-    <div class="col-xl-8 col-lg-7 mb-4">
-      <div class="card border shadow-none h-100">
-        <div class="card-body p-3 p-md-4">
-          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-            <div>
-              <h5 class="card-title fw-semibold mb-1">Tráfico de Red Transferido</h5>
-              <p class="card-subtitle text-muted fs-2 mb-0">Consumo de datos en tiempo real por dispositivo en esta red</p>
-            </div>
-            <div class="d-flex align-items-center gap-1 flex-wrap">
-              <span class="badge bg-success-subtle text-success px-2 py-1" title="Tráfico de descarga (hacia los dispositivos)">
-                <i class="ti ti-arrow-down me-1"></i>RX <?= esc($telemetry['formattedRx'] ?? '0 B') ?>
-              </span>
-              <span class="badge bg-primary-subtle text-primary px-2 py-1" title="Tráfico de subida (desde los dispositivos)">
-                <i class="ti ti-arrow-up me-1"></i>TX <?= esc($telemetry['formattedTx'] ?? '0 B') ?>
-              </span>
-            </div>
-          </div>
-
-          <?php if (!($telemetry['isConfigured'] ?? false)): ?>
-            <div class="alert alert-warning d-flex align-items-center py-3" role="alert">
-              <i class="ti ti-alert-triangle fs-6 me-3"></i>
-              <div>
-                <strong>Servidor Lighthouse no configurado:</strong> El host central de Nebula no está enlazado aún.
-                <a href="<?= site_url('settings/nebula') ?>" class="alert-link ms-1">Configurar ahora</a>.
-              </div>
-            </div>
-          <?php elseif (empty($telemetry['trafficLabels'])): ?>
-            <div class="text-center py-5">
-              <div class="bg-light-subtle rounded-circle d-inline-flex p-3 mb-3 text-muted">
-                <i class="ti ti-arrows-transfer-down fs-8"></i>
-              </div>
-              <h6 class="fw-semibold mb-1">Sin tráfico registrado aún</h6>
-              <p class="text-muted fs-2 mb-0">Los nodos de esta red aún no han generado paquetes de datos a través de la interfaz.</p>
-            </div>
-          <?php else: ?>
-            <div id="chart-traffic" class="dash-chart-lg"></div>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
-
-    <!-- Indicador Radial de Conectividad / Salud de Red -->
-    <div class="col-xl-4 col-lg-5 mb-4">
-      <div class="card border shadow-none h-100">
-        <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
-          <div>
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h5 class="card-title fw-semibold mb-0">Salud de la Red</h5>
-              <span class="status-indicator-dot status-online" title="En vivo"></span>
-            </div>
-            <p class="card-subtitle text-muted fs-2 mb-3">Dispositivos conectados en tiempo real</p>
-          </div>
-
-          <div class="position-relative d-flex justify-content-center my-2">
-            <div id="chart-health" class="dash-chart-md"></div>
-          </div>
-
-          <div class="border-top pt-3 mt-2">
-            <div class="row text-center g-0 dash-health-row">
-              <div class="col-4">
-                <div class="dash-health-cell">
-                  <span class="d-block text-success fw-medium fs-4 dash-figure">
-                    <i class="ti ti-point-filled"></i><?= esc($telemetry['onlineDevices'] ?? 0) ?>
-                  </span>
-                  <span class="text-muted fs-2 fw-medium">Online</span>
-                </div>
-              </div>
-              <div class="col-4">
-                <div class="dash-health-cell">
-                  <span class="d-block text-muted fw-medium fs-4 dash-figure">
-                    <?= esc($telemetry['offlineDevices'] ?? 0) ?>
-                  </span>
-                  <span class="text-muted fs-2 fw-medium">Offline</span>
-                </div>
-              </div>
-              <div class="col-4">
-                <div class="dash-health-cell">
-                  <span class="d-block text-body fw-medium fs-4 dash-figure">
-                    <?= esc($telemetry['formattedTotal'] ?? '0 B') ?>
-                  </span>
-                  <span class="text-muted fs-2 fw-medium">Total</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- =====================================================================
        TABLA DE NODOS / DISPOSITIVOS
        ===================================================================== -->
   <div class="row">
@@ -269,8 +174,8 @@
                               </a>
                             </li>
                             <li>
-                              <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-view-config" data-id="<?= $dev->id ?>">
-                                <i class="ti ti-eye"></i> Ver Conf / QR
+                              <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-send-email-config" data-id="<?= $dev->id ?>">
+                                <i class="ti ti-mail"></i> Enviar por Email
                               </a>
                             </li>
                             <li>
@@ -349,8 +254,8 @@
                             </a>
                           </li>
                           <li>
-                            <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-view-config" data-id="<?= $dev->id ?>">
-                              <i class="ti ti-eye"></i> Ver Conf / QR
+                            <a href="javascript:void(0)" class="dropdown-item d-flex align-items-center gap-2 btn-send-email-config" data-id="<?= $dev->id ?>">
+                              <i class="ti ti-mail"></i> Enviar por Email
                             </a>
                           </li>
                           <li>
@@ -422,61 +327,17 @@
   </div>
 
 <!-- =====================================================================
-     MODAL: VER CONFIGURACIÓN / QR
+     SCRIPTS DE FUNCIONALIDAD (AJAX, EMAIL Y TIEMPO REAL)
      ===================================================================== -->
-<div class="modal fade" id="modal-view-config" data-bs-focus="false" aria-labelledby="modalViewConfigLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-semibold" id="modalViewConfigLabel">Configuración de Nebula P2P</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body py-4 text-center">
-        <p class="text-muted small">Escanea este código QR o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.</p>
-        
-        <div class="d-flex flex-column align-items-center mb-4">
-          <div class="qr-wrapper mb-3 p-3 bg-light rounded display-inline-block">
-            <div id="qrcode-container-page" class="qr-container"></div>
-          </div>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
-          <button type="button" class="btn btn-info btn-sm border-0" id="btn-send-email-config">
-            <i class="ti ti-mail me-1"></i> Enviar por Email
-          </button>
-          <a href="#" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-2" id="btn-download-config-modal">
-            <i class="ti ti-download"></i> Descargar .yml
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- =====================================================================
-     SCRIPTS DE FUNCIONALIDAD (AJAX, QR Y TIEMPO REAL)
-     ===================================================================== -->
-<!-- Librería QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  let qrcode = null;
-  const qrcodeContainer = document.getElementById("qrcode-container-page");
-  const btnDownloadConfigModal = document.getElementById("btn-download-config-modal");
-  
-  const modalViewConfigEl = document.getElementById('modal-view-config');
-  const modalViewConfig = modalViewConfigEl ? new bootstrap.Modal(modalViewConfigEl, { focus: false }) : null;
-
-  let currentActiveDeviceId = null;
-  const btnSendEmail = document.getElementById("btn-send-email-config");
-
-  if (btnSendEmail) {
-    btnSendEmail.addEventListener("click", function() {
-      if (!currentActiveDeviceId) return;
+  document.querySelectorAll('.btn-send-email-config').forEach(btn => {
+    btn.addEventListener("click", function() {
+      const devId = this.dataset.id;
+      if (!devId) return;
       Swal.fire({
         title: 'Enviar Configuración por Correo',
-        text: 'Ingresa la dirección de correo a la que deseas enviar el archivo .conf adjunto:',
+        text: 'Ingresa la dirección de correo a la que deseas enviar el archivo .yml adjunto:',
         input: 'email',
         inputPlaceholder: 'usuario@empresa.com',
         showCancelButton: true,
@@ -498,22 +359,7 @@ document.addEventListener("DOMContentLoaded", function () {
           formData.append('email', email);
           formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
 
-          // Adjuntar imagen del código QR en base64 si está renderizado
-          let qrCanvas = qrcodeContainer ? qrcodeContainer.querySelector('canvas') : null;
-          let qrImg = qrcodeContainer ? qrcodeContainer.querySelector('img') : null;
-          let qrData = '';
-          if (qrImg && qrImg.src && qrImg.src.startsWith('data:image/')) {
-            qrData = qrImg.src;
-          } else if (qrCanvas) {
-            try {
-              qrData = qrCanvas.toDataURL('image/png');
-            } catch (e) {}
-          }
-          if (qrData) {
-            formData.append('qr_image', qrData);
-          }
-
-          return fetch(`<?= site_url('devices/send-email/') ?>${currentActiveDeviceId}`, {
+          return fetch(`<?= site_url('devices/send-email/') ?>${devId}`, {
             method: 'POST',
             headers: {
               'X-Requested-With': 'XMLHttpRequest',
@@ -543,52 +389,6 @@ document.addEventListener("DOMContentLoaded", function () {
           });
         }
       });
-    });
-  }
-
-  // Manejo de la previsualización del QR y archivo de configuración
-  document.querySelectorAll('.btn-view-config').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const devId = this.dataset.id;
-      currentActiveDeviceId = devId;
-      
-      // Limpiar contenedor QR previo
-      qrcodeContainer.innerHTML = "";
-      btnDownloadConfigModal.href = "#";
-
-      fetch(`<?= site_url('devices/details-json/') ?>${devId}`)
-        .then(response => response.json())
-        .then(res => {
-          if (res.success) {
-            btnDownloadConfigModal.href = `<?= site_url('devices/download/') ?>${res.device.id}`;
-            
-            // Generar código QR
-            qrcode = new QRCode(qrcodeContainer, {
-              text: res.device.config,
-              width: 250,
-              height: 250,
-              colorDark : "#000000",
-              colorLight : "#ffffff",
-              correctLevel : QRCode.CorrectLevel.M
-            });
-
-            modalViewConfig.show();
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: res.message || 'No se pudo cargar la configuración.'
-            });
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error de Red',
-            text: 'Ocurrió un error al conectar con el servidor.'
-          });
-        });
     });
   });
 
@@ -776,153 +576,5 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener('beforeunload', () => {
     clearInterval(statusInterval);
   });
-});
-</script>
-
-<!-- =====================================================================
-     SCRIPTS DE APEXCHARTS (TELEMETRÍA DE RED)
-     ===================================================================== -->
-<script src="<?= base_url('assets/libs/apexcharts/dist/apexcharts.min.js') ?>"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-
-    // -------------------------------------------------------------
-    // 1. Gráfica de Tráfico de Red (Area Spline)
-    // -------------------------------------------------------------
-    const trafficEl = document.querySelector("#chart-traffic");
-    if (trafficEl) {
-        const trafficCategories = <?= json_encode($telemetry['trafficLabels'] ?? []) ?>;
-        const trafficRx = <?= json_encode($telemetry['trafficRx'] ?? []) ?>;
-        const trafficTx = <?= json_encode($telemetry['trafficTx'] ?? []) ?>;
-
-        const trafficOptions = {
-            series: [
-                { name: 'Descarga (RX)', data: trafficRx },
-                { name: 'Subida (TX)', data: trafficTx }
-            ],
-            chart: {
-                type: 'area',
-                height: 330,
-                toolbar: { show: false },
-                fontFamily: 'inherit',
-                foreColor: isDark ? '#94a3b8' : '#64748b'
-            },
-            colors: ['#34c759', '#F38020'],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.45,
-                    opacityTo: 0.05,
-                    stops: [0, 95, 100]
-                }
-            },
-            dataLabels: { enabled: false },
-            stroke: { curve: 'smooth', width: 2.5 },
-            xaxis: {
-                categories: trafficCategories,
-                labels: {
-                    style: { fontSize: '11px' },
-                    rotate: -15,
-                    trim: true
-                },
-                axisBorder: { show: false },
-                axisTicks: { show: false }
-            },
-            yaxis: {
-                labels: {
-                    formatter: function (val) {
-                        if (!val || val === 0) return '0 B';
-                        const k = 1024;
-                        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-                        const i = Math.floor(Math.log(val) / Math.log(k));
-                        return parseFloat((val / Math.pow(k, i)).toFixed(1)) + ' ' + (sizes[i] || 'B');
-                    }
-                }
-            },
-            tooltip: {
-                theme: isDark ? 'dark' : 'light',
-                y: {
-                    formatter: function (val) {
-                        if (!val || val === 0) return '0 B';
-                        const k = 1024;
-                        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-                        const i = Math.floor(Math.log(val) / Math.log(k));
-                        return parseFloat((val / Math.pow(k, i)).toFixed(2)) + ' ' + (sizes[i] || 'B');
-                    }
-                }
-            },
-            grid: {
-                borderColor: isDark ? '#1e293b' : '#e2e8f0',
-                strokeDashArray: 4
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                labels: { colors: isDark ? '#e2e8f0' : '#1e293b' }
-            }
-        };
-
-        const trafficChart = new ApexCharts(trafficEl, trafficOptions);
-        trafficChart.render();
-    }
-
-    // -------------------------------------------------------------
-    // 2. Gráfica de Salud y Nodos Online (RadialBar)
-    // -------------------------------------------------------------
-    const healthEl = document.querySelector("#chart-health");
-    if (healthEl) {
-        const healthPercentage = <?= (int) ($telemetry['healthPercentage'] ?? 0) ?>;
-        const healthColor = healthPercentage >= 70 ? '#34c759' : (healthPercentage >= 30 ? '#F38020' : '#b31b34');
-
-        const healthOptions = {
-            series: [healthPercentage],
-            chart: {
-                type: 'radialBar',
-                height: 270,
-                sparkline: { enabled: true }
-            },
-            plotOptions: {
-                radialBar: {
-                    startAngle: -125,
-                    endAngle: 125,
-                    hollow: {
-                        margin: 0,
-                        size: '72%',
-                        background: 'transparent'
-                    },
-                    track: {
-                        background: isDark ? '#1e293b' : '#f1f5f9',
-                        strokeWidth: '97%'
-                    },
-                    dataLabels: {
-                        name: {
-                            show: true,
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: isDark ? '#94a3b8' : '#64748b',
-                            offsetY: 60
-                        },
-                        value: {
-                            offsetY: -10,
-                            fontSize: '32px',
-                            fontWeight: 700,
-                            color: isDark ? '#ffffff' : '#0f172a',
-                            formatter: function (val) {
-                                return val + '%';
-                            }
-                        }
-                    }
-                }
-            },
-            colors: [healthColor],
-            stroke: { lineCap: 'round' },
-            labels: ['Nodos Online']
-        };
-
-        const healthChart = new ApexCharts(healthEl, healthOptions);
-        healthChart.render();
-    }
 });
 </script>

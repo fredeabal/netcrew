@@ -680,35 +680,6 @@ body .select2-container {
     background-color: var(--bs-tertiary-bg, #fcfcfc);
 }
 
-/* --- QR Code Container & Styling --- */
-.qr-container {
-    background-color: #fff;
-    padding: 1rem;
-    border-radius: 12px;
-    display: inline-block;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.qr-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 1.5rem 0;
-}
-
-/* --- Config Area for VPN --- */
-.config-pre {
-    background-color: #1a262d;
-    color: #e5e5e5;
-    padding: 1rem;
-    border-radius: 8px;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 0.85rem;
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid rgba(255,255,255,0.05);
-}
-
 /* --- Hover and transition for nodes list --- */
 .device-item {
     transition: background-color 0.2s ease, transform 0.2s ease;
@@ -1571,22 +1542,6 @@ a.net-name:hover {
     }
 }
 
-.dash-chart-lg {
-    min-height: 330px;
-}
-
-.dash-chart-md {
-    min-height: 250px;
-}
-
-.dash-health-cell {
-    padding: 0.25rem 0.5rem;
-}
-
-.dash-health-row > [class*="col-"] + [class*="col-"] {
-    border-left: 1px solid var(--bs-border-color);
-}
-
 /* ==========================================================================
    VISTAS VARIAS - pase unslop (sin estilos inline en las vistas)
    ========================================================================== */
@@ -1616,4 +1571,252 @@ a.net-name:hover {
 
 .connect-note {
     font-size: 0.6875rem;
+}
+
+/* ==========================================================================
+   INSTALAR Y CONECTAR CLIENTE (devices/show.php)
+   ========================================================================== */
+.install-client-card {
+    container: install-card / inline-size;
+}
+
+.install-controls-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.install-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.install-action-btn {
+    min-block-size: 39px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.95rem;
+    font-weight: 500;
+    border-radius: 7px;
+    flex: 1 1 auto;
+}
+
+@container install-card (min-width: 44rem) {
+    .install-controls-row {
+        grid-template-columns: minmax(15rem, 22rem) 1fr;
+        gap: 0.875rem;
+    }
+
+    .install-action-btn {
+        flex: 0 0 auto;
+    }
+}
+
+@media (pointer: coarse), (max-width: 767.98px) {
+    .install-action-btn {
+        min-block-size: 44px;
+    }
+}
+
+.install-terminal {
+    border-radius: 10px;
+    border: 1px solid var(--bs-border-color);
+    overflow: hidden;
+    background-color: var(--bs-tertiary-bg);
+}
+
+[data-bs-theme="dark"] .install-terminal {
+    background-color: #0b1114;
+    border-color: #1f2d36;
+}
+
+[data-bs-theme="light"] .install-terminal {
+    background-color: #f8fafc;
+    border-color: #dfe5ef;
+}
+
+.install-terminal-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    background-color: rgba(var(--bs-body-color-rgb), 0.02);
+}
+
+[data-bs-theme="dark"] .install-terminal-header {
+    border-bottom-color: #1a262d;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.install-terminal-status {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background-color: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    white-space: nowrap;
+}
+
+.install-terminal-status.is-ready {
+    background-color: rgba(var(--bs-success-rgb), 0.15);
+    color: var(--bs-success);
+}
+
+.install-terminal-body {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+}
+
+.install-terminal-prompt {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    user-select: none;
+    flex: none;
+}
+
+.install-terminal-pre {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--bs-body-color);
+    white-space: nowrap;
+}
+
+.install-terminal-pre code,
+.install-terminal-pre code.code {
+    color: var(--bs-body-color) !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.install-terminal-pre .cmd-token-placeholder {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+/* Copy button & live-region bubble */
+.copy {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+}
+
+.copy-button {
+    min-inline-size: 32px;
+    min-block-size: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+@media (pointer: coarse) {
+    .copy-button {
+        min-inline-size: 44px;
+        min-block-size: 44px;
+    }
+}
+
+.copy-button:hover,
+.copy-button:focus-visible {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.copy-button[data-copied] {
+    color: var(--bs-success);
+    border-color: var(--bs-success);
+}
+
+.copy-button[data-failed] {
+    color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+
+.copy-button .icon-check {
+    display: none;
+}
+
+.copy-button[data-copied] .icon-copy {
+    display: none;
+}
+
+.copy-button[data-copied] .icon-check {
+    display: inline-block;
+}
+
+.copy .tip {
+    position: absolute;
+    inset-block-end: calc(100% + 6px);
+    inset-inline-end: 0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    background-color: var(--bs-dark);
+    color: #ffffff;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 5;
+}
+
+.copy-button[data-copied] + .tip,
+.copy-button[data-failed] + .tip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .copy .tip {
+        transform: none;
+    }
+}
+
+.install-mobile-steps {
+    border-radius: 10px;
+    border: 1px solid var(--bs-border-color);
+    padding: 0.875rem 1rem;
+    background-color: var(--bs-tertiary-bg);
+}
+
+[data-bs-theme="dark"] .install-mobile-steps {
+    background-color: #0b1114;
+    border-color: #1f2d36;
+}
+
+.install-step-badge {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
 }

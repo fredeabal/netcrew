@@ -18,24 +18,10 @@ class DashboardController extends BaseController
             'title' => 'Dashboard',
         ];
 
-        // Estructura base de telemetría de red (Nebula P2P)
+        // Estado base de Nebula P2P
         $telemetry = [
-            'isConfigured'     => NebulaService::isConfigured(),
-            'isInterfaceUp'    => NebulaService::isConfigured(),
-            'totalRxBytes'     => 0,
-            'totalTxBytes'     => 0,
-            'formattedRx'      => '0 B',
-            'formattedTx'      => '0 B',
-            'formattedTotal'   => '0 B',
-            'onlineDevices'    => 0,
-            'offlineDevices'   => 0,
-            'totalDevices'     => 0,
-            'healthPercentage' => 0,
-            'trafficLabels'    => [],
-            'networkNames'     => [],
-            'trafficRx'        => [],
-            'trafficTx'        => [],
-            'hasTrafficData'   => false,
+            'isConfigured'  => NebulaService::isConfigured(),
+            'isInterfaceUp' => NebulaService::isConfigured(),
         ];
 
         if ($user->inGroup('superadmin', 'supervisor')) {
@@ -54,8 +40,6 @@ class DashboardController extends BaseController
                                                   ->orderBy('networks.created_at', 'DESC')
                                                   ->limit(5)
                                                   ->find();
-
-            $telemetry = $this->buildTelemetryData($devices, $allNetworks, $telemetry);
         } else {
             // Usuario estándar
             $allUserNetworks       = $networkModel->where('owner_id', $user->id)->findAll();
@@ -72,8 +56,6 @@ class DashboardController extends BaseController
             $networkIds           = array_column($allUserNetworks, 'id');
             $devices              = empty($networkIds) ? [] : $deviceModel->whereIn('network_id', $networkIds)->findAll();
             $data['devicesCount'] = count($devices);
-
-            $telemetry = $this->buildTelemetryData($devices, $allUserNetworks, $telemetry);
         }
 
         $data['telemetry'] = $telemetry;
@@ -87,45 +69,5 @@ class DashboardController extends BaseController
         }
 
         echo view('template/footer');
-    }
-
-    /**
-     * Procesa la telemetría resumen de dispositivos para redes Nebula P2P.
-     */
-    protected function buildTelemetryData(array $devices, array $networks, array $telemetry): array
-    {
-        $telemetry['totalDevices'] = count($devices);
-        $activeCount = 0;
-        $now = time();
-
-        foreach ($devices as $dev) {
-            $expired = !empty($dev->expires_at) && strtotime($dev->expires_at) < $now;
-            if ((int) $dev->active === 1 && !$expired) {
-                $activeCount++;
-            }
-        }
-
-        $telemetry['onlineDevices']    = $activeCount;
-        $telemetry['offlineDevices']   = max(0, $telemetry['totalDevices'] - $activeCount);
-        $telemetry['healthPercentage'] = $telemetry['totalDevices'] > 0
-            ? (int) round(($activeCount / $telemetry['totalDevices']) * 100)
-            : 0;
-
-        return $telemetry;
-    }
-
-    /**
-     * Formatea un valor en bytes a formato legible (B, KB, MB, GB, TB).
-     */
-    public static function formatBytes(int $bytes, int $precision = 2): string
-    {
-        if ($bytes <= 0) {
-            return '0 B';
-        }
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $pow   = (int) floor(log($bytes, 1024));
-        $pow   = min($pow, count($units) - 1);
-
-        return round($bytes / pow(1024, $pow), $precision) . ' ' . $units[$pow];
     }
 }

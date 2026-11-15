@@ -7,7 +7,6 @@
   <link rel="shortcut icon" type="image/png" href="<?= base_url('assets/images/logos/favicon.png') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/styles.css') ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZepKmjzdRNO39UnUq205AC9041zguTkFcUcLhy5F5GyUH4ud55xqdXY2NWKRh6936UO32UQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="connect-page">
 
@@ -18,14 +17,8 @@
 
     <h4 class="fw-semibold text-white mb-2"><?= esc($device->name) ?></h4>
     <p class="text-muted small mb-4">
-      Escanea el código QR o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.
+      Usa el comando de instalación rápida o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.
     </p>
-
-    <div class="d-flex justify-content-center mb-4">
-      <div class="p-3 bg-white rounded-3 shadow-sm d-inline-block">
-        <div id="qrcode"></div>
-      </div>
-    </div>
 
     <div class="bg-dark p-3 rounded-3 text-start small mb-4 border border-secondary border-opacity-25">
       <div class="d-flex justify-content-between mb-1">
@@ -82,17 +75,7 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const configText = <?= json_encode($config) ?>;
       const baseDownloadUrl = <?= json_encode(site_url('connect/' . $token . '/download')) ?>;
-
-      new QRCode(document.getElementById("qrcode"), {
-        text: configText,
-        width: 220,
-        height: 220,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.M
-      });
 
       const selectEl = document.getElementById('sharePlatformSelect');
       const cmdSec = document.getElementById('shareCmdSection');

@@ -33,7 +33,7 @@ class NebulaInstallerService
             'linux'                  => self::buildLinux($slug, $ymlContent),
             default                  => [
                 'filename'    => $slug . '.yml',
-                'contentType' => 'text/plain; charset=utf-8',
+                'contentType' => 'application/yaml; charset=utf-8',
                 'body'        => $ymlContent,
             ],
         };

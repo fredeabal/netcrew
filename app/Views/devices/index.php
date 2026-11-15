@@ -114,7 +114,6 @@
                     <th scope="col" class="text-center">IP red</th>
                     <th scope="col" class="text-center">IP física</th>
                     <th scope="col" class="text-center">Última conexión</th>
-                    <th scope="col" class="text-center">Tráfico (↑/↓)</th>
                     <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
                   </tr>
                 </thead>
@@ -158,9 +157,6 @@
                         <?php else: ?>
                           <span class="text-muted">—</span>
                         <?php endif; ?>
-                      </td>
-                      <td class="text-center device-traffic-cell" data-pubkey="<?= esc($dev->public_key) ?>">
-                        <span class="text-muted">—</span>
                       </td>
                       <td class="text-end" onclick="event.stopPropagation();">
                         <div class="dropdown">
@@ -297,10 +293,6 @@
                       <span class="device-status-cell mobile-card-value text-muted net-mono" data-pubkey="<?= esc($dev->public_key) ?>" data-active="<?= $dev->active ? '1' : '0' ?>">—</span>
                     </div>
                     <div class="mobile-card-row">
-                      <span class="mobile-card-label">Tráfico</span>
-                      <span class="device-traffic-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">—</span>
-                    </div>
-                    <div class="mobile-card-row">
                       <span class="mobile-card-label">Última conexión</span>
                       <span class="device-last-seen-cell mobile-card-value text-muted" data-pubkey="<?= esc($dev->public_key) ?>">
                         <?= $dev->last_seen ? date('d/m/Y H:i', strtotime($dev->last_seen)) : '—' ?>
@@ -425,15 +417,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const cells = document.querySelectorAll('.device-status-cell');
     const iconWrappers = document.querySelectorAll('.device-icon-status-wrapper');
     const lastSeenCells = document.querySelectorAll('.device-last-seen-cell');
-    const trafficCells = document.querySelectorAll('.device-traffic-cell');
-
-    function formatBytes(bytes) {
-      if (!bytes || bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
 
     // Ruta relativa al origen actual: evita fallos si se accede por una IP/host distinto a app.baseURL
     fetch(`<?= parse_url(site_url('devices/realtime-status/' . $network->id), PHP_URL_PATH) ?>`, { credentials: 'same-origin' })
@@ -478,29 +461,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
           });
 
-          trafficCells.forEach(cell => {
-            const pubkey = cell.dataset.pubkey;
-            const peer = peers[pubkey];
-
-            if (peer && (peer.rx > 0 || peer.tx > 0)) {
-              if (cell.tagName === 'TD') {
-                cell.innerHTML = `
-                  <div class="text-info small fw-semibold" title="Subida (Enviado)"><i class="ti ti-arrow-up"></i> ${formatBytes(peer.rx)}</div>
-                  <div class="text-success small fw-semibold mt-1" title="Descarga (Recibido)"><i class="ti ti-arrow-down"></i> ${formatBytes(peer.tx)}</div>
-                `;
-              } else {
-                cell.innerHTML = `
-                  <span class="d-inline-flex align-items-center gap-2">
-                    <span class="text-info fw-semibold" title="Subida (Enviado)"><i class="ti ti-arrow-up"></i> ${formatBytes(peer.rx)}</span>
-                    <span class="text-success fw-semibold" title="Descarga (Recibido)"><i class="ti ti-arrow-down"></i> ${formatBytes(peer.tx)}</span>
-                  </span>
-                `;
-              }
-            } else {
-              cell.innerHTML = `<span class="text-muted">—</span>`;
-            }
-          });
-
           function setWrapperStatus(wrapper, state) {
             wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');
             if (state === 'online') {
@@ -529,9 +489,6 @@ document.addEventListener("DOMContentLoaded", function () {
             cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
             cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
           });
-          trafficCells.forEach(cell => {
-            cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
-          });
           iconWrappers.forEach(wrapper => {
             wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');
             if (wrapper.dataset.active === '1') {
@@ -548,9 +505,6 @@ document.addEventListener("DOMContentLoaded", function () {
           const isTd = cell.tagName === 'TD';
           cell.innerHTML = `<span class="text-muted fs-3">-</span>`;
           cell.className = isTd ? "text-center device-status-cell text-muted fs-3" : "device-status-cell mobile-card-value text-muted";
-        });
-        trafficCells.forEach(cell => {
-          cell.innerHTML = `<span class="text-muted fs-3">—</span>`;
         });
         iconWrappers.forEach(wrapper => {
           wrapper.classList.remove('bg-danger-subtle', 'text-danger', 'bg-success-subtle', 'text-success', 'bg-light', 'text-muted');

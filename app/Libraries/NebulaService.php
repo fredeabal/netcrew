@@ -483,10 +483,8 @@ punchy:
 {$relayConfig}
 tun:
   disabled: false
-  dev: nebula1
   drop_local_broadcast: false
   drop_multicast: false
-  tx_queue: 500
   mtu: 1300
 
 cipher: {$cipher}
@@ -622,11 +620,10 @@ YAML;
             return ['by_ip' => [], 'by_fp' => []];
         }
 
-        $now = time();
+        $now    = time();
+        $closed = ['by_ip' => [], 'by_fp' => []];
+
         foreach (preg_split("/\r\n|\n|\r/", $raw) as $line) {
-            if (strpos($line, 'Handshake message') === false) {
-                continue;
-            }
             if (! preg_match('/time="([^"]+)"/', $line, $mTime)) {
                 continue;
             }
@@ -637,7 +634,22 @@ YAML;
 
             $vpnIp = preg_match('/vpnIp=([0-9.]+)/', $line, $mIp) ? $mIp[1] : '';
             $fp    = preg_match('/fingerprint=([a-f0-9]+)/i', $line, $mFp) ? strtolower($mFp[1]) : '';
-            $addr  = preg_match('/udpAddr="([^"]+)"/', $line, $mAddr) ? $mAddr[1] : '';
+
+            if (stripos($line, 'Close tunnel') !== false || stripos($line, 'Closing tunnel') !== false || stripos($line, 'Goodbye') !== false) {
+                if ($vpnIp !== '' && $ts >= ($closed['by_ip'][$vpnIp] ?? 0)) {
+                    $closed['by_ip'][$vpnIp] = $ts;
+                }
+                if ($fp !== '' && $ts >= ($closed['by_fp'][$fp] ?? 0)) {
+                    $closed['by_fp'][$fp] = $ts;
+                }
+                continue;
+            }
+
+            if (strpos($line, 'Handshake message') === false) {
+                continue;
+            }
+
+            $addr = preg_match('/udpAddr="([^"]+)"/', $line, $mAddr) ? $mAddr[1] : '';
 
             $publicIp = '';
             $port     = '';
@@ -648,7 +660,7 @@ YAML;
             }
 
             $entry = [
-                'connected'        => ($now - $ts) <= 3600,
+                'connected'        => ($now - $ts) <= 300,
                 'endpoint'         => $addr,
                 'public_ip'        => $publicIp,
                 'port'             => $port,
@@ -666,7 +678,81 @@ YAML;
             }
         }
 
+        foreach ($byIp as $ip => &$entry) {
+            if (($closed['by_ip'][$ip] ?? 0) >= $entry['latest_handshake']) {
+                $entry['connected'] = false;
+            }
+        }
+        unset($entry);
+
+        foreach ($byFp as $fp => &$entry) {
+            if (($closed['by_fp'][$fp] ?? 0) >= $entry['latest_handshake']) {
+                $entry['connected'] = false;
+            }
+        }
+        unset($entry);
+
         return ['by_ip' => $byIp, 'by_fp' => $byFp];
+    }
+
+    /**
+     * Comprueba en tiempo real qué IPs VPN responden a ICMP desde la interfaz nebula1
+     * (local o vía SSH en el Lighthouse). Devuelve un mapa [ip => true] o null si no hay interfaz tun.
+     *
+     * @param string[] $ips
+     * @return array<string, bool>|null
+     */
+    public static function probeReachableIps(array $ips): ?array
+    {
+        $validIps = [];
+        foreach ($ips as $ip) {
+            $ip = trim((string) $ip);
+            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $validIps[] = $ip;
+            }
+        }
+        $validIps = array_values(array_unique($validIps));
+        if (empty($validIps)) {
+            return [];
+        }
+
+        $escapedList = implode(' ', array_map('escapeshellarg', $validIps));
+        $probeCmd    = 'sh -c ' . escapeshellarg("for ip in {$escapedList}; do (ping -c 1 -W 1 \"\$ip\" >/dev/null 2>&1 && echo \"\$ip\") & done; wait");
+
+        @exec('ip link show nebula1 >/dev/null 2>&1', $tunOut, $tunCode);
+        if ($tunCode === 0) {
+            @exec($probeCmd, $out, $code);
+            $reachable = [];
+            foreach ($out as $line) {
+                $line = trim((string) $line);
+                if (filter_var($line, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                    $reachable[$line] = true;
+                }
+            }
+            return $reachable;
+        }
+
+        if (self::isSshConfigured()) {
+            try {
+                $ssh = self::sshFromSettings(6);
+                $hasTun = trim((string) $ssh->exec('ip link show nebula1 >/dev/null 2>&1 && echo UP || echo DOWN'));
+                if ($hasTun === 'UP') {
+                    $raw = (string) $ssh->exec($probeCmd);
+                    $reachable = [];
+                    foreach (preg_split("/\r\n|\n|\r/", $raw) as $line) {
+                        $line = trim($line);
+                        if (filter_var($line, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                            $reachable[$line] = true;
+                        }
+                    }
+                    return $reachable;
+                }
+            } catch (\Throwable $e) {
+                log_message('warning', 'No se pudo sondear IPs Nebula por SSH: ' . $e->getMessage());
+            }
+        }
+
+        return null;
     }
 
     /**

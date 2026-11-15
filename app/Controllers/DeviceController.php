@@ -1281,6 +1281,13 @@ class DeviceController extends BaseController
             return null;
         }
 
+        if ((int) ($device->active ?? 0) === 1 && $ip !== '') {
+            $reachable = NebulaService::probeReachableIps([$ip]);
+            if ($reachable !== null) {
+                $peer['connected'] = isset($reachable[$ip]);
+            }
+        }
+
         if (! empty($peer['latest_handshake'])) {
             $this->updateLastSeenFromHandshake($device, (int) $peer['latest_handshake']);
         }
@@ -1385,6 +1392,13 @@ class DeviceController extends BaseController
 
         $devices   = $this->deviceModel->where('network_id', $networkId)->findAll();
         $telemetry = NebulaService::getLighthousePeerTelemetry();
+        $activeIps = [];
+        foreach ($devices as $dev) {
+            if ((int) ($dev->active ?? 0) === 1 && ! empty($dev->ip_address)) {
+                $activeIps[] = (string) $dev->ip_address;
+            }
+        }
+        $reachable = NebulaService::probeReachableIps($activeIps);
         $peers     = [];
 
         foreach ($devices as $dev) {
@@ -1392,16 +1406,19 @@ class DeviceController extends BaseController
             $ip   = (string) ($dev->ip_address ?? '');
             $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
 
-            if ($peer) {
-                $ts = (int) ($peer['latest_handshake'] ?? 0);
+            $isConnected = $peer ? (bool) ($peer['connected'] ?? false) : false;
+            if ($reachable !== null && (int) ($dev->active ?? 0) === 1) {
+                $isConnected = isset($reachable[$ip]);
+            }
+
+            if ($peer || $isConnected) {
+                $ts = $peer ? (int) ($peer['latest_handshake'] ?? 0) : 0;
                 if ($ts > 0) {
                     $this->updateLastSeenFromHandshake($dev, $ts);
                 }
                 $peers[(string) $dev->public_key] = [
-                    'connected'      => (bool) ($peer['connected'] ?? false),
-                    'endpoint'       => (string) ($peer['endpoint'] ?? ''),
-                    'rx'             => (int) ($peer['rx_bytes'] ?? 0),
-                    'tx'             => (int) ($peer['tx_bytes'] ?? 0),
+                    'connected'      => $isConnected,
+                    'endpoint'       => $peer ? (string) ($peer['endpoint'] ?? '') : '',
                     'last_seen_date' => $ts > 0 ? date('d/m/Y', $ts) : null,
                     'last_seen_time' => $ts > 0 ? date('H:i', $ts) : null,
                 ];

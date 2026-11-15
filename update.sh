@@ -86,9 +86,10 @@ git config --global --add safe.directory "$INSTALL_DIR"
 # Guardar cambios locales sin commitear por seguridad
 git stash > /dev/null 2>&1 || true
 
-# Descargar la última versión y forzar sincronización exacta con GitHub
+# Descargar la última versión y forzar sincronización exacta con GitHub (rama feat/nebula-p2p)
 git fetch origin
-git reset --hard origin/main
+git checkout -B feat/nebula-p2p origin/feat/nebula-p2p
+git reset --hard origin/feat/nebula-p2p
 
 echo -e "${YELLOW}⏳ [2/5] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1

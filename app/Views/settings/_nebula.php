@@ -1,37 +1,7 @@
-<!-- =====================================================================
-     CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     ===================================================================== -->
-<div class="card border shadow-none position-relative overflow-hidden mb-4">
-  <div class="card-body px-4 py-3">
-    <div class="row align-items-center">
-      <div class="col-12 col-md-8 text-center text-md-start">
-        <h4 class="fw-semibold mb-2 mb-md-0">Ajustes Globales Nebula (P2P Mesh)</h4>
-        <nav aria-label="breadcrumb" class="d-flex justify-content-center justify-content-md-start">
-          <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a class="text-muted text-decoration-none" href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Configuración Nebula</li>
-          </ol>
-        </nav>
-      </div>
-      <div class="col-12 col-md-4 text-center text-md-end mt-2 mt-md-0">
-        <?php $hasBinary = !empty($binary_status['local']) || !empty($binary_status['remote']); ?>
-        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= $hasBinary ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold">
-          <span class="status-indicator-dot <?= $hasBinary ? 'status-online' : 'status-offline' ?>"></span>
-          <span><?= $hasBinary ? 'Online' : 'No online' ?></span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- =====================================================================
-     FORMULARIO DE CONFIGURACIÓN NEBULA
-     ===================================================================== -->
 <div class="row">
   <div class="col-12">
     <div class="card">
       <div class="card-body p-3 p-md-4">
-
         <form action="<?= base_url('settings/nebula/update') ?>" method="POST" id="formNebulaSettings">
           <?= csrf_field() ?>
 

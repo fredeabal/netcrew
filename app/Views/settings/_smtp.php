@@ -1,26 +1,3 @@
-<!-- =====================================================================
-     CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     ===================================================================== -->
-<div class="card border shadow-none position-relative overflow-hidden mb-4">
-    <div class="card-body px-4 py-3">
-        <div class="row align-items-center">
-            <div class="col-12 col-md-8 text-center text-md-start">
-                <h4 class="fw-semibold mb-2 mb-md-0">Ajustes SMTP</h4>
-                <nav aria-label="breadcrumb" class="d-flex justify-content-center justify-content-md-start">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a class="text-muted text-decoration-none" href="<?= base_url('dashboard') ?>">Inicio</a></li>
-                        <li class="breadcrumb-item"><a class="text-muted text-decoration-none" href="<?= base_url('dashboard') ?>">Ajustes</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Configuración SMTP</li>
-                    </ol>
-                </nav>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- =====================================================================
-     FORMULARIO DE CONFIGURACIÓN SMTP
-     ===================================================================== -->
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -137,16 +114,11 @@
                     <div class="mt-4 pt-3 border-top">
                         <div class="row g-2 justify-content-center align-items-center">
                             <div class="col-6 col-sm-auto">
-                                <a href="<?= base_url('dashboard') ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
-                                    <i class="ti ti-x me-1"></i>Cancelar
-                                </a>
-                            </div>
-                            <div class="col-6 col-sm-auto">
                                 <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
                                     <i class="ti ti-send me-1"></i>Probar
                                 </button>
                             </div>
-                            <div class="col-12 col-sm-auto">
+                            <div class="col-6 col-sm-auto">
                                 <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
                                     <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
                                 </button>

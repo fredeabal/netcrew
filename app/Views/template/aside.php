@@ -76,29 +76,13 @@
                 <?php endif; ?>
                  <?php if (auth()->user()->can('admin.settings')): ?>
                  <li class="sidebar-item">
-                   <a href="<?= base_url('settings/smtp') ?>" class="sidebar-link">
+                   <a href="<?= base_url('settings') ?>" class="sidebar-link">
                      <div class="round-16 d-flex align-items-center justify-content-center">
                        <i class="ti ti-circle"></i>
                      </div>
-                     <span class="hide-menu">Ajustes SMTP</span>
+                     <span class="hide-menu">Configuración</span>
                    </a>
                  </li>
-                  <li class="sidebar-item">
-                    <a href="<?= base_url('settings/nebula') ?>" class="sidebar-link">
-                      <div class="round-16 d-flex align-items-center justify-content-center">
-                        <i class="ti ti-circle"></i>
-                      </div>
-                      <span class="hide-menu">Ajustes Nebula (P2P)</span>
-                    </a>
-                  </li>
-                  <li class="sidebar-item">
-                    <a href="<?= base_url('settings/maintenance') ?>" class="sidebar-link">
-                      <div class="round-16 d-flex align-items-center justify-content-center">
-                        <i class="ti ti-circle"></i>
-                      </div>
-                      <span class="hide-menu">Mantenimiento</span>
-                    </a>
-                  </li>
                   <li class="sidebar-item">
                     <a href="<?= base_url('audit-logs') ?>" class="sidebar-link">
                       <div class="round-16 d-flex align-items-center justify-content-center">

@@ -1,30 +1,4 @@
 <!-- =====================================================================
-     CABECERA Y BREADCRUMB (NAVEGACIÓN)
-     ===================================================================== -->
-<div class="card border shadow-none position-relative overflow-hidden mb-3 mb-md-4">
-    <div class="card-body px-3 px-md-4 py-3">
-        <div class="d-flex align-items-center justify-content-between gap-2">
-            <div>
-                <h4 class="fw-semibold mb-1">Mantenimiento del Sistema</h4>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a class="text-muted text-decoration-none" href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                        <li class="breadcrumb-item text-muted" aria-current="page">Mantenimiento</li>
-                    </ol>
-                </nav>
-            </div>
-            <div class="flex-shrink-0 text-end">
-                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?>">
-                    <span class="status-indicator-dot <?= ($stats['isWgUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-                    <span class="d-none d-sm-inline">Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?></span>
-                    <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?></span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- =====================================================================
      MÉTRICAS Y ESTADO DE ALMACENAMIENTO DEL SISTEMA
      ===================================================================== -->
 <div class="row mb-2">
@@ -120,8 +94,6 @@
         </div>
     </div>
 
-    <!-- ================= SECCIÓN: DATOS Y RESPALDOS ================= -->
-
     <!-- Respaldos (Backup) -->
     <div class="col-12 mb-4 d-none d-md-block">
         <div class="card shadow-none border">
@@ -132,11 +104,10 @@
                     </div>
                     <div>
                         <h5 class="fw-bold mb-0">Respaldo y Restauración de Base de Datos</h5>
-                        <!-- <p class="text-muted fs-2 mb-0">Copia de seguridad en caliente con VACUUM y restauración íntegra</p> -->
                     </div>
                 </div>
                 <p class="text-muted mb-4">Descarga o restaura una copia SQLite completa. <strong>Atención:</strong> Al restaurar se reemplazará la base de datos actual.</p>
-                
+
                 <div class="row g-4">
                     <div class="col-md-6">
                         <div class="h-100 p-4 border rounded d-flex flex-column justify-content-between">
@@ -178,7 +149,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 <script>
@@ -186,7 +156,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const fileInput = document.getElementById('backup_file');
     const fileNameSpan = document.getElementById('file-name');
     const submitBtn = document.getElementById('btn-submit-restore');
-    
+
     if (fileInput) {
         fileInput.addEventListener('change', function() {
             if (this.files && this.files.length > 0) {

@@ -64,7 +64,7 @@ class MaintenanceController extends BaseController
 
         $totalCleaned = $sessionsCount + $debugCount + $logsCount + $cacheCount;
 
-        return redirect()->to(base_url('settings/maintenance'))->with(
+        return redirect()->to(base_url('settings?tab=maintenance'))->with(
             'message',
             "Mantenimiento general completado.<br><small class='text-muted'>{$totalCleaned} archivos eliminados ({$sessionsCount} sesiones, {$debugCount} debugs, {$logsCount} logs, {$cacheCount} caché).</small>{$dbMsg}"
         );
@@ -78,7 +78,7 @@ class MaintenanceController extends BaseController
         $dbPath = config('Database')->default['database'];
 
         if (! file_exists($dbPath)) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'El archivo de base de datos no existe.');
+            return redirect()->to(base_url('settings?tab=maintenance'))->with('error', 'El archivo de base de datos no existe.');
         }
 
         $filename       = 'backup-netcrew-' . date('Y-m-d_H-i-s') . '.db';
@@ -90,7 +90,7 @@ class MaintenanceController extends BaseController
             $sqlite->exec("VACUUM INTO '{$tempBackupPath}'");
             $sqlite->close();
         } catch (\Exception $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al generar la copia segura: ' . $e->getMessage());
+            return redirect()->to(base_url('settings?tab=maintenance'))->with('error', 'Error al generar la copia segura: ' . $e->getMessage());
         }
 
         $data = file_get_contents($tempBackupPath);

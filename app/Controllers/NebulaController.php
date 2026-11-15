@@ -115,7 +115,7 @@ class NebulaController extends BaseController
 
         AuditLogModel::log('SETTINGS_NEBULA_UPDATE', "Actualizó ajustes globales de Nebula (Lighthouse: {$host}:{$port}, Relay: {$relayEnabled}, Cipher: {$cipher})");
 
-        return redirect()->to('/settings/nebula')->with('success', 'Ajustes de Nebula guardados correctamente.');
+        return redirect()->to('/settings?tab=nebula')->with('success', 'Ajustes de Nebula guardados correctamente.');
     }
 
     /**

@@ -69,7 +69,7 @@ class SmtpController extends BaseController
         $settings->set('Email.SMTPCrypto', $this->request->getPost('smtp_crypto'));
         $settings->set('Email.mailType', $this->request->getPost('mailType'));
 
-        return redirect()->back()->with('message', 'Ajustes SMTP guardados exitosamente.');
+        return redirect()->to(base_url('settings?tab=smtp'))->with('message', 'Ajustes SMTP guardados exitosamente.');
     }
 
     // ---------------------------------------------------------------------
@@ -187,11 +187,11 @@ class SmtpController extends BaseController
         ');
 
         if ($emailService->send()) {
-            return redirect()->to(base_url('settings/smtp'))->with('message', "¡Conexión exitosa!<br><small class='text-muted'>Se ha enviado un correo de prueba a {$adminEmail}</small>");
+            return redirect()->to(base_url('settings?tab=smtp'))->with('message', "¡Conexión exitosa!<br><small class='text-muted'>Se ha enviado un correo de prueba a {$adminEmail}</small>");
         } else {
             $errorMsg = $emailService->printDebugger(['headers']);
             log_message('error', 'Error en test SMTP: ' . $errorMsg);
-            return redirect()->to(base_url('settings/smtp'))->with('error', 'Error al conectar con SMTP.');
+            return redirect()->to(base_url('settings?tab=smtp'))->with('error', 'Error al conectar con SMTP.');
         }
     }
 }

@@ -39,13 +39,14 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
 
 // Rutas de Superadmin (Configuración - requieren permisos)
 $routes->group('settings', ['filter' => ['session', 'permission:admin.settings']], static function ($routes) {
-    $routes->get('smtp', 'SmtpController::smtp');
+    $routes->get('/', 'SettingsController::index');
+    $routes->get('smtp', 'SettingsController::index/smtp');
     $routes->post('smtp/update', 'SmtpController::smtpUpdate');
     $routes->post('smtp/test', 'SmtpController::smtpTest');
-    $routes->get('nebula', 'NebulaController::index');
+    $routes->get('nebula', 'SettingsController::index/nebula');
     $routes->post('nebula/update', 'NebulaController::update');
     $routes->post('nebula/test', 'NebulaController::test');
-    $routes->get('maintenance', 'MaintenanceController::maintenance');
+    $routes->get('maintenance', 'SettingsController::index/maintenance');
     $routes->post('maintenance/clear-all', 'MaintenanceController::clearAll');
     $routes->get('maintenance/backup/download', 'MaintenanceController::downloadBackup');
     $routes->post('maintenance/backup/restore', 'MaintenanceController::restoreBackup');

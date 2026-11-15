@@ -66,8 +66,6 @@
           confirmButtonText: 'Entendido',
           confirmButtonColor: '#F38020'
         });
-      } else {
-        alert('Para instalar en iOS: Pulsa el botón de Compartir en Safari y selecciona "Añadir a pantalla de inicio".');
       }
     } else {
       if (typeof Swal !== 'undefined') {

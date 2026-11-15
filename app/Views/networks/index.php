@@ -76,7 +76,7 @@
                        <?php else: ?>
                          <span class="net-name"><?= esc($net->name) ?></span>
                        <?php endif; ?>
-                       <span class="badge bg-info-subtle text-info rounded-pill fs-2 fw-medium">Nebula P2P</span>
+                       <span class="badge bg-primary-subtle text-primary rounded-pill fs-2 fw-medium">Nebula P2P</span>
                      </div>
                    </td>
                    <td class="text-center"><span class="net-mono"><?= esc($net->cidr) ?></span></td>

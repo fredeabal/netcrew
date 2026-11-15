@@ -14,10 +14,10 @@
                 </nav>
             </div>
             <div class="flex-shrink-0 text-end">
-                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Configurado' : 'Sin configurar' ?>">
+                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?>">
                     <span class="status-indicator-dot <?= ($stats['isWgUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-                    <span class="d-none d-sm-inline">Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Configurado' : 'Sin configurar' ?></span>
-                    <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Activo' : 'Off' ?></span>
+                    <span class="d-none d-sm-inline">Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?></span>
+                    <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Online' : 'No online' ?></span>
                 </div>
             </div>
         </div>

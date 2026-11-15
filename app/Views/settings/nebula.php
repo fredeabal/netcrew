@@ -13,6 +13,13 @@
           </ol>
         </nav>
       </div>
+      <div class="col-12 col-md-4 text-center text-md-end mt-2 mt-md-0">
+        <?php $hasBinary = !empty($binary_status['local']) || !empty($binary_status['remote']); ?>
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= $hasBinary ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold">
+          <span class="status-indicator-dot <?= $hasBinary ? 'status-online' : 'status-offline' ?>"></span>
+          <span><?= $hasBinary ? 'Online' : 'No online' ?></span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -24,14 +31,6 @@
   <div class="col-12">
     <div class="card">
       <div class="card-body p-3 p-md-4">
-
-        <?php $hasBinary = !empty($binary_status['local']) || !empty($binary_status['remote']); ?>
-        <div class="alert <?= $hasBinary ? 'alert-success' : 'alert-warning' ?> d-flex align-items-center gap-2 mb-4" role="alert">
-          <i class="ti <?= $hasBinary ? 'ti-circle-check' : 'ti-alert-triangle' ?> fs-5 flex-shrink-0"></i>
-          <div>
-            <strong>Estado de <code>nebula-cert</code>:</strong> <?= esc($binary_status['message'] ?? '') ?>
-          </div>
-        </div>
 
         <form action="<?= base_url('settings/nebula/update') ?>" method="POST" id="formNebulaSettings">
           <?= csrf_field() ?>
@@ -98,7 +97,7 @@
           <!-- SECCIÓN 2: SSH OPCIONAL SI nebula-cert ESTÁ EN SERVIDOR REMOTO -->
           <div class="mb-4">
             <div class="d-flex align-items-center gap-2 mb-3">
-              <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
+              <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
                 <i class="ti ti-terminal-2 fs-5"></i>
               </div>
               <div>
@@ -172,19 +171,32 @@ document.addEventListener('DOMContentLoaded', function() {
           'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
         }
       })
-      .then(r => r.json())
-      .then(data => {
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({
-            icon: data.success ? 'success' : 'warning',
-            title: data.success ? 'nebula-cert disponible' : 'nebula-cert no encontrado',
-            text: data.message
-          });
-        } else {
-          alert(data.message);
-        }
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
       })
-      .catch(() => alert('Error al comprobar nebula-cert.'))
+      .then(data => {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        Swal.fire({
+          icon: data.success ? 'success' : 'error',
+          title: data.success ? 'Online' : 'No online',
+          text: data.success ? 'El servicio está disponible.' : (data.message || 'El servicio no está disponible.'),
+          background: isDark ? '#0b1114' : '#f8f9fa',
+          color: isDark ? '#ffffff' : '#0b1114',
+          confirmButtonColor: '#F38020'
+        });
+      })
+      .catch(() => {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al comprobar el estado de Nebula.',
+          background: isDark ? '#0b1114' : '#f8f9fa',
+          color: isDark ? '#ffffff' : '#0b1114',
+          confirmButtonColor: '#F38020'
+        });
+      })
       .finally(() => { btnTest.disabled = false; });
     });
   }

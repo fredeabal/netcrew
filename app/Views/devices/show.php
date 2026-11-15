@@ -415,14 +415,23 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnGen) {
     btnGen.addEventListener('click', function() {
       btnGen.disabled = true;
-      fetch('<?= site_url('devices/share/' . $device->id) ?>', {
+      const fd = new FormData();
+      fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+      fetch('<?= site_url('devices/generate-share-link/' . $device->id) ?>', {
         method: 'POST',
         headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
-        }
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
       })
-      .then(r => r.json())
+      .then(async r => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          throw new Error(data.message || ('Error HTTP ' + r.status));
+        }
+        return data;
+      })
       .then(data => {
         if (!data.success || !data.token) {
           throw new Error(data.message || 'No se pudo generar el comando.');

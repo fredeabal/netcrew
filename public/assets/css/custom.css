@@ -657,7 +657,7 @@ body .select2-container {
     margin: 1.5rem 0;
 }
 
-/* --- Config Area for WireGuard --- */
+/* --- Config Area for VPN --- */
 .config-pre {
     background-color: #1a262d;
     color: #e5e5e5;
@@ -742,7 +742,7 @@ body .select2-container {
     min-width: 40px;
 }
 
-/* --- Wireguard Peer Premium Status CSS --- */
+/* --- Nebula Peer Premium Status CSS --- */
 .status-indicator-dot {
     width: 8px;
     height: 8px;

@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Para peticiones de navegación (páginas HTML): Network-First
-  // Así siempre se tiene la información más reciente de nodos y estado WireGuard
+  // Así siempre se tiene la información más reciente de nodos y estado VPN
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() => {

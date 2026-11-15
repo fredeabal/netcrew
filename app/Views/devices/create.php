@@ -44,7 +44,7 @@
           <div class="mb-3">
             <label for="name" class="form-label">Nombre del Dispositivo</label>
             <input type="text" class="form-control" id="name" name="name" value="<?= old('name') ?>" placeholder="Ej: Laptop Oficina" required minlength="2" maxlength="100">
-            <small class="text-muted d-block mt-1">Se generará automáticamente su IP privada y el par de llaves WireGuard.</small>
+            <small class="text-muted d-block mt-1">Se generará automáticamente su IP privada y su certificado firmado por la CA de Nebula.</small>
           </div>
 
           <div class="mb-3">

@@ -33,7 +33,7 @@ class NetworkModel extends Model
         'cidr'     => 'required|min_length[9]|max_length[45]|is_unique[networks.cidr,id,{id}]',
         'dns'      => 'permit_empty|string|max_length[255]',
         'owner_id' => 'required|integer',
-        'engine'   => 'permit_empty|in_list[wireguard,nebula]',
+        'engine'   => 'permit_empty|in_list[nebula]',
     ];
     protected $validationMessages   = [
         'name' => [

@@ -18,7 +18,7 @@
 
     <h4 class="fw-semibold text-white mb-2"><?= esc($device->name) ?></h4>
     <p class="text-muted small mb-4">
-      Escanea el código QR con la app oficial de WireGuard o descarga el archivo <code>.conf</code>.
+      Escanea el código QR o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.
     </p>
 
     <div class="d-flex justify-content-center mb-4">

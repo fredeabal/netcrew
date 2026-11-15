@@ -110,7 +110,7 @@
     </div>
   </div>
 
-  <!-- Paso 3: Conectar a WireGuard -->
+  <!-- Paso 3: Conectar a Nebula P2P -->
   <div class="col-lg-4 col-md-12 mb-4">
     <div class="card h-100 border shadow-none d-flex flex-column">
       <div class="card-body p-4 flex-grow-1">
@@ -122,12 +122,12 @@
         </div>
 
         <h5 class="fw-semibold mb-2">Establecer la Conexión VPN</h5>
-        <p class="text-muted small mb-4">Enlaza tus equipos usando el cliente oficial de WireGuard.</p>
+        <p class="text-muted small mb-4">Enlaza tus equipos usando el cliente oficial de Nebula P2P.</p>
 
         <ul class="list-unstyled d-flex flex-column gap-3 mb-0 fs-3 text-muted">
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">1</span>
-            <span>Descarga e instala el <a href="https://www.wireguard.com/install/" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">cliente oficial de WireGuard <i class="ti ti-external-link fs-2"></i></a> en tu dispositivo.</span>
+            <span>Descarga e instala el <a href="https://github.com/slackhq/nebula/releases" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">cliente oficial de Nebula <i class="ti ti-external-link fs-2"></i></a> en tu dispositivo.</span>
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">2</span>

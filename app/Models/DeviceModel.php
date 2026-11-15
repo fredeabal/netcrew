@@ -64,7 +64,7 @@ class DeviceModel extends Model
     protected $cleanValidationRules = true;
 
     /**
-     * Callback para encriptar la llave privada (WireGuard y Nebula) antes de guardarla.
+     * Callback para encriptar la llave privada (Nebula) antes de guardarla.
      */
     protected function encryptPrivateKey(array $data)
     {
@@ -87,7 +87,7 @@ class DeviceModel extends Model
             $encrypter = \Config\Services::encrypter();
             return $encrypter->decrypt(base64_decode($encryptedKey));
         } catch (\Throwable $e) {
-            log_message('error', 'Error al desencriptar llave privada de WireGuard: ' . $e->getMessage());
+            log_message('error', 'Error al desencriptar llave privada del nodo: ' . $e->getMessage());
             return '';
         }
     }

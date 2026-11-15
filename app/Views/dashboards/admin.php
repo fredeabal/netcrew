@@ -16,9 +16,9 @@
         </nav>
       </div>
       <div class="flex-shrink-0 text-end">
-        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
           <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-          <span class="d-none d-sm-inline">WireGuard <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
+          <span class="d-none d-sm-inline">Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
           <span class="d-inline d-sm-none"><?= ($telemetry['isInterfaceUp'] ?? false) ? 'Activo' : 'Off' ?></span>
         </div>
       </div>
@@ -77,7 +77,7 @@
 </div>
 
 <!-- =====================================================================
-     TELEMETRÍA Y TRÁFICO WIREGUARD (APEXCHARTS)
+     TELEMETRÍA Y ESTADO NEBULA P2P (APEXCHARTS)
      ===================================================================== -->
 <div class="row">
     <!-- Gráfica de Tráfico Transferido (RX / TX) -->
@@ -103,7 +103,7 @@
                     <div class="alert alert-warning d-flex align-items-center py-3" role="alert">
                         <i class="ti ti-alert-triangle fs-6 me-3"></i>
                         <div>
-                            <strong>Servidor WireGuard no configurado:</strong> El host SSH central no está enlazado aún.
+                            <strong>Servidor Lighthouse no configurado:</strong> El host central de Nebula no está enlazado aún.
                             <a href="<?= site_url('settings/nebula') ?>" class="alert-link ms-1">Configurar ahora</a>.
                         </div>
                     </div>

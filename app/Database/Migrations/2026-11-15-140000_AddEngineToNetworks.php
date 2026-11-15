@@ -12,7 +12,7 @@ class AddEngineToNetworks extends Migration
             'engine' => [
                 'type'       => 'VARCHAR',
                 'constraint' => '20',
-                'default'    => 'wireguard',
+                'default'    => 'nebula',
                 'null'       => false,
                 'after'      => 'active',
             ],

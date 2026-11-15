@@ -104,7 +104,7 @@
             <div class="alert alert-warning d-flex align-items-center py-3" role="alert">
               <i class="ti ti-alert-triangle fs-6 me-3"></i>
               <div>
-                <strong>Servidor WireGuard no configurado:</strong> El host SSH central no está enlazado aún.
+                <strong>Servidor Lighthouse no configurado:</strong> El host central de Nebula no está enlazado aún.
                 <a href="<?= site_url('settings/nebula') ?>" class="alert-link ms-1">Configurar ahora</a>.
               </div>
             </div>
@@ -195,7 +195,7 @@
           <?php if (empty($devices)): ?>
             <div class="text-center py-5">
               <h6 class="fw-medium mb-1">Aún no hay nodos</h6>
-              <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración de WireGuard.</p>
+              <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración Nebula (.yml).</p>
             </div>
           <?php else: ?>
             <div class="table-responsive d-none d-md-block">
@@ -272,7 +272,7 @@
                             </li>
                             <li>
                               <a href="<?= site_url('devices/download/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
-                                <i class="ti ti-download"></i> Descargar .conf
+                                <i class="ti ti-download"></i> Descargar .yml
                               </a>
                             </li>
                             <li>
@@ -352,7 +352,7 @@
                           </li>
                           <li>
                             <a href="<?= site_url('devices/download/' . $dev->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
-                              <i class="ti ti-download"></i> Descargar .conf
+                              <i class="ti ti-download"></i> Descargar .yml
                             </a>
                           </li>
                           <li>
@@ -425,11 +425,11 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0">
       <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-semibold" id="modalViewConfigLabel">Configuración de WireGuard</h5>
+        <h5 class="modal-title fw-semibold" id="modalViewConfigLabel">Configuración de Nebula P2P</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body py-4 text-center">
-        <p class="text-muted small">Escanea este código QR con la app móvil oficial de WireGuard o descarga el archivo de configuración para tu cliente de escritorio.</p>
+        <p class="text-muted small">Escanea este código QR o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.</p>
         
         <div class="d-flex flex-column align-items-center mb-4">
           <div class="qr-wrapper mb-3 p-3 bg-light rounded display-inline-block">
@@ -442,7 +442,7 @@
             <i class="ti ti-mail me-1"></i> Enviar por Email
           </button>
           <a href="#" class="btn btn-primary btn-sm border-0 d-flex align-items-center gap-2" id="btn-download-config-modal">
-            <i class="ti ti-download"></i> Descargar .conf
+            <i class="ti ti-download"></i> Descargar .yml
           </a>
         </div>
       </div>
@@ -612,7 +612,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ---------------------------------------------------------------------
-  // Estado en tiempo real de conexión WireGuard
+  // Estado en tiempo real de conexión Nebula P2P
   // ---------------------------------------------------------------------
   let isRefreshing = false;
   function updateRealtimeStatuses() {

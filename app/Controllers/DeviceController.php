@@ -141,7 +141,7 @@ class DeviceController extends BaseController
             return redirect()->to('/networks')->with('error', 'Acceso denegado.');
         }
 
-        // Intentar obtener datos WireGuard en tiempo real
+        // Estado en tiempo real (Nebula P2P)
         $wg = $this->fetchPeerStatus($device);
         if ($wg && !empty($wg['last_seen'])) {
             $device->last_seen = $wg['last_seen'];
@@ -698,7 +698,7 @@ class DeviceController extends BaseController
                 'id'         => $device->id,
                 'name'       => $device->name,
                 'ip_address' => $device->ip_address,
-                'engine'     => $network->engine ?? 'wireguard',
+                'engine'     => 'nebula',
                 'filename'   => $payload['filename'],
                 'config'     => $payload['content'],
             ]
@@ -889,12 +889,12 @@ class DeviceController extends BaseController
             }
 
             $fromEmail = $settings->get('Email.fromEmail') ?: ($userSmtp ?: 'no-reply@tudominio.com');
-            $fromName  = $settings->get('Email.fromName') ?: 'NetCrew WireGuard';
+            $fromName  = $settings->get('Email.fromName') ?: 'NetCrew Nebula';
             $emailService->setFrom($fromEmail, $fromName);
             $emailService->setTo($targetEmail);
-            $emailService->setSubject('Configuración VPN WireGuard - ' . $device->name);
+            $emailService->setSubject('Configuración VPN Nebula P2P - ' . $device->name);
 
-            // Adjuntar archivo .conf de WireGuard
+            // Adjuntar archivo .yml de Nebula
             $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
 
             // Procesar y adjuntar código QR en memoria si fue recibido desde el cliente con validación estricta de firma y tamaño
@@ -926,10 +926,10 @@ class DeviceController extends BaseController
                 $qrSection = '
                 <div style="text-align: center; margin: 25px 0 10px 0;">
                     <div style="display: inline-block; background-color: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                        <img src="cid:' . $qrCid . '" alt="Código QR WireGuard" width="210" height="210" style="display: block; margin: 0 auto; width: 210px; height: 210px; border-radius: 4px;">
+                        <img src="cid:' . $qrCid . '" alt="Código QR Nebula" width="210" height="210" style="display: block; margin: 0 auto; width: 210px; height: 210px; border-radius: 4px;">
                     </div>
                     <p style="color: #64748b; font-size: 13px; font-weight: 500; margin-top: 10px; margin-bottom: 0;">
-                        Escanea este código con la app móvil oficial de WireGuard
+                        Escanea este código o importa el archivo adjunto en la app oficial de Nebula
                     </p>
                 </div>';
             }
@@ -955,7 +955,7 @@ class DeviceController extends BaseController
                     <tr>
                         <td align="left" style="padding: 35px 30px;">
                             <h2 style="color: #333f52; -webkit-text-fill-color: #333f52; margin-top: 0; margin-bottom: 8px; text-align: center; font-weight: 600; font-size: 22px;">
-                                Configuración de WireGuard
+                                Configuración de Nebula P2P
                             </h2>
                             <p style="color: #5a6a85; -webkit-text-fill-color: #5a6a85; font-size: 14px; line-height: 1.5; text-align: center; margin-top: 0; margin-bottom: 25px;">
                                 Te enviamos los parámetros de conexión VPN para tu dispositivo en la red de NetCrew.
@@ -985,7 +985,7 @@ class DeviceController extends BaseController
 
                             <!-- Aviso de archivos adjuntos -->
                             <div style="margin-top: 20px; padding: 12px 14px; background-color: #edf2f7; border-radius: 8px; color: #475569; font-size: 13px; text-align: center;">
-                                <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en WireGuard.
+                                <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en Nebula.
                             </div>
 
                             <div style="text-align: center; margin-top: 25px;">
@@ -1001,7 +1001,7 @@ class DeviceController extends BaseController
                     <tr>
                         <td align="center" style="padding: 0 20px;">
                             <p style="color: #8c98a4; -webkit-text-fill-color: #8c98a4; font-size: 12px; line-height: 1.5; margin: 0;">
-                                &copy; ' . $year . ' NetCrew &bull; Gestión Segura de Redes WireGuard
+                                &copy; ' . $year . ' NetCrew &bull; Gestión Segura de Redes Nebula P2P
                             </p>
                         </td>
                     </tr>
@@ -1276,11 +1276,11 @@ class DeviceController extends BaseController
 
             'last_seen'   => $device->last_seen,
             'created_at'  => $device->created_at,
-            // Estado WireGuard en tiempo real (se rellena si hay SSH configurado)
+            // Estado en tiempo real (Nebula P2P)
             'wg' => null,
         ];
 
-        // Intentar obtener datos de WireGuard en tiempo real vía SSH
+        // Estado del nodo en tiempo real
         $result['wg'] = $this->fetchPeerStatus($device);
         if ($result['wg'] && !empty($result['wg']['last_seen'])) {
             $result['last_seen'] = $result['wg']['last_seen'];
@@ -1378,7 +1378,7 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
-    // Actualizar último acceso usando el último handshake real de WireGuard
+    // Actualizar último acceso del dispositivo
     // ---------------------------------------------------------------------
     protected function updateLastSeenFromHandshake($device, int $handshake): ?string
     {

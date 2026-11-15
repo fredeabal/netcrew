@@ -92,12 +92,14 @@ class UserSeeder extends Seeder
         $settings->set('Email.SMTPPort', 587);
         $settings->set('Email.mailType', 'html');
 
-        // Configuración predeterminada de WireGuard (Localhost SSH / Key Auth)
-        $settings->set('WireGuard.sshHost', '127.0.0.1');
-        $settings->set('WireGuard.sshUser', 'root');
-        $settings->set('WireGuard.sshPort', 22);
-        $settings->set('WireGuard.sshAuthType', 'key');
-        $settings->set('WireGuard.interface', 'wg0');
+        // Configuración predeterminada de Nebula P2P (Lighthouse)
+        $settings->set('Nebula.sshHost', '127.0.0.1');
+        $settings->set('Nebula.sshUser', 'root');
+        $settings->set('Nebula.sshPort', 22);
+        $settings->set('Nebula.sshAuthType', 'key');
+        $settings->set('Nebula.lighthousePort', 4242);
+        $settings->set('Nebula.relayEnabled', 1);
+        $settings->set('Nebula.cipher', 'aes');
 
         $baseUrl = env('app.baseURL') ?: config('App')->baseURL;
         $hostOnly = '127.0.0.1';
@@ -107,7 +109,7 @@ class UserSeeder extends Seeder
                 $hostOnly = $parsed['host'];
             }
         }
-        $settings->set('WireGuard.endpoint', $hostOnly . ':51820');
+        $settings->set('Nebula.lighthouseHost', $hostOnly);
 
         // Cargar llave SSH autogenerada si existe en writable
         $sshKeyPath = WRITEPATH . 'netcrew_ssh_key';
@@ -117,7 +119,7 @@ class UserSeeder extends Seeder
                 try {
                     $encrypter = \Config\Services::encrypter();
                     $encryptedKey = base64_encode($encrypter->encrypt($sshKeyContent));
-                    $settings->set('WireGuard.sshPrivateKey', $encryptedKey);
+                    $settings->set('Nebula.sshPrivateKey', $encryptedKey);
                 } catch (\Exception $e) {
                     log_message('error', 'Error al encriptar llave SSH autogenerada: ' . $e->getMessage());
                 }

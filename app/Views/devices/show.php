@@ -192,7 +192,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 </div>
 
 <!-- =====================================================================
-     ESTADO DE CONEXIÓN WIREGUARD
+     ESTADO DE CONEXIÓN NEBULA P2P
      Esta sección solo se renderiza si existen datos de conexión ($wg).
      Muestra IP pública, puerto, handshake y tráfico (subida/bajada).
      ===================================================================== -->

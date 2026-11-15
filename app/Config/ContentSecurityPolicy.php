@@ -92,6 +92,7 @@ class ContentSecurityPolicy extends BaseConfig
     public $styleSrc = [
         'self',
         'unsafe-inline',
+        'https://fonts.googleapis.com',
     ];
 
     /**
@@ -102,6 +103,7 @@ class ContentSecurityPolicy extends BaseConfig
     public array|string $styleSrcElem = [
         'self',
         'unsafe-inline',
+        'https://fonts.googleapis.com',
     ];
 
     /**
@@ -163,6 +165,7 @@ class ContentSecurityPolicy extends BaseConfig
     public $fontSrc = [
         'self',
         'data:',
+        'https://fonts.gstatic.com',
     ];
 
     /**

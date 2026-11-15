@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" dir="ltr" data-color-theme="Blue_Theme" data-layout="vertical" class="auth-no-scroll">
 <head>
-  <script>
+  <script {csp-script-nonce}>
     (function() {
       var saved = localStorage.getItem('theme');
       var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -106,7 +106,7 @@
   <!-- Particles.js para la animación de nodos -->
   <script src="<?= base_url('assets/libs/particles.js/particles.min.js') ?>"></script>
 
-  <script>
+  <script {csp-script-nonce}>
     // Bloquear el arrastre vertical / rebote elástico en iPhone y Android
     document.addEventListener('touchmove', function(e) {
       e.preventDefault();

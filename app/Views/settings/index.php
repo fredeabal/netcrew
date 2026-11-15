@@ -99,7 +99,7 @@
   </div>
 </div>
 
-<script>
+<script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function () {
   // Sincronizar pestaña activa con ?tab=... en la URL
   const tabButtons = document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]');

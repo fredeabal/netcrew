@@ -20,11 +20,11 @@
   <script src="<?= base_url('assets/') ?>js/forms/select2.init.js"></script>
 
   <!-- solar icons -->
-  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js" integrity="sha384-D4fI2O1dD9gQnn73J775jfm7LFa+lp87psAf0aiqjF9EQjnhGwZwkGm+2bffcJSF" crossorigin="anonymous"></script>
 
   <!-- highlight.js (code view) -->
   <script src="<?= base_url('assets/') ?>js/highlights/highlight.min.js"></script>
-  <script>
+  <script {csp-script-nonce}>
   hljs.initHighlightingOnLoad();
 
 
@@ -34,7 +34,7 @@
 </script>
 
   <!-- Persistencia de tema en localStorage -->
-  <script>
+  <script {csp-script-nonce}>
     document.querySelectorAll('.dark-layout').forEach(function(el) {
       el.addEventListener('click', function() {
         localStorage.setItem('theme', 'dark');

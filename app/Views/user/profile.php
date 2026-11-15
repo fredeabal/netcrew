@@ -176,7 +176,7 @@
 <!-- =====================================================================
      SCRIPT DE PREVISUALIZACIÓN DE IMAGEN
      ===================================================================== -->
-<script>
+<script {csp-script-nonce}>
 function previewImage(event) {
   const reader = new FileReader();
   reader.onload = function(){

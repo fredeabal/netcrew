@@ -15,7 +15,7 @@
   $userGroups = $currentUser ? $currentUser->getGroups() : [];
   $displayRole = !empty($userGroups) ? (config('AuthGroups')->groups[$userGroups[0]]['title'] ?? ucfirst($userGroups[0])) : 'Usuario';
 ?>
-<script>
+<script {csp-script-nonce}>
   // Tema DB > localStorage > preferencia del sistema
   (function() {
     var dbTheme = '<?= esc($userTheme, 'js') ?>';

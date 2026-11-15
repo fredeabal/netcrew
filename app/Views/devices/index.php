@@ -321,7 +321,7 @@
 <!-- =====================================================================
      SCRIPTS DE FUNCIONALIDAD (AJAX, EMAIL Y TIEMPO REAL)
      ===================================================================== -->
-<script>
+<script {csp-script-nonce}>
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('.btn-send-email-config').forEach(btn => {
     btn.addEventListener("click", function() {

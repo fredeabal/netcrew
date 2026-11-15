@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  <script>
+  <script {csp-script-nonce}>
     document.addEventListener("DOMContentLoaded", function () {
       const baseDownloadUrl = <?= json_encode(site_url('connect/' . $token . '/download')) ?>;
 

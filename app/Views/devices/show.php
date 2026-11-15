@@ -317,7 +317,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
   </div>
 </div>
 
-<script>
+<script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   const selectEl = document.getElementById('installPlatformSelect');
   const cmdBox = document.getElementById('installCommandBox');
@@ -585,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<script>
+<script {csp-script-nonce}>
 function pingDevice(deviceId) {
     Swal.fire({
         title: 'Haciendo Ping...',

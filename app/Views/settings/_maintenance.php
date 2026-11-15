@@ -151,7 +151,7 @@
     </div>
 </div>
 
-<script>
+<script {csp-script-nonce}>
 document.addEventListener("DOMContentLoaded", function() {
     const fileInput = document.getElementById('backup_file');
     const fileNameSpan = document.getElementById('file-name');

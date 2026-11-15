@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" dir="ltr" data-color-theme="Blue_Theme" data-layout="vertical">
 <head>
-  <script>
+  <script {csp-script-nonce}>
     (function() {
       var saved = localStorage.getItem('theme');
       var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -85,7 +85,7 @@
   <script src="<?= base_url('assets/libs/sweetalert2/dist/sweetalert2.min.js') ?>"></script>
   <script src="<?= base_url('assets/libs/particles.js/particles.min.js') ?>"></script>
 
-  <script>
+  <script {csp-script-nonce}>
     document.addEventListener("DOMContentLoaded", function() {
       const toastMessage = <?= json_encode(session()->getFlashdata('message') ?? session()->getFlashdata('success')) ?>;
       const toastError = <?= json_encode(session()->getFlashdata('error')) ?>;

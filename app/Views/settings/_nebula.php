@@ -128,7 +128,7 @@
   </div>
 </div>
 
-<script>
+<script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   const btnTest = document.getElementById('btnTestNebula');
   if (btnTest) {

@@ -213,7 +213,7 @@
 <!-- =====================================================================
      SCRIPT DE BÚSQUEDA EN TIEMPO REAL
      ===================================================================== -->
-<script>
+<script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('search-networks');
   if (searchInput) {

@@ -228,4 +228,23 @@ final class SecurityFixesTest extends CIUnitTestCase
         $yamlEmpty = NebulaService::buildLighthouseConfig($network, 'CERT_PEM', 'KEY_PEM', []);
         $this->assertStringNotContainsString('blocklist:', $yamlEmpty);
     }
+
+    public function testCspAndSriConfiguration(): void
+    {
+        $appConfig = new App();
+        $this->assertTrue($appConfig->CSPEnabled);
+
+        $csp = new \Config\ContentSecurityPolicy();
+        $this->assertSame('none', $csp->objectSrc);
+        $this->assertSame('self', $csp->frameAncestors);
+        $this->assertNotContains('unsafe-inline', (array) $csp->scriptSrc);
+        $this->assertNotContains('unsafe-inline', (array) $csp->scriptSrcElem);
+
+        $footer = file_get_contents(APPPATH . 'Views/template/footer.php');
+        $this->assertIsString($footer);
+        $this->assertStringContainsString(
+            'integrity="sha384-D4fI2O1dD9gQnn73J775jfm7LFa+lp87psAf0aiqjF9EQjnhGwZwkGm+2bffcJSF" crossorigin="anonymous"',
+            $footer
+        );
+    }
 }

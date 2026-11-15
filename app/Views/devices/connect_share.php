@@ -42,21 +42,34 @@
       </div>
     </div>
 
-    <div class="d-grid gap-2">
-      <a id="btnPrimaryInstaller" href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
-        <i class="ti ti-download" id="primaryInstallerIcon"></i>
-        <span id="primaryInstallerLabel">Descargar configuración (.yml)</span>
-      </a>
-      <small id="installerHint" class="text-muted d-block mt-1"></small>
+    <div class="text-start mb-3">
+      <label for="sharePlatformSelect" class="form-label small fw-semibold text-muted">Tu dispositivo</label>
+      <select id="sharePlatformSelect" class="form-select">
+        <option value="mac">macOS (MacBook / iMac)</option>
+        <option value="windows">Windows (10 / 11)</option>
+        <option value="linux">Linux</option>
+        <option value="mobile">iPhone / iPad / Android</option>
+      </select>
     </div>
 
-    <div class="mt-3 pt-3 border-top border-secondary border-opacity-25">
-      <span class="text-muted small d-block mb-2">¿Configurando otro dispositivo?</span>
-      <div class="d-flex flex-wrap justify-content-center gap-2">
-        <a href="<?= site_url('connect/' . $token . '/download?platform=mac') ?>" class="btn btn-outline-primary btn-sm">macOS</a>
-        <a href="<?= site_url('connect/' . $token . '/download?platform=windows') ?>" class="btn btn-outline-primary btn-sm">Windows</a>
-        <a href="<?= site_url('connect/' . $token . '/download?platform=linux') ?>" class="btn btn-outline-primary btn-sm">Linux</a>
-        <a href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-outline-secondary btn-sm">.yml</a>
+    <div id="shareCmdSection" class="text-start mb-3">
+      <small id="shareCmdHint" class="text-muted d-block mb-2">Abre Terminal, pega este comando y pulsa Enter:</small>
+      <pre class="p-3 rounded bg-dark border border-secondary border-opacity-25 net-mono small text-break mb-2" style="white-space: pre-wrap;"><code id="shareCmdText"></code></pre>
+      <div class="d-grid gap-2">
+        <button type="button" id="btnCopyShareCmd" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+          <i class="ti ti-copy"></i>
+          <span>Copiar Comando</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="shareMobileSection" class="d-none">
+      <div class="d-grid gap-2">
+        <a href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+          <i class="ti ti-download"></i>
+          <span>Descargar configuración (.yml)</span>
+        </a>
+        <small class="text-muted d-block mt-1">Instala la app gratuita <strong>Nebula</strong> en App Store o Google Play e importa el archivo.</small>
       </div>
     </div>
 
@@ -81,39 +94,61 @@
         correctLevel : QRCode.CorrectLevel.M
       });
 
-      const ua = navigator.userAgent || '';
-      const platform = (navigator.platform || '').toLowerCase();
-      const btn = document.getElementById('btnPrimaryInstaller');
-      const lbl = document.getElementById('primaryInstallerLabel');
-      const ico = document.getElementById('primaryInstallerIcon');
-      const hint = document.getElementById('installerHint');
+      const selectEl = document.getElementById('sharePlatformSelect');
+      const cmdSec = document.getElementById('shareCmdSection');
+      const mobSec = document.getElementById('shareMobileSection');
+      const cmdHint = document.getElementById('shareCmdHint');
+      const cmdText = document.getElementById('shareCmdText');
+      const btnCopy = document.getElementById('btnCopyShareCmd');
 
-      if (/iphone|ipad|ipod/i.test(ua)) {
-        btn.href = baseDownloadUrl + '?platform=yml';
-        ico.className = 'ti ti-brand-apple';
-        lbl.textContent = 'Descargar perfil para iPhone / iPad (.yml)';
-        hint.textContent = 'Instala la app gratuita Nebula en App Store e importa el archivo.';
-      } else if (/android/i.test(ua)) {
-        btn.href = baseDownloadUrl + '?platform=yml';
-        ico.className = 'ti ti-brand-android';
-        lbl.textContent = 'Descargar perfil para Android (.yml)';
-        hint.textContent = 'Instala la app gratuita Nebula en Google Play e importa el archivo.';
-      } else if (platform.includes('mac') || /macintosh|mac os x/i.test(ua)) {
-        btn.href = baseDownloadUrl + '?platform=mac';
-        ico.className = 'ti ti-brand-apple';
-        lbl.textContent = 'Descargar Configurador para Mac (.zip)';
-        hint.textContent = 'Abre el ZIP y haz doble clic en Instalar-NetCrew.';
-      } else if (platform.includes('win') || /windows/i.test(ua)) {
-        btn.href = baseDownloadUrl + '?platform=windows';
-        ico.className = 'ti ti-brand-windows';
-        lbl.textContent = 'Descargar Configurador para Windows (.bat)';
-        hint.textContent = 'Haz doble clic en el archivo descargado para instalar y conectar.';
-      } else if (platform.includes('linux') || /linux/i.test(ua)) {
-        btn.href = baseDownloadUrl + '?platform=linux';
-        ico.className = 'ti ti-brand-ubuntu';
-        lbl.textContent = 'Descargar Configurador para Linux (.sh)';
-        hint.textContent = 'Ejecuta: bash instalar-netcrew-*.sh';
+      const ua = navigator.userAgent || '';
+      const plat = (navigator.platform || '').toLowerCase();
+      if (/iphone|ipad|ipod|android/i.test(ua)) {
+        selectEl.value = 'mobile';
+      } else if (plat.includes('mac') || /macintosh|mac os x/i.test(ua)) {
+        selectEl.value = 'mac';
+      } else if (plat.includes('win') || /windows/i.test(ua)) {
+        selectEl.value = 'windows';
+      } else if (plat.includes('linux') || /linux/i.test(ua)) {
+        selectEl.value = 'linux';
       }
+
+      function renderShareUI() {
+        const p = selectEl.value;
+        if (p === 'mobile') {
+          cmdSec.classList.add('d-none');
+          mobSec.classList.remove('d-none');
+          return;
+        }
+        mobSec.classList.add('d-none');
+        cmdSec.classList.remove('d-none');
+
+        if (p === 'mac') {
+          cmdHint.textContent = 'Abre Terminal en tu Mac, pega este comando y pulsa Enter:';
+          cmdText.textContent = `bash <(curl -fsSL "${baseDownloadUrl}?platform=mac-sh")`;
+        } else if (p === 'windows') {
+          cmdHint.textContent = 'Abre PowerShell como Administrador, pega este comando y pulsa Enter:';
+          cmdText.textContent = `powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm '${baseDownloadUrl}?platform=win-ps1')"`;
+        } else {
+          cmdHint.textContent = 'Abre Terminal en Linux, pega este comando y pulsa Enter:';
+          cmdText.textContent = `sudo bash <(curl -fsSL "${baseDownloadUrl}?platform=linux")`;
+        }
+      }
+
+      selectEl.addEventListener('change', renderShareUI);
+      renderShareUI();
+
+      btnCopy.addEventListener('click', function () {
+        const text = cmdText.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            btnCopy.innerHTML = '<i class="ti ti-check"></i><span>¡Copiado!</span>';
+            setTimeout(() => {
+              btnCopy.innerHTML = '<i class="ti ti-copy"></i><span>Copiar Comando</span>';
+            }, 2500);
+          });
+        }
+      });
     });
   </script>
 </body>

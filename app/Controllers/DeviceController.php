@@ -804,6 +804,7 @@ class DeviceController extends BaseController
 
         return $this->response->setJSON([
             'success'   => true,
+            'token'     => $token,
             'share_url' => $shareUrl,
             'expires'   => '60 minutos',
         ]);

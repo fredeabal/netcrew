@@ -19,7 +19,17 @@ class NebulaInstallerService
 
         return match ($platform) {
             'mac', 'macos', 'darwin' => self::buildMac($slug, $ymlContent),
+            'mac-sh'                 => [
+                'filename'    => "instalar-netcrew-{$slug}.sh",
+                'contentType' => 'text/plain; charset=utf-8',
+                'body'        => self::buildMacScript($slug, $ymlContent),
+            ],
             'windows', 'win'         => self::buildWindows($slug, $ymlContent),
+            'win-ps1'                => [
+                'filename'    => "instalar-netcrew-{$slug}.ps1",
+                'contentType' => 'text/plain; charset=utf-8',
+                'body'        => self::buildWindowsPs1($ymlContent),
+            ],
             'linux'                  => self::buildLinux($slug, $ymlContent),
             default                  => [
                 'filename'    => $slug . '.yml',
@@ -29,7 +39,7 @@ class NebulaInstallerService
         };
     }
 
-    private static function buildMac(string $slug, string $ymlContent): array
+    private static function buildMacScript(string $slug, string $ymlContent): string
     {
         $marker = 'NETCREW_YML_EOF_' . substr(md5($slug . $ymlContent), 0, 8);
         $script = <<<BASH
@@ -73,12 +83,14 @@ sudo brew services restart nebula
 
 echo ""
 echo "¡Listo! Tu Mac ya está conectado a la red NetCrew."
-echo "Puedes cerrar esta ventana."
-read -r -p "Pulsa Enter para salir..."
-
 BASH;
 
-        $script = str_replace("\r\n", "\n", $script);
+        return str_replace("\r\n", "\n", $script);
+    }
+
+    private static function buildMac(string $slug, string $ymlContent): array
+    {
+        $script = self::buildMacScript($slug, $ymlContent) . "\necho \"Puedes cerrar esta ventana.\"\nread -r -p \"Pulsa Enter para salir...\"\n";
 
         if (class_exists(\ZipArchive::class)) {
             $tmpZip = tempnam(sys_get_temp_dir(), 'netcrew_mac_');
@@ -173,6 +185,46 @@ BAT;
             'contentType' => 'application/x-bat',
             'body'        => $bat,
         ];
+    }
+
+    private static function buildWindowsPs1(string $ymlContent): string
+    {
+        $b64Yml = base64_encode($ymlContent);
+
+        return <<<PS1
+\$ErrorActionPreference = 'Stop'
+\$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not \$isAdmin) {
+    Write-Host "Se necesitan permisos de Administrador. Abre PowerShell como Administrador y vuelve a ejecutar el comando." -ForegroundColor Yellow
+    return
+}
+
+\$nebulaDir = 'C:\\Program Files\\Nebula'
+if (-not (Test-Path \$nebulaDir)) { New-Item -ItemType Directory -Path \$nebulaDir -Force | Out-Null }
+
+if (-not (Test-Path (Join-Path \$nebulaDir 'nebula.exe'))) {
+    Write-Host "[1/3] Descargando Nebula oficial para Windows..." -ForegroundColor Cyan
+    \$ProgressPreference = 'SilentlyContinue'
+    \$rel = Invoke-RestMethod 'https://api.github.com/repos/slackhq/nebula/releases/latest'
+    \$asset = \$rel.assets | Where-Object { \$_.name -match 'nebula-windows-amd64\\.zip$' } | Select-Object -First 1
+    \$zip = Join-Path \$env:TEMP 'nebula-win.zip'
+    Invoke-WebRequest -Uri \$asset.browser_download_url -OutFile \$zip
+    Expand-Archive -Path \$zip -DestinationPath \$nebulaDir -Force
+    Remove-Item \$zip -Force
+}
+
+Write-Host "[2/3] Guardando configuracion de NetCrew..." -ForegroundColor Cyan
+\$bytes = [Convert]::FromBase64String('{$b64Yml}')
+[IO.File]::WriteAllBytes((Join-Path \$nebulaDir 'config.yml'), \$bytes)
+
+Write-Host "[3/3] Iniciando servicio Nebula..." -ForegroundColor Cyan
+net stop Nebula 2>\$null | Out-Null
+& (Join-Path \$nebulaDir 'nebula.exe') -service uninstall 2>\$null | Out-Null
+& (Join-Path \$nebulaDir 'nebula.exe') -service install -config (Join-Path \$nebulaDir 'config.yml')
+net start Nebula
+
+Write-Host "Listo! Tu equipo Windows ya esta conectado a NetCrew." -ForegroundColor Green
+PS1;
     }
 
     private static function buildLinux(string $slug, string $ymlContent): array

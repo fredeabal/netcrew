@@ -276,7 +276,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 <?php endif; ?>
 
 <!-- =====================================================================
-     DESCARGAR CONFIGURADOR AUTOMÁTICO POR PLATAFORMA
+     CONFIGURADOR AUTOMÁTICO POR PLATAFORMA (SELECT + COMANDO)
      ===================================================================== -->
 <?php if (!empty($device->active) && !empty($network->active)): ?>
 <div class="row">
@@ -285,44 +285,185 @@ $timeAgoView = static function (?int $ts, int $ref): string {
       <div class="card-body">
         <div class="d-flex align-items-center gap-2 mb-3">
           <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
-            <i class="ti ti-download fs-5"></i>
+            <i class="ti ti-terminal-2 fs-5"></i>
           </div>
           <div>
-            <h5 class="fw-semibold mb-0">Configurador de Cliente</h5>
-            <small class="text-muted">Descarga el instalador automático según el sistema operativo o el archivo <code>.yml</code> para móvil.</small>
+            <h5 class="fw-semibold mb-0">Instalar y Conectar Cliente</h5>
+            <small class="text-muted">Selecciona el sistema operativo del dispositivo para ver el comando de instalación rápida.</small>
           </div>
         </div>
 
-        <div class="row g-2 justify-content-center">
-          <div class="col-6 col-md-auto">
-            <a href="<?= site_url('devices/download/' . $device->id . '?platform=mac') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
-              <i class="ti ti-brand-apple"></i>
-              <span>macOS (.zip)</span>
-            </a>
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-5">
+            <label for="installPlatformSelect" class="form-label fw-semibold">Sistema Operativo</label>
+            <select class="select2 form-control custom-select" id="installPlatformSelect" style="width: 100%">
+              <option value="mac">macOS (Apple Silicon / Intel)</option>
+              <option value="windows">Windows (10 / 11)</option>
+              <option value="linux">Linux (Ubuntu / Debian / etc.)</option>
+              <option value="mobile">iOS / Android (Móvil / Tablet)</option>
+            </select>
           </div>
-          <div class="col-6 col-md-auto">
-            <a href="<?= site_url('devices/download/' . $device->id . '?platform=windows') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
-              <i class="ti ti-brand-windows"></i>
-              <span>Windows (.bat)</span>
-            </a>
+          <div class="col-12 col-md-7">
+            <div class="row g-2 justify-content-center justify-content-md-start">
+              <div class="col-6 col-sm-auto" id="wrapBtnCopyCmd">
+                <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm w-100 px-sm-3 d-inline-flex align-items-center justify-content-center gap-1">
+                  <i class="ti ti-copy"></i>
+                  <span>Generar y Copiar Comando</span>
+                </button>
+              </div>
+              <div class="col-6 col-sm-auto">
+                <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm w-100 px-sm-3 d-inline-flex align-items-center justify-content-center gap-1">
+                  <i class="ti ti-download"></i>
+                  <span id="lblDownloadFile">Descargar .yml</span>
+                </a>
+              </div>
+            </div>
           </div>
-          <div class="col-6 col-md-auto">
-            <a href="<?= site_url('devices/download/' . $device->id . '?platform=linux') ?>" class="btn btn-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
-              <i class="ti ti-brand-ubuntu"></i>
-              <span>Linux (.sh)</span>
-            </a>
+        </div>
+
+        <div id="installCommandBox" class="mt-3 p-3 rounded border bg-body-tertiary">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <small class="fw-semibold text-muted" id="installCommandHint">Pega este comando en Terminal:</small>
+            <small class="text-muted" id="installCommandStatus">Pulsa "Generar y Copiar Comando" para obtener un enlace válido por 60 min.</small>
           </div>
-          <div class="col-6 col-md-auto">
-            <a href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm w-100 px-md-3 d-inline-flex align-items-center justify-content-center gap-1">
-              <i class="ti ti-file-code"></i>
-              <span>Archivo .yml</span>
-            </a>
-          </div>
+          <pre class="mb-0 net-mono small text-break" style="white-space: pre-wrap;"><code id="installCommandPreview">bash &lt;(curl -fsSL "<?= esc(site_url('connect/TOKEN/download?platform=mac-sh')) ?>")</code></pre>
+        </div>
+
+        <div id="installMobileBox" class="mt-3 p-3 rounded border bg-body-tertiary d-none">
+          <p class="mb-0 small text-muted">
+            1. Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.<br>
+            2. Pulsa <strong>Descargar .yml</strong> e importa el archivo en la app.
+          </p>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const selectEl = document.getElementById('installPlatformSelect');
+  const cmdBox = document.getElementById('installCommandBox');
+  const mobBox = document.getElementById('installMobileBox');
+  const wrapCopy = document.getElementById('wrapBtnCopyCmd');
+  const cmdPreview = document.getElementById('installCommandPreview');
+  const cmdHint = document.getElementById('installCommandHint');
+  const cmdStatus = document.getElementById('installCommandStatus');
+  const btnGen = document.getElementById('btnGenerateCommand');
+  const lnkDl = document.getElementById('lnkDownloadYml');
+  const lblDl = document.getElementById('lblDownloadFile');
+
+  const deviceId = <?= (int) $device->id ?>;
+  const baseConnect = <?= json_encode(rtrim(site_url('connect'), '/')) ?>;
+  const baseDownload = <?= json_encode(site_url('devices/download/' . $device->id)) ?>;
+  let activeToken = null;
+
+  function buildCommand(platform, token) {
+    const t = token || 'TOKEN';
+    if (platform === 'mac') {
+      return `bash <(curl -fsSL "${baseConnect}/${t}/download?platform=mac-sh")`;
+    }
+    if (platform === 'windows') {
+      return `powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm '${baseConnect}/${t}/download?platform=win-ps1')"`;
+    }
+    if (platform === 'linux') {
+      return `sudo bash <(curl -fsSL "${baseConnect}/${t}/download?platform=linux")`;
+    }
+    return '';
+  }
+
+  function updatePlatformUI() {
+    const p = selectEl.value;
+    if (p === 'mobile') {
+      cmdBox.classList.add('d-none');
+      wrapCopy.classList.add('d-none');
+      mobBox.classList.remove('d-none');
+      lnkDl.href = baseDownload + '?platform=yml';
+      lblDl.textContent = 'Descargar .yml';
+      return;
+    }
+
+    mobBox.classList.add('d-none');
+    cmdBox.classList.remove('d-none');
+    wrapCopy.classList.remove('d-none');
+
+    if (p === 'mac') {
+      cmdHint.textContent = 'Pega este comando en Terminal (macOS):';
+      lnkDl.href = baseDownload + '?platform=yml';
+      lblDl.textContent = 'Descargar .yml';
+    } else if (p === 'windows') {
+      cmdHint.textContent = 'Pega este comando en PowerShell (como Administrador):';
+      lnkDl.href = baseDownload + '?platform=windows';
+      lblDl.textContent = 'Descargar .bat';
+    } else if (p === 'linux') {
+      cmdHint.textContent = 'Pega este comando en Terminal (Linux):';
+      lnkDl.href = baseDownload + '?platform=linux';
+      lblDl.textContent = 'Descargar .sh';
+    }
+
+    cmdPreview.textContent = buildCommand(p, activeToken);
+  }
+
+  if (selectEl) {
+    selectEl.addEventListener('change', updatePlatformUI);
+    if (typeof jQuery !== 'undefined') {
+      jQuery(selectEl).on('change.select2', updatePlatformUI);
+    }
+    updatePlatformUI();
+  }
+
+  if (btnGen) {
+    btnGen.addEventListener('click', function() {
+      btnGen.disabled = true;
+      fetch('<?= site_url('devices/share/' . $device->id) ?>', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
+        }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success || !data.token) {
+          throw new Error(data.message || 'No se pudo generar el comando.');
+        }
+        activeToken = data.token;
+        const cmd = buildCommand(selectEl.value, activeToken);
+        cmdPreview.textContent = cmd;
+        cmdStatus.textContent = 'Comando listo (válido por 60 min y 1 uso).';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(cmd).then(() => true).catch(() => false);
+        }
+        return false;
+      })
+      .then(copied => {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        Swal.fire({
+          icon: 'success',
+          title: copied ? 'Comando copiado' : 'Comando generado',
+          text: copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado debajo del selector.',
+          timer: 3000,
+          showConfirmButton: false,
+          background: isDark ? '#0b1114' : '#f8f9fa',
+          color: isDark ? '#ffffff' : '#0b1114'
+        });
+      })
+      .catch(err => {
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.message || 'No se pudo generar el comando.',
+          background: isDark ? '#0b1114' : '#f8f9fa',
+          color: isDark ? '#ffffff' : '#0b1114',
+          confirmButtonColor: '#F38020'
+        });
+      })
+      .finally(() => { btnGen.disabled = false; });
+    });
+  }
+});
+</script>
 <?php endif; ?>
 
 <!-- =====================================================================

@@ -127,7 +127,7 @@ BASH;
     {
         $b64Yml = base64_encode($ymlContent);
 
-        $bat = <<<BAT
+        $bat = <<<'BAT'
 @echo off
 setlocal
 title NetCrew - Configurador Automatico Windows
@@ -141,31 +141,26 @@ if %errorlevel% neq 0 (
 )
 
 echo ==========================================
-echo   NetCrew - Configurador Automatico Win   
+echo   NetCrew - Configurador Automatico Win
 echo ==========================================
 echo.
 
 set "NEBULA_DIR=C:\Program Files\Nebula"
 if not exist "%NEBULA_DIR%" mkdir "%NEBULA_DIR%"
 
-if not exist "%NEBULA_DIR%\nebula.exe" (
-    echo [1/3] Descargando Nebula oficial para Windows...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "\$ProgressPreference='SilentlyContinue'; " ^
-      "\$rel = Invoke-RestMethod 'https://api.github.com/repos/slackhq/nebula/releases/latest'; " ^
-      "\$asset = \$rel.assets | Where-Object { \$_.name -match 'nebula-windows-amd64\.zip$' } | Select-Object -First 1; " ^
-      "\$zip = Join-Path \$env:TEMP 'nebula-win.zip'; " ^
-      "Invoke-WebRequest -Uri \$asset.browser_download_url -OutFile \$zip; " ^
-      "Expand-Archive -Path \$zip -DestinationPath '%NEBULA_DIR%' -Force; " ^
-      "Remove-Item \$zip -Force"
-) else (
-    echo [1/3] Nebula ya esta instalado.
-)
+if exist "%NEBULA_DIR%\nebula.exe" goto :has_nebula
+echo [1/3] Descargando Nebula oficial para Windows...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $rel=Invoke-RestMethod 'https://api.github.com/repos/slackhq/nebula/releases/latest'; $asset=$rel.assets | Where-Object { $_.name -match 'nebula-windows-amd64\.zip$' } | Select-Object -First 1; $zip=Join-Path $env:TEMP 'nebula-win.zip'; Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip; Expand-Archive -Path $zip -DestinationPath (Join-Path $env:ProgramFiles 'Nebula') -Force; Remove-Item $zip -Force"
+if errorlevel 1 goto :err_download
+goto :write_cfg
 
+:has_nebula
+echo [1/3] Nebula ya esta instalado.
+
+:write_cfg
 echo [2/3] Escribiendo configuracion de NetCrew...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "\$bytes = [Convert]::FromBase64String('{$b64Yml}'); " ^
-  "[IO.File]::WriteAllBytes('%NEBULA_DIR%\config.yml', \$bytes)"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$bytes=[Convert]::FromBase64String('__B64_YML__'); [IO.File]::WriteAllBytes((Join-Path $env:ProgramFiles 'Nebula\config.yml'), $bytes)"
+if errorlevel 1 goto :err_cfg
 
 echo [3/3] Registrando e iniciando servicio Nebula...
 net stop Nebula >nul 2>&1
@@ -176,8 +171,20 @@ net start Nebula
 echo.
 echo Listo! Tu equipo Windows ya esta conectado a NetCrew.
 pause
+exit /b 0
+
+:err_download
+echo Error al descargar Nebula. Comprueba tu conexion a Internet.
+pause
+exit /b 1
+
+:err_cfg
+echo Error al escribir la configuracion de NetCrew.
+pause
+exit /b 1
 BAT;
 
+        $bat = str_replace('__B64_YML__', $b64Yml, $bat);
         $bat = str_replace("\n", "\r\n", str_replace("\r\n", "\n", $bat));
 
         return [

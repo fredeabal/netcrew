@@ -123,9 +123,24 @@ BASH;
         ];
     }
 
+    /**
+     * Garantiza que `tun.dev` tenga un nombre explícito en Windows (Wintun 0.14
+     * falla con "Failed to set adapter name" si `tun.dev` queda vacío).
+     */
+    private static function ensureWindowsTunDev(string $ymlContent, string $devName = 'Nebula'): string
+    {
+        if (preg_match('/^tun:\R(?:[ \t]+.*\R)*?[ \t]+dev:/m', $ymlContent)) {
+            return $ymlContent;
+        }
+
+        $updated = preg_replace('/^(tun:\R)/m', "$1  dev: {$devName}\n", $ymlContent, 1);
+
+        return is_string($updated) ? $updated : $ymlContent;
+    }
+
     private static function buildWindows(string $slug, string $ymlContent): array
     {
-        $b64Yml = base64_encode($ymlContent);
+        $b64Yml = base64_encode(self::ensureWindowsTunDev($ymlContent));
 
         $bat = <<<'BAT'
 @echo off
@@ -164,8 +179,12 @@ if errorlevel 1 goto :err_cfg
 
 echo [3/3] Registrando e iniciando servicio Nebula...
 net stop Nebula >nul 2>&1
+taskkill /F /IM nebula.exe >nul 2>&1
 "%NEBULA_DIR%\nebula.exe" -service uninstall >nul 2>&1
 "%NEBULA_DIR%\nebula.exe" -service install -config "%NEBULA_DIR%\config.yml"
+sc.exe failure Nebula reset= 86400 actions= restart/5000/restart/10000/restart/30000 >nul 2>&1
+sc.exe config Nebula start= delayed-auto >nul 2>&1
+netsh advfirewall firewall show rule name="NetCrew Nebula ICMPv4" >nul 2>&1 || netsh advfirewall firewall add rule name="NetCrew Nebula ICMPv4" dir=in action=allow protocol=icmpv4:8,any >nul 2>&1
 net start Nebula
 
 echo.
@@ -196,7 +215,7 @@ BAT;
 
     private static function buildWindowsPs1(string $ymlContent): string
     {
-        $b64Yml = base64_encode($ymlContent);
+        $b64Yml = base64_encode(self::ensureWindowsTunDev($ymlContent));
 
         return <<<PS1
 \$ErrorActionPreference = 'Stop'
@@ -226,8 +245,14 @@ Write-Host "[2/3] Guardando configuracion de NetCrew..." -ForegroundColor Cyan
 
 Write-Host "[3/3] Iniciando servicio Nebula..." -ForegroundColor Cyan
 net stop Nebula 2>\$null | Out-Null
+Stop-Process -Name nebula -Force -ErrorAction SilentlyContinue
 & (Join-Path \$nebulaDir 'nebula.exe') -service uninstall 2>\$null | Out-Null
 & (Join-Path \$nebulaDir 'nebula.exe') -service install -config (Join-Path \$nebulaDir 'config.yml')
+sc.exe failure Nebula reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null
+sc.exe config Nebula start= delayed-auto | Out-Null
+if (-not (Get-NetFirewallRule -DisplayName 'NetCrew Nebula ICMPv4' -ErrorAction SilentlyContinue)) {
+    New-NetFirewallRule -DisplayName 'NetCrew Nebula ICMPv4' -Direction Inbound -Protocol ICMPv4 -IcmpType 8 -Action Allow | Out-Null
+}
 net start Nebula
 
 Write-Host "Listo! Tu equipo Windows ya esta conectado a NetCrew." -ForegroundColor Green

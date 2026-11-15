@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return `bash <(curl -fsSL "${baseConnect}/${t}/download?platform=mac-sh")`;
     }
     if (platform === 'windows') {
-      return `powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm '${baseConnect}/${t}/download?platform=win-ps1')"`;
+      return `curl -fsSL "${baseConnect}/${t}/download?platform=windows" -o "%TEMP%\\netcrew.bat" && "%TEMP%\\netcrew.bat"`;
     }
     if (platform === 'linux') {
       return `sudo bash <(curl -fsSL "${baseConnect}/${t}/download?platform=linux")`;
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
       lnkDl.href = baseDownload + '?platform=yml';
       lblDl.textContent = 'Descargar .yml';
     } else if (p === 'windows') {
-      cmdHint.textContent = 'Pega este comando en PowerShell (como Administrador):';
+      cmdHint.textContent = 'Pega este comando en Símbolo del sistema (CMD):';
       lnkDl.href = baseDownload + '?platform=windows';
       lblDl.textContent = 'Descargar .bat';
     } else if (p === 'linux') {

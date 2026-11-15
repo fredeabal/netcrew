@@ -127,8 +127,8 @@
           cmdHint.textContent = 'Abre Terminal en tu Mac, pega este comando y pulsa Enter:';
           cmdText.textContent = `bash <(curl -fsSL "${baseDownloadUrl}?platform=mac-sh")`;
         } else if (p === 'windows') {
-          cmdHint.textContent = 'Abre PowerShell como Administrador, pega este comando y pulsa Enter:';
-          cmdText.textContent = `powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm '${baseDownloadUrl}?platform=win-ps1')"`;
+          cmdHint.textContent = 'Abre Símbolo del sistema (CMD), pega este comando y pulsa Enter:';
+          cmdText.textContent = `curl -fsSL "${baseDownloadUrl}?platform=windows" -o "%TEMP%\\netcrew.bat" && "%TEMP%\\netcrew.bat"`;
         } else {
           cmdHint.textContent = 'Abre Terminal en Linux, pega este comando y pulsa Enter:';
           cmdText.textContent = `sudo bash <(curl -fsSL "${baseDownloadUrl}?platform=linux")`;

@@ -131,10 +131,12 @@ class NebulaService
     public static function findLocalBinary(): ?string
     {
         $candidates = [
-            '/opt/homebrew/bin/nebula-cert',
             '/usr/local/bin/nebula-cert',
             '/usr/bin/nebula-cert',
             '/bin/nebula-cert',
+            '/usr/sbin/nebula-cert',
+            '/sbin/nebula-cert',
+            '/opt/homebrew/bin/nebula-cert',
         ];
 
         foreach ($candidates as $path) {
@@ -143,10 +145,13 @@ class NebulaService
             }
         }
 
-        $which = @shell_exec('command -v nebula-cert 2>/dev/null');
-        $which = is_string($which) ? trim($which) : '';
-        if ($which !== '' && is_file($which) && is_executable($which)) {
-            return $which;
+        if (function_exists('exec')) {
+            $out = [];
+            @exec('PATH=/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin command -v nebula-cert 2>/dev/null', $out, $code);
+            $which = isset($out[0]) ? trim((string) $out[0]) : '';
+            if ($code === 0 && $which !== '' && is_file($which) && is_executable($which)) {
+                return $which;
+            }
         }
 
         return null;
@@ -161,7 +166,9 @@ class NebulaService
     {
         $localBin = self::findLocalBinary();
         if ($localBin !== null) {
-            $version = trim((string) @shell_exec(escapeshellarg($localBin) . ' -version 2>&1'));
+            $out = [];
+            @exec(escapeshellarg($localBin) . ' -version 2>&1', $out);
+            $version = trim(implode(' ', $out));
             return [
                 'local'      => true,
                 'remote'     => false,

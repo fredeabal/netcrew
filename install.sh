@@ -64,18 +64,20 @@ if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; th
 fi
 if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; then
     echo -e "${YELLOW}⏳ Descargando binarios oficiales de Nebula...${NC}"
-    ARCH=$(dpkg --print-architecture)
+    ARCH=$(dpkg --print-architecture 2>/dev/null || uname -m)
     case "$ARCH" in
-        amd64) NEBULA_ARCH="linux-amd64" ;;
-        arm64) NEBULA_ARCH="linux-arm64" ;;
-        armhf) NEBULA_ARCH="linux-arm-7" ;;
+        amd64|x86_64) NEBULA_ARCH="linux-amd64" ;;
+        arm64|aarch64) NEBULA_ARCH="linux-arm64" ;;
+        armhf|armv7l) NEBULA_ARCH="linux-arm-7" ;;
         *) NEBULA_ARCH="linux-amd64" ;;
     esac
-    NEBULA_URL=$(curl -s https://api.github.com/repos/slackhq/nebula/releases/latest | grep -oE "https://[^\"]+nebula-${NEBULA_ARCH}\.tar\.gz" | head -n 1)
-    if [ -n "$NEBULA_URL" ]; then
-        curl -sL "$NEBULA_URL" | tar -xz -C /usr/local/bin/
-        chmod +x /usr/local/bin/nebula /usr/local/bin/nebula-cert
+    TMP_NEBULA=$(mktemp -d /tmp/nebula_dl.XXXXXX)
+    if curl -fsSL "https://github.com/slackhq/nebula/releases/latest/download/nebula-${NEBULA_ARCH}.tar.gz" -o "${TMP_NEBULA}/nebula.tar.gz" || \
+       curl -fsSL "https://github.com/slackhq/nebula/releases/download/v1.9.5/nebula-${NEBULA_ARCH}.tar.gz" -o "${TMP_NEBULA}/nebula.tar.gz"; then
+        tar -xzf "${TMP_NEBULA}/nebula.tar.gz" -C /usr/local/bin/
+        chmod 755 /usr/local/bin/nebula /usr/local/bin/nebula-cert
     fi
+    rm -rf "$TMP_NEBULA"
 fi
 
 # Instalación de Composer si no está presente

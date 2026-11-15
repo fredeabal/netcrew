@@ -56,7 +56,27 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y nginx git unzip curl \
     php-fpm php-cli php-sqlite3 php-curl php-intl php-mbstring php-xml php-zip \
-    wireguard wireguard-tools iptables openssh-server
+    openssh-server
+
+# Instalación de Nebula (apt o binario oficial si no está disponible en repositorios)
+if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; then
+    apt-get install -y nebula 2>/dev/null || true
+fi
+if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; then
+    echo -e "${YELLOW}⏳ Descargando binarios oficiales de Nebula...${NC}"
+    ARCH=$(dpkg --print-architecture)
+    case "$ARCH" in
+        amd64) NEBULA_ARCH="linux-amd64" ;;
+        arm64) NEBULA_ARCH="linux-arm64" ;;
+        armhf) NEBULA_ARCH="linux-arm-7" ;;
+        *) NEBULA_ARCH="linux-amd64" ;;
+    esac
+    NEBULA_URL=$(curl -s https://api.github.com/repos/slackhq/nebula/releases/latest | grep -oE "https://[^\"]+nebula-${NEBULA_ARCH}\.tar\.gz" | head -n 1)
+    if [ -n "$NEBULA_URL" ]; then
+        curl -sL "$NEBULA_URL" | tar -xz -C /usr/local/bin/
+        chmod +x /usr/local/bin/nebula /usr/local/bin/nebula-cert
+    fi
+fi
 
 # Instalación de Composer si no está presente
 if ! command -v composer &> /dev/null; then
@@ -75,7 +95,7 @@ if [ ! -f "./spark" ]; then
         cd /tmp
         rm -rf "$INSTALL_DIR"
     fi
-    git clone https://github.com/fredeabal/netcrew.git "$INSTALL_DIR"
+    git clone -b feat/nebula-p2p https://github.com/fredeabal/netcrew.git "$INSTALL_DIR"
 else
     echo -e "${YELLOW}⏳ [2/6] Preparando el directorio del proyecto en ${INSTALL_DIR}...${NC}"
     mkdir -p "$INSTALL_DIR"
@@ -132,17 +152,36 @@ echo -e "\n${YELLOW}⏳ [5/6] Configurando la base de datos y creando usuario in
 # Permisos temporales para migrar
 chmod -R 777 writable/
 
-# Configuración automática de WireGuard y SSH local
-sysctl -w net.ipv4.ip_forward=1 > /dev/null 2>&1 || true
-sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf 2>/dev/null || true
-
+# Configuración automática de Nebula (Lighthouse) y SSH local
 systemctl enable ssh > /dev/null 2>&1 || true
 systemctl start ssh > /dev/null 2>&1 || true
 
-mkdir -p /etc/wireguard
-if [ ! -f "/etc/wireguard/privatekey" ] || [ ! -f "/etc/wireguard/publickey" ]; then
-    wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey 2>/dev/null || true
-    chmod 600 /etc/wireguard/privatekey /etc/wireguard/publickey 2>/dev/null || true
+mkdir -p /etc/nebula
+chmod 700 /etc/nebula
+
+if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
+    ufw allow 4242/udp > /dev/null 2>&1 || true
+fi
+
+if [ ! -f /etc/systemd/system/nebula.service ]; then
+    NEBULA_BIN=$(command -v nebula || echo "/usr/local/bin/nebula")
+    cat > /etc/systemd/system/nebula.service <<EOF
+[Unit]
+Description=Nebula P2P Mesh Lighthouse
+Wants=basic.target
+After=basic.target network.target
+ConditionPathExists=/etc/nebula/config.yml
+
+[Service]
+ExecStart=${NEBULA_BIN} -config /etc/nebula/config.yml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable nebula > /dev/null 2>&1 || true
 fi
 
 SSH_KEY_FILE="${INSTALL_DIR}/writable/netcrew_ssh_key"

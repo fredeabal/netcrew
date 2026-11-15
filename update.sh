@@ -91,7 +91,53 @@ git fetch origin
 git checkout -B feat/nebula-p2p origin/feat/nebula-p2p
 git reset --hard origin/feat/nebula-p2p
 
-echo -e "${YELLOW}⏳ [2/5] Actualizando dependencias de PHP (Composer)...${NC}"
+echo -e "${YELLOW}⏳ [2/6] Verificando binarios de Nebula (nebula / nebula-cert)...${NC}"
+if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; then
+    DEBIAN_FRONTEND=noninteractive apt-get update -y > /dev/null 2>&1 || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nebula > /dev/null 2>&1 || true
+fi
+if ! command -v nebula-cert &> /dev/null || ! command -v nebula &> /dev/null; then
+    ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+    case "$ARCH" in
+        amd64) NEBULA_ARCH="linux-amd64" ;;
+        arm64) NEBULA_ARCH="linux-arm64" ;;
+        armhf) NEBULA_ARCH="linux-arm-7" ;;
+        *) NEBULA_ARCH="linux-amd64" ;;
+    esac
+    NEBULA_URL=$(curl -s https://api.github.com/repos/slackhq/nebula/releases/latest | grep -oE "https://[^\"]+nebula-${NEBULA_ARCH}\.tar\.gz" | head -n 1)
+    if [ -n "$NEBULA_URL" ]; then
+        curl -sL "$NEBULA_URL" | tar -xz -C /usr/local/bin/
+        chmod +x /usr/local/bin/nebula /usr/local/bin/nebula-cert
+    fi
+fi
+
+mkdir -p /etc/nebula
+chmod 700 /etc/nebula
+if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
+    ufw allow 4242/udp > /dev/null 2>&1 || true
+fi
+if [ ! -f /etc/systemd/system/nebula.service ]; then
+    NEBULA_BIN=$(command -v nebula || echo "/usr/local/bin/nebula")
+    cat > /etc/systemd/system/nebula.service <<EOF
+[Unit]
+Description=Nebula P2P Mesh Lighthouse
+Wants=basic.target
+After=basic.target network.target
+ConditionPathExists=/etc/nebula/config.yml
+
+[Service]
+ExecStart=${NEBULA_BIN} -config /etc/nebula/config.yml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable nebula > /dev/null 2>&1 || true
+fi
+
+echo -e "${YELLOW}⏳ [3/6] Actualizando dependencias de PHP (Composer)...${NC}"
 export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader --no-interaction
 

@@ -1591,6 +1591,7 @@ a.net-name:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .install-action-btn {
@@ -1602,17 +1603,19 @@ a.net-name:hover {
     padding: 0.45rem 0.95rem;
     font-weight: 500;
     border-radius: 7px;
-    flex: 1 1 auto;
+    flex: 1 1 12rem;
+    white-space: nowrap;
 }
 
 @container install-card (min-width: 44rem) {
     .install-controls-row {
-        grid-template-columns: minmax(15rem, 22rem) 1fr;
+        grid-template-columns: minmax(15rem, 1fr) minmax(0, 1.35fr);
         gap: 0.875rem;
     }
 
     .install-action-btn {
-        flex: 0 0 auto;
+        flex: 1 1 0;
+        min-inline-size: 0;
     }
 }
 

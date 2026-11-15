@@ -286,7 +286,6 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               <i class="ti ti-terminal text-primary" aria-hidden="true"></i>
               <span>Pega este comando en Terminal (macOS):</span>
             </small>
-            <span class="install-terminal-status" id="installCommandStatus">Enlace válido 60 min · 1 uso</span>
           </div>
           <div class="install-terminal-body">
             <span class="install-terminal-prompt" aria-hidden="true">$</span>
@@ -325,7 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const mobBox = document.getElementById('installMobileBox');
   const cmdPreview = document.getElementById('installCommandPreview');
   const cmdHint = document.getElementById('installCommandHint').querySelector('span');
-  const cmdStatus = document.getElementById('installCommandStatus');
   const btnGen = document.getElementById('btnGenerateCommand');
   const btnInlineCopy = document.getElementById('btnInlineCopyCmd');
   const lnkDl = document.getElementById('lnkDownloadYml');
@@ -486,8 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
         activeToken = data.token;
         const cmd = buildCommand(selectEl.value, activeToken);
         renderCommandPreview(cmd, activeToken);
-        cmdStatus.textContent = 'Listo · 60 min (1 uso)';
-        cmdStatus.classList.add('is-ready');
         if (navigator.clipboard && navigator.clipboard.writeText) {
           return navigator.clipboard.writeText(cmd).then(() => true).catch(() => false);
         }

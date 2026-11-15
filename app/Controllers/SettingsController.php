@@ -3,13 +3,14 @@
 namespace App\Controllers;
 
 use App\Libraries\NebulaService;
+use App\Models\AuditLogModel;
 
 class SettingsController extends BaseController
 {
     public function index(?string $tab = null)
     {
         $requestedTab = $tab ?? (string) $this->request->getGet('tab');
-        $allowedTabs  = ['nebula', 'smtp', 'maintenance'];
+        $allowedTabs  = ['nebula', 'smtp', 'audit', 'maintenance'];
         $currentTab   = in_array($requestedTab, $allowedTabs, true) ? $requestedTab : 'nebula';
 
         $settings = service('settings');
@@ -26,6 +27,23 @@ class SettingsController extends BaseController
         $logsStats          = $this->getDirStats(WRITEPATH . 'logs');
         $cacheStats         = $this->getDirStats(WRITEPATH . 'cache');
         $isNebulaConfigured = NebulaService::isConfigured();
+
+        // 3. Auditoría
+        $auditModel = new AuditLogModel();
+        $search     = $this->request->getGet('q');
+        $builder    = $auditModel->orderBy('id', 'DESC');
+
+        if (! empty($search)) {
+            $builder->groupStart()
+                ->like('username', $search)
+                ->orLike('action', $search)
+                ->orLike('description', $search)
+                ->orLike('ip_address', $search)
+                ->groupEnd();
+        }
+
+        $auditLogs  = $builder->paginate(25, 'audit');
+        $auditPager = $auditModel->pager;
 
         $data = [
             'title'                   => 'Configuración',
@@ -53,6 +71,10 @@ class SettingsController extends BaseController
             'smtp_port'               => $settings->get('Email.SMTPPort') ?: 587,
             'smtp_crypto'             => $settings->get('Email.SMTPCrypto') ?: 'tls',
             'mailType'                => $settings->get('Email.mailType') ?: 'html',
+            // Auditoría
+            'logs'                    => $auditLogs,
+            'pager'                   => $auditPager,
+            'search'                  => $search,
             // Mantenimiento
             'stats' => [
                 'dbSize'         => $this->formatBytes($dbSize),

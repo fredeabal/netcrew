@@ -53,6 +53,18 @@
     </button>
   </li>
   <li class="nav-item" role="presentation">
+    <button class="nav-link <?= $currentTab === 'audit' ? 'active' : '' ?>"
+            id="tab-audit-btn"
+            data-bs-toggle="tab"
+            data-bs-target="#tab-audit"
+            type="button"
+            role="tab"
+            aria-controls="tab-audit"
+            aria-selected="<?= $currentTab === 'audit' ? 'true' : 'false' ?>">
+      <i class="ti ti-history me-1"></i> Auditoría
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
     <button class="nav-link <?= $currentTab === 'maintenance' ? 'active' : '' ?>"
             id="tab-maintenance-btn"
             data-bs-toggle="tab"
@@ -76,6 +88,10 @@
 
   <div class="tab-pane fade <?= $currentTab === 'smtp' ? 'show active' : '' ?>" id="tab-smtp" role="tabpanel" aria-labelledby="tab-smtp-btn">
     <?= view('settings/_smtp', get_defined_vars()) ?>
+  </div>
+
+  <div class="tab-pane fade <?= $currentTab === 'audit' ? 'show active' : '' ?>" id="tab-audit" role="tabpanel" aria-labelledby="tab-audit-btn">
+    <?= view('settings/_audit', get_defined_vars()) ?>
   </div>
 
   <div class="tab-pane fade <?= $currentTab === 'maintenance' ? 'show active' : '' ?>" id="tab-maintenance" role="tabpanel" aria-labelledby="tab-maintenance-btn">

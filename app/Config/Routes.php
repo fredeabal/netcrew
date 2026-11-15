@@ -34,7 +34,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('roles/update/(:segment)', 'RolesController::update/$1', ['filter' => 'permission:admin.roles']);
 
     // Registro de Auditoría
-    $routes->get('audit-logs', 'AuditLogsController::index', ['filter' => 'permission:admin.settings']);
+    $routes->get('audit-logs', 'SettingsController::index/audit', ['filter' => 'permission:admin.settings']);
 });
 
 // Rutas de Superadmin (Configuración - requieren permisos)

@@ -83,14 +83,6 @@
                      <span class="hide-menu">Configuración</span>
                    </a>
                  </li>
-                  <li class="sidebar-item">
-                    <a href="<?= base_url('audit-logs') ?>" class="sidebar-link">
-                      <div class="round-16 d-flex align-items-center justify-content-center">
-                        <i class="ti ti-circle"></i>
-                      </div>
-                      <span class="hide-menu">Auditoría</span>
-                    </a>
-                  </li>
                  <?php endif; ?>
               </ul>
             </li>

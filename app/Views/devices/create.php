@@ -59,15 +59,6 @@
           </div>
 
           <div class="mb-3">
-            <label for="routing_mode" class="form-label">Modo de Enrutamiento (Túnel)</label>
-            <select class="select2 form-control custom-select" id="routing_mode" name="routing_mode">
-              <option value="split" <?= old('routing_mode') === 'split' ? 'selected' : '' ?>>Split-Tunnel (Solo red VPN local)</option>
-              <option value="full" <?= old('routing_mode') === 'full' ? 'selected' : '' ?>>Full-Tunnel (Todo el tráfico de Internet por VPN - 0.0.0.0/0)</option>
-            </select>
-            <small class="text-muted d-block mt-1">Split-Tunnel permite navegar por tu Internet habitual y solo usar la VPN para la red interna. Full-Tunnel cifra todo el tráfico.</small>
-          </div>
-
-          <div class="mb-3">
             <label for="expiration" class="form-label">Expiración del Acceso</label>
             <select class="select2 form-control custom-select" id="expiration" name="expiration">
               <option value="never" <?= old('expiration') === 'never' ? 'selected' : '' ?>>Permanente (Sin expiración)</option>

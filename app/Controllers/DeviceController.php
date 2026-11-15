@@ -210,11 +210,10 @@ class DeviceController extends BaseController
         }
 
         $rules = [
-            'network_id'   => 'required|is_natural_no_zero',
-            'name'         => 'required|min_length[2]|max_length[100]',
-            'device_type'  => 'permit_empty|in_list[pc,server,mobile,tablet,router]',
-            'routing_mode' => 'permit_empty|in_list[split,full]',
-            'expiration'   => 'permit_empty|in_list[never,1d,7d,30d]',
+            'network_id'  => 'required|is_natural_no_zero',
+            'name'        => 'required|min_length[2]|max_length[100]',
+            'device_type' => 'permit_empty|in_list[pc,server,mobile,tablet,router]',
+            'expiration'  => 'permit_empty|in_list[never,1d,7d,30d]',
         ];
 
         if (!$this->validate($rules)) {
@@ -232,7 +231,7 @@ class DeviceController extends BaseController
         $networkId   = (int) $this->request->getPost('network_id');
         $name        = trim((string) $this->request->getPost('name'));
         $deviceType  = (string) ($this->request->getPost('device_type') ?: 'pc');
-        $routingMode = (string) ($this->request->getPost('routing_mode') ?: 'split');
+        $routingMode = 'split';
         $expiration  = (string) ($this->request->getPost('expiration') ?: 'never');
 
         $expiresAt = null;
@@ -451,10 +450,9 @@ class DeviceController extends BaseController
         }
 
         $rules = [
-            'name'         => 'required|min_length[2]|max_length[100]',
-            'device_type'  => 'required|in_list[pc,server,mobile,tablet,router]',
-            'routing_mode' => 'permit_empty|in_list[split,full]',
-            'expiration'   => 'permit_empty|in_list[keep,never,1d,7d,30d]',
+            'name'        => 'required|min_length[2]|max_length[100]',
+            'device_type' => 'required|in_list[pc,server,mobile,tablet,router]',
+            'expiration'  => 'permit_empty|in_list[keep,never,1d,7d,30d]',
         ];
 
         if (!$this->validate($rules)) {
@@ -471,13 +469,11 @@ class DeviceController extends BaseController
 
         $name        = trim((string) $this->request->getPost('name'));
         $deviceType  = (string) $this->request->getPost('device_type');
-        $routingMode = (string) ($this->request->getPost('routing_mode') ?: 'split');
         $expiration  = (string) ($this->request->getPost('expiration') ?: 'keep');
 
         $updateData = [
-            'name'         => $name,
-            'device_type'  => $deviceType,
-            'routing_mode' => $routingMode,
+            'name'        => $name,
+            'device_type' => $deviceType,
         ];
 
         if ($expiration === 'never') {
@@ -927,9 +923,6 @@ class DeviceController extends BaseController
             $logoUrl = base_url('assets/images/logos/dark-logo.svg');
             $appUrl = base_url();
             $year = date('Y');
-            $routingModeLabel = ($device->routing_mode ?? 'split') === 'full' 
-                ? 'Túnel Completo (Todo el tráfico)' 
-                : 'Túnel Dividido (Solo red VPN)';
 
             $htmlMessage = '
 <!DOCTYPE html>
@@ -969,12 +962,8 @@ class DeviceController extends BaseController
                                     <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #1e293b; font-weight: 600; text-align: right;">' . esc($network->name) . '</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #64748b; font-weight: 600;">IP Asignada</td>
-                                    <td style="padding: 10px 16px; border-bottom: 1px solid #edf2f7; color: #F38020; font-weight: 600; text-align: right; font-family: monospace;">' . esc($device->ip_address) . '</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px 16px; color: #64748b; font-weight: 600;">Enrutamiento</td>
-                                    <td style="padding: 10px 16px; color: #1e293b; font-weight: 600; text-align: right;">' . esc($routingModeLabel) . '</td>
+                                    <td style="padding: 10px 16px; color: #64748b; font-weight: 600;">IP Asignada</td>
+                                    <td style="padding: 10px 16px; color: #F38020; font-weight: 600; text-align: right; font-family: monospace;">' . esc($device->ip_address) . '</td>
                                 </tr>
                             </table>
 

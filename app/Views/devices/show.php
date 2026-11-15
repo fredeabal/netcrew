@@ -119,15 +119,6 @@ $timeAgoView = static function (?int $ts, int $ref): string {
               </span>
             </div>
           </div>
-          <div class="col-12 col-sm-6 col-lg-3">
-            <div class="border p-3 rounded h-100">
-              <span class="text-muted d-block small mb-1">Enrutamiento</span>
-              <span class="fw-semibold small <?= ($device->routing_mode ?? 'split') === 'full' ? 'text-danger' : 'text-primary' ?>">
-                <i class="ti <?= ($device->routing_mode ?? 'split') === 'full' ? 'ti-world' : 'ti-arrows-split' ?> me-1"></i>
-                <?= ($device->routing_mode ?? 'split') === 'full' ? 'Full-Tunnel (Internet)' : 'Split-Tunnel (Local)' ?>
-              </span>
-            </div>
-          </div>
 
           <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">

@@ -25,13 +25,9 @@
         <span class="text-muted">Red:</span>
         <span class="text-white fw-semibold"><?= esc($network->name) ?></span>
       </div>
-      <div class="d-flex justify-content-between mb-1">
+      <div class="d-flex justify-content-between">
         <span class="text-muted">IP asignada:</span>
         <span class="net-mono"><?= esc($device->ip_address) ?></span>
-      </div>
-      <div class="d-flex justify-content-between">
-        <span class="text-muted">Enrutamiento:</span>
-        <span class="text-primary"><?= ($device->routing_mode ?? 'split') === 'full' ? 'Todo el Tráfico (Internet)' : 'Red Local' ?></span>
       </div>
     </div>
 

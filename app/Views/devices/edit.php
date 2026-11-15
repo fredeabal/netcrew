@@ -61,16 +61,6 @@
           </div>
 
           <div class="mb-3">
-            <label for="routing_mode" class="form-label">Modo de Enrutamiento (Túnel)</label>
-            <?php $currentRouting = old('routing_mode', $device->routing_mode ?? 'split'); ?>
-            <select class="select2 form-control custom-select" id="routing_mode" name="routing_mode">
-              <option value="split" <?= $currentRouting === 'split' ? 'selected' : '' ?>>Split-Tunnel (Solo red VPN local)</option>
-              <option value="full" <?= $currentRouting === 'full' ? 'selected' : '' ?>>Full-Tunnel (Todo el tráfico / Salida a Internet por VPN - 0.0.0.0/0)</option>
-            </select>
-            <small class="text-muted d-block mt-1">Si cambias el modo, el usuario deberá descargar o escanear la nueva configuración.</small>
-          </div>
-
-          <div class="mb-3">
             <label for="expiration" class="form-label">
               Expiración del Acceso
               <?php if (!empty($device->expires_at)): ?>

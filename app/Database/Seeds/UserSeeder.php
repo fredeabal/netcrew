@@ -86,6 +86,7 @@ class UserSeeder extends Seeder
         $admin = $users->findById($users->getInsertID());
         $admin->addGroup('superadmin');
         $admin->activate();
+        $admin->forcePasswordReset();
 
         // Establecer puerto SMTP predeterminado en 587 y formato HTML
         $settings = service('settings');

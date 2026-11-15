@@ -191,11 +191,15 @@ cat > /usr/local/sbin/netcrew-lighthouse <<'EOF'
 set -e
 mkdir -p /etc/nebula
 chmod 700 /etc/nebula
-cat > /etc/nebula/config.yml
+TMP_CFG=$(mktemp /etc/nebula/config.yml.XXXXXX)
+trap 'rm -f "$TMP_CFG"' EXIT
+cat > "$TMP_CFG"
 if ! (exec 3<>/dev/net/tun) 2>/dev/null; then
-    sed -i '/^tun:/,/^[^ ]/ s/disabled: false/disabled: true/' /etc/nebula/config.yml
+    sed -i '/^tun:/,/^[^ ]/ s/disabled: false/disabled: true/' "$TMP_CFG"
 fi
-chmod 600 /etc/nebula/config.yml
+chmod 600 "$TMP_CFG"
+nebula -test -config "$TMP_CFG"
+mv -f "$TMP_CFG" /etc/nebula/config.yml
 systemctl enable nebula >/dev/null 2>&1 || true
 systemctl restart nebula
 EOF

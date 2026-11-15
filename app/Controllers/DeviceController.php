@@ -540,6 +540,9 @@ class DeviceController extends BaseController
         }
 
         if ($this->deviceModel->delete($id)) {
+            if (!empty($device->public_key)) {
+                NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key);
+            }
             \App\Models\AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})");
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
         }
@@ -572,6 +575,14 @@ class DeviceController extends BaseController
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
+        if (!$network->active) {
+            return redirect()->back()->with('error', 'La red se encuentra desactivada.');
+        }
+
+        if (!$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return redirect()->back()->with('error', 'No se pueden rotar claves de un dispositivo inactivo o expirado.');
+        }
+
         try {
             $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
             if (empty($network->nebula_ca_crt) || $caKey === '') {
@@ -585,12 +596,16 @@ class DeviceController extends BaseController
                 $device->nebula_groups ?: 'devices',
                 $device->expires_at
             );
+            $oldFingerprint = (string) ($device->public_key ?? '');
             $updateData = [
                 'public_key' => $signed['fingerprint'],
                 'nebula_crt' => $signed['crt'],
                 'nebula_key' => $signed['key'],
             ];
             if ($this->deviceModel->update($id, $updateData)) {
+                if ($oldFingerprint !== '' && $oldFingerprint !== $signed['fingerprint']) {
+                    NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint);
+                }
                 \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
                 return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado Nebula regenerado con éxito! Descarga la nueva configuración .yml.');
             }
@@ -641,6 +656,9 @@ class DeviceController extends BaseController
         }
 
         if ($this->deviceModel->update($id, ['active' => $newActiveStatus ? 1 : 0])) {
+            if (! $newActiveStatus && !empty($device->public_key)) {
+                NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key);
+            }
             $status = $newActiveStatus ? 'activado' : 'desactivado';
             \App\Models\AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}");
             return redirect()->to("networks/{$networkId}/devices")->with('message', "Nodo {$status}.");
@@ -671,11 +689,18 @@ class DeviceController extends BaseController
         }
 
         // Validar acceso a la red
-        if (!$this->hasNetworkAccess($network, 'view')) {
+        if (!$this->hasNetworkAccess($network, 'edit')) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Acceso denegado.'
             ])->setStatusCode(403);
+        }
+
+        if (!$network->active || !$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'El dispositivo o la red están inactivos o han expirado.'
+            ])->setStatusCode(400);
         }
 
         try {
@@ -718,7 +743,7 @@ class DeviceController extends BaseController
         }
 
         // Validar acceso a la red
-        if (!$this->hasNetworkAccess($network, 'view')) {
+        if (!$this->hasNetworkAccess($network, 'edit')) {
             return redirect()->to('/networks')->with('error', 'Acceso denegado.');
         }
 
@@ -781,10 +806,9 @@ class DeviceController extends BaseController
 
         $db = \Config\Database::connect();
 
-        // Limpiar tokens anteriores no utilizados para este nodo para reducir la superficie de exposición
+        // Limpiar tokens anteriores de este nodo para evitar reutilización
         $db->table('device_share_tokens')
            ->where('device_id', $device->id)
-           ->where('used', 0)
            ->delete();
 
         $db->table('device_share_tokens')->insert([
@@ -1094,6 +1118,7 @@ class DeviceController extends BaseController
 
         $row = $db->table('device_share_tokens')
                   ->where('token', $token)
+                  ->whereIn('used', [0, 1])
                   ->where('expires_at >', date('Y-m-d H:i:s'))
                   ->get()
                   ->getRow();
@@ -1102,6 +1127,20 @@ class DeviceController extends BaseController
             return $this->response->setStatusCode(404)->setBody(
                 view('errors/html/error_404', [
                     'message' => 'El enlace de conexión ha expirado o no es válido.'
+                ])
+            );
+        }
+
+        // Consumir el token de descarga atómicamente (estado 2 = descargado)
+        $db->table('device_share_tokens')
+           ->where('id', $row->id)
+           ->whereIn('used', [0, 1])
+           ->update(['used' => 2]);
+
+        if ($db->affectedRows() !== 1) {
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => 'El enlace de descarga ya ha sido utilizado.'
                 ])
             );
         }

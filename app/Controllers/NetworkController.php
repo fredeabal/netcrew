@@ -127,9 +127,14 @@ class NetworkController extends BaseController
             $newId   = $this->networkModel->getInsertID();
             $created = $newId ? $this->networkModel->find($newId) : null;
             if ($created) {
-                $plainCaKey = $this->networkModel->decryptCaKey((string) $created->nebula_ca_key);
-                if ($plainCaKey !== '') {
-                    NebulaService::syncLocalLighthouse($created, $plainCaKey);
+                $user = auth()->user();
+                $isPrivileged = $user && $user->inGroup('superadmin', 'supervisor');
+                $activeCount = (int) $this->networkModel->where('active', 1)->countAllResults();
+                if ($isPrivileged || $activeCount <= 1) {
+                    $plainCaKey = $this->networkModel->decryptCaKey((string) $created->nebula_ca_key);
+                    if ($plainCaKey !== '') {
+                        NebulaService::syncLocalLighthouse($created, $plainCaKey);
+                    }
                 }
             }
             return redirect()->to('/networks')->with('message', 'Red Nebula P2P creada.');
@@ -315,10 +320,10 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Sin permisos.');
         }
 
-        $network->active = !$network->active;
+        $newActive = !$network->active;
 
-        if ($this->networkModel->save($network)) {
-            $status = $network->active ? 'activada' : 'desactivada';
+        if ($this->networkModel->update($id, ['active' => $newActive ? 1 : 0])) {
+            $status = $newActive ? 'activada' : 'desactivada';
             return redirect()->to('/networks')->with('message', "Red {$status}.");
         }
 

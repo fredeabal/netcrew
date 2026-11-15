@@ -138,6 +138,10 @@ class ProfileController extends BaseController
         try {
             $usersModel->save($user);
 
+            if ($this->request->getPost('password')) {
+                model(\CodeIgniter\Shield\Models\RememberModel::class)->purgeRememberTokens($user);
+            }
+
             // Guardar el tema explícitamente directo en BD (evita restricciones de Shield)
             $db = \Config\Database::connect();
             $db->table('users')->where('id', $user->id)->update([

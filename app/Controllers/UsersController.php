@@ -150,6 +150,10 @@ class UsersController extends BaseController
 
         try {
             $this->usersModel->save($user);
+
+        if ($this->request->getPost('password')) {
+            model(\CodeIgniter\Shield\Models\RememberModel::class)->purgeRememberTokens($user);
+        }
             $newUserId = $this->usersModel->getInsertID();
             $userObj = $this->usersModel->findById($newUserId);
             $userObj->addGroup($this->request->getPost('group'));
@@ -275,6 +279,10 @@ class UsersController extends BaseController
         }
 
         $this->usersModel->save($user);
+
+        if ($this->request->getPost('password')) {
+            model(\CodeIgniter\Shield\Models\RememberModel::class)->purgeRememberTokens($user);
+        }
 
         // Actualizar grupo SOLO si no es uno mismo (previene auto-escalada de privilegios)
         if (! $isSelf) {

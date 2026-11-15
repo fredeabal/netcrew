@@ -82,7 +82,11 @@ class MaintenanceController extends BaseController
         }
 
         $filename       = 'backup-netcrew-' . date('Y-m-d_H-i-s') . '.db';
-        $tempBackupPath = sys_get_temp_dir() . '/' . $filename;
+        $tmpDir         = sys_get_temp_dir() . '/nc_backup_' . bin2hex(random_bytes(12));
+        if (!mkdir($tmpDir, 0700, true) && !is_dir($tmpDir)) {
+            return redirect()->to(base_url('settings?tab=maintenance'))->with('error', 'No se pudo crear directorio temporal seguro.');
+        }
+        $tempBackupPath = $tmpDir . '/' . $filename;
 
         // Crear una copia segura usando VACUUM INTO para evitar corrupción si hay escrituras concurrentes
         try {
@@ -90,11 +94,14 @@ class MaintenanceController extends BaseController
             $sqlite->exec("VACUUM INTO '{$tempBackupPath}'");
             $sqlite->close();
         } catch (\Exception $e) {
+            @unlink($tempBackupPath);
+            @rmdir($tmpDir);
             return redirect()->to(base_url('settings?tab=maintenance'))->with('error', 'Error al generar la copia segura: ' . $e->getMessage());
         }
 
         $data = file_get_contents($tempBackupPath);
-        unlink($tempBackupPath);
+        @unlink($tempBackupPath);
+        @rmdir($tmpDir);
 
         return $this->response->download($filename, $data);
     }
@@ -191,7 +198,8 @@ class MaintenanceController extends BaseController
                 unlink($backupPath);
             }
 
-            // Cerrar sesión para evitar inconsistencias de usuarios/permisos borrados
+            // Invalidar todas las sesiones activas en disco y cerrar la sesión actual
+            $this->cleanDirectory(WRITEPATH . 'session', ['index.html', '.gitignore', '.htaccess', 'ci_session' . session_id()]);
             auth()->logout();
 
             return redirect()->to(base_url('login'))->with('message', "Base de datos restaurada correctamente.<br><small class='text-muted'>Por razones de seguridad, tu sesión ha sido cerrada.</small>");

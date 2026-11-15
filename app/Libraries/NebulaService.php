@@ -308,7 +308,11 @@ class NebulaService
 
         $durationHours = 43800;
         if (!empty($expiresAt)) {
-            $diffSeconds   = max(3600, strtotime($expiresAt) - time());
+            $expiresTs = strtotime($expiresAt);
+            if ($expiresTs === false || $expiresTs <= time()) {
+                throw new RuntimeException('La fecha de expiración del dispositivo ya ha vencido.');
+            }
+            $diffSeconds   = max(3600, $expiresTs - time());
             $durationHours = (int) ceil($diffSeconds / 3600);
         }
         $duration = $durationHours . 'h';
@@ -446,14 +450,18 @@ class NebulaService
         $crtBlock = self::indentPem($decryptedCrt, 4);
         $keyBlock = self::indentPem($decryptedKey, 4);
 
+        $safeNetworkName = self::sanitizeYamlComment((string) $network->name);
+        $safeDeviceName  = self::sanitizeYamlComment((string) $device->name);
+        $safeHost        = self::sanitizeYamlScalar($lighthouseHost);
+
         $relayConfig = $relayEnabled
             ? "relay:\n  relays:\n    - {$lighthouseVpnIp}\n  am_relay: false\n  use_relays: true\n"
             : "relay:\n  am_relay: false\n  use_relays: false\n";
 
         return <<<YAML
 # Configuración Nebula P2P Mesh generada por NetCrew
-# Red: {$network->name} ({$network->cidr})
-# Nodo: {$device->name} ({$device->ip_address})
+# Red: {$safeNetworkName} ({$network->cidr})
+# Nodo: {$safeDeviceName} ({$device->ip_address})
 
 pki:
   ca: |
@@ -464,7 +472,7 @@ pki:
 {$keyBlock}
 
 static_host_map:
-  "{$lighthouseVpnIp}": ["{$lighthouseHost}:{$lighthousePort}"]
+  "{$lighthouseVpnIp}": ["{$safeHost}:{$lighthousePort}"]
 
 lighthouse:
   am_lighthouse: false
@@ -514,7 +522,55 @@ YAML;
     /**
      * Construye el `config.yml` para el servidor Lighthouse de una red Nebula.
      */
-    public static function buildLighthouseConfig(object $network, string $lighthouseCrt, string $lighthouseKey): string
+    /**
+     * Obtiene la lista de fingerprints revocados (pki.blocklist) para una red.
+     *
+     * @return string[]
+     */
+    public static function getBlocklist(int $networkId): array
+    {
+        $raw = service('settings')->get('Nebula.blocklist_' . $networkId);
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $clean = [];
+        foreach ($raw as $fp) {
+            if (! is_string($fp)) {
+                continue;
+            }
+            $fp = strtolower(trim($fp));
+            if ($fp !== '' && preg_match('/^[a-f0-9]{64}$/', $fp) === 1) {
+                $clean[$fp] = true;
+            }
+        }
+
+        return array_keys($clean);
+    }
+
+    /**
+     * Agrega un fingerprint de certificado Nebula a la blocklist persistida de la red.
+     */
+    public static function revokeFingerprint(int $networkId, string $fingerprint): void
+    {
+        $fp = strtolower(trim($fingerprint));
+        if ($networkId <= 0 || $fp === '' || preg_match('/^[a-f0-9]{64}$/', $fp) !== 1) {
+            return;
+        }
+
+        $list = self::getBlocklist($networkId);
+        if (! in_array($fp, $list, true)) {
+            $list[] = $fp;
+            service('settings')->set('Nebula.blocklist_' . $networkId, $list);
+        }
+    }
+
+    /**
+     * Genera el YAML completo para el servidor Lighthouse de una red.
+     *
+     * @param string[] $blocklist
+     */
+    public static function buildLighthouseConfig(object $network, string $lighthouseCrt, string $lighthouseKey, array $blocklist = []): string
     {
         $settings     = service('settings');
         $endpoint     = self::resolveLighthouseEndpoint();
@@ -525,14 +581,32 @@ YAML;
             $cipher = 'aes';
         }
 
-        $caBlock  = self::indentPem((string) $network->nebula_ca_crt, 4);
-        $crtBlock = self::indentPem($lighthouseCrt, 4);
-        $keyBlock = self::indentPem($lighthouseKey, 4);
-        $amRelay  = $relayEnabled ? 'true' : 'false';
+        $caBlock         = self::indentPem((string) $network->nebula_ca_crt, 4);
+        $crtBlock        = self::indentPem($lighthouseCrt, 4);
+        $keyBlock        = self::indentPem($lighthouseKey, 4);
+        $amRelay         = $relayEnabled ? 'true' : 'false';
+        $safeNetworkName = self::sanitizeYamlComment((string) $network->name);
+
+        $blocklistYaml = '';
+        $validBlocklist = [];
+        foreach ($blocklist as $fp) {
+            if (is_string($fp)) {
+                $fp = strtolower(trim($fp));
+                if ($fp !== '' && preg_match('/^[a-f0-9]{64}$/', $fp) === 1) {
+                    $validBlocklist[$fp] = true;
+                }
+            }
+        }
+        if ($validBlocklist !== []) {
+            $blocklistYaml = "\n  blocklist:";
+            foreach (array_keys($validBlocklist) as $fp) {
+                $blocklistYaml .= "\n    - \"{$fp}\"";
+            }
+        }
 
         return <<<YAML
 # Configuración de Servidor Lighthouse Nebula generada por NetCrew
-# Red: {$network->name} ({$network->cidr})
+# Red: {$safeNetworkName} ({$network->cidr})
 
 pki:
   ca: |
@@ -540,7 +614,7 @@ pki:
   cert: |
 {$crtBlock}
   key: |
-{$keyBlock}
+{$keyBlock}{$blocklistYaml}
 
 static_host_map: {}
 
@@ -783,7 +857,12 @@ YAML;
                 $lighthouseIp,
                 'lighthouse,devices'
             );
-            $yaml = self::buildLighthouseConfig($network, $cert['crt'], $cert['key']);
+            $yaml = self::buildLighthouseConfig(
+                $network,
+                $cert['crt'],
+                $cert['key'],
+                self::getBlocklist((int) $network->id)
+            );
         } catch (\Throwable $e) {
             log_message('warning', 'No se pudo generar config Lighthouse local: ' . $e->getMessage());
             return false;
@@ -851,5 +930,21 @@ YAML;
         $pad   = str_repeat(' ', $spaces);
         $lines = preg_split("/\r\n|\n|\r/", trim($pem));
         return implode("\n", array_map(static fn ($line) => $pad . $line, $lines));
+    }
+
+    /**
+     * Elimina saltos de línea y caracteres de control para evitar inyección YAML en comentarios.
+     */
+    protected static function sanitizeYamlComment(string $value): string
+    {
+        return trim((string) preg_replace('/[\x00-\x1F\x7F]+/', ' ', $value));
+    }
+
+    /**
+     * Sanitiza escalares interpolados entre comillas dobles en YAML.
+     */
+    protected static function sanitizeYamlScalar(string $value): string
+    {
+        return trim((string) preg_replace('/[\x00-\x1F\x7F"\'\\\\]+/', '', $value));
     }
 }

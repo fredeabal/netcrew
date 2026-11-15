@@ -123,28 +123,5 @@ class UserSeeder extends Seeder
                 }
             }
         }
-
-        // Cargar llave pública del servidor WireGuard si existe
-        $wgPubKeyPath = '/etc/wireguard/publickey';
-        if (file_exists($wgPubKeyPath)) {
-            $pubKeyContent = trim(file_get_contents($wgPubKeyPath));
-            if (!empty($pubKeyContent)) {
-                $settings->set('WireGuard.publicKey', $pubKeyContent);
-            }
-        }
-
-        // Intentar aprovisionar y levantar la interfaz WireGuard (wg0) automáticamente si estamos en el servidor
-        if (\App\Libraries\WireguardService::isConfigured() && is_dir('/etc/wireguard')) {
-            try {
-                $wg = \App\Libraries\WireguardService::fromSettings(5);
-                $wg->setTimeout(60);
-                $pubkey = $wg->provisionServer();
-                if (!empty($pubkey)) {
-                    $settings->set('WireGuard.publicKey', $pubkey);
-                }
-            } catch (\Throwable $e) {
-                log_message('notice', 'Aprovisionamiento inicial de WireGuard omitido en UserSeeder: ' . $e->getMessage());
-            }
-        }
     }
 }

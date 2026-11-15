@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Libraries\WireguardService;
+use App\Libraries\NebulaService;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 
@@ -247,18 +247,6 @@ class DeviceController extends BaseController
             $expiresAt = date('Y-m-d H:i:s', strtotime('+30 days'));
         }
 
-        // Validar que SSH esté configurado a nivel global antes de crear nodos
-        if (!WireguardService::isConfigured()) {
-            $msg = 'No se pueden crear nodos: El Administrador no ha configurado la conexión SSH del servidor VPN.';
-            if (!$isAjax) {
-                return redirect()->back()->withInput()->with('error', $msg);
-            }
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => $msg
-            ])->setStatusCode(403);
-        }
-
         $network = $this->networkModel->find($networkId);
         if (!$network) {
             if (!$isAjax) {
@@ -327,13 +315,27 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        // Generar par de llaves WireGuard (Curve25519) con clamping estándar RFC 7748
+        // Firmar certificado Nebula P2P para el dispositivo
         try {
-            $keypair = WireguardService::generateKeyPair();
-            $privateKey = $keypair['privateKey'];
-            $publicKey  = $keypair['publicKey'];
+            $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+            if (empty($network->nebula_ca_crt) || $caKey === '') {
+                throw new \RuntimeException('La CA de Nebula de esta red no es válida o no se pudo descifrar.');
+            }
+            $signed       = NebulaService::signDeviceCert(
+                $network->nebula_ca_crt,
+                $caKey,
+                $name,
+                $ipAddress . '/24',
+                'devices',
+                $expiresAt
+            );
+            $publicKey    = $signed['fingerprint'];
+            $privateKey   = 'nebula';
+            $nebulaCrt    = $signed['crt'];
+            $nebulaKey    = $signed['key'];
+            $nebulaGroups = 'devices';
         } catch (\Throwable $e) {
-            $msg = 'Error al generar llaves criptográficas: ' . $e->getMessage();
+            $msg = 'Error al firmar certificado Nebula: ' . $e->getMessage();
             if (!$isAjax) {
                 return redirect()->back()->withInput()->with('error', $msg);
             }
@@ -345,15 +347,18 @@ class DeviceController extends BaseController
 
         // Registrar dispositivo
         $data = [
-            'network_id'   => $networkId,
-            'name'         => $name,
-            'ip_address'   => $ipAddress,
-            'public_key'   => $publicKey,
-            'private_key'  => $privateKey,
-            'active'       => 1,
-            'device_type'  => $deviceType,
-            'routing_mode' => $routingMode,
-            'expires_at'   => $expiresAt,
+            'network_id'    => $networkId,
+            'name'          => $name,
+            'ip_address'    => $ipAddress,
+            'public_key'    => $publicKey,
+            'private_key'   => $privateKey,
+            'nebula_crt'    => $nebulaCrt,
+            'nebula_key'    => $nebulaKey,
+            'nebula_groups' => $nebulaGroups,
+            'active'        => 1,
+            'device_type'   => $deviceType,
+            'routing_mode'  => $routingMode,
+            'expires_at'    => $expiresAt,
         ];
 
         try {
@@ -380,27 +385,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(409);
         }
 
-        $insertId  = $this->deviceModel->getInsertID();
-        $deviceObj = $this->deviceModel->find($insertId);
-
-        // Registrar el peer en el servidor. Si falla, se revierte el alta en la BD.
-        try {
-            $this->pushPeer($deviceObj, true);
-            \App\Models\AuditLogModel::log('DEVICE_CREATE', "Creó el nodo '{$data['name']}' ({$data['ip_address']}) en red ID: {$networkId}");
-        } catch (\Throwable $e) {
-            log_message('error', 'No se pudo registrar el nodo ' . $insertId . ' en WireGuard: ' . $e->getMessage());
-            $this->deviceModel->delete($insertId);
-            $this->bestEffort(fn () => $this->pushPeer($deviceObj, false), 'revertir alta del nodo ' . $insertId);
-
-            $msg = 'No se pudo registrar el nodo en el servidor VPN. No se ha creado. Detalle: ' . $e->getMessage();
-            if (!$isAjax) {
-                return redirect()->back()->withInput()->with('error', $msg);
-            }
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => $msg,
-            ])->setStatusCode(502);
-        }
+        $insertId = $this->deviceModel->getInsertID();
+        \App\Models\AuditLogModel::log('DEVICE_CREATE', "Creó el nodo '{$data['name']}' ({$data['ip_address']}) en red ID: {$networkId}");
 
         if (!$isAjax) {
             return redirect()->to('/networks/' . $networkId . '/devices')->with('message', 'Dispositivo agregado correctamente.');
@@ -556,25 +542,9 @@ class DeviceController extends BaseController
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
-        // Quitar primero el peer del servidor (si estaba activo). Si falla, no se borra de la BD.
-        if ($device->active) {
-            try {
-                $this->pushPeer($device, false);
-            } catch (\Throwable $e) {
-                log_message('error', 'No se pudo quitar el nodo ' . $id . ' de WireGuard: ' . $e->getMessage());
-                return redirect()->to("networks/{$networkId}/devices")
-                    ->with('error', 'No se pudo quitar el nodo del servidor VPN. No se ha eliminado. Detalle: ' . esc($e->getMessage()));
-            }
-        }
-
         if ($this->deviceModel->delete($id)) {
             \App\Models\AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})");
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
-        }
-
-        // Revertir: volver a registrar el peer en el servidor
-        if ($device->active) {
-            $this->bestEffort(fn () => $this->pushPeer($device, true), 'revertir baja del nodo ' . $id);
         }
 
         return redirect()->to("networks/{$networkId}/devices")->with('error', 'Error al eliminar.');
@@ -605,69 +575,33 @@ class DeviceController extends BaseController
             return redirect()->to("networks/{$networkId}/devices")->with('error', 'Sin permisos.');
         }
 
-        if (!WireguardService::isConfigured()) {
-            return redirect()->back()->with('error', 'El servidor VPN no está configurado.');
-        }
-
-        // 1. Generar nuevo par de llaves WireGuard
         try {
-            $keypair = WireguardService::generateKeyPair();
-            $newPrivateKey = $keypair['privateKey'];
-            $newPublicKey  = $keypair['publicKey'];
+            $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+            if (empty($network->nebula_ca_crt) || $caKey === '') {
+                return redirect()->back()->with('error', 'No se pudo descifrar la CA de Nebula.');
+            }
+            $signed = NebulaService::signDeviceCert(
+                $network->nebula_ca_crt,
+                $caKey,
+                $device->name,
+                $device->ip_address . '/24',
+                $device->nebula_groups ?: 'devices',
+                $device->expires_at
+            );
+            $updateData = [
+                'public_key' => $signed['fingerprint'],
+                'nebula_crt' => $signed['crt'],
+                'nebula_key' => $signed['key'],
+            ];
+            if ($this->deviceModel->update($id, $updateData)) {
+                \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+                return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado Nebula regenerado con éxito! Descarga la nueva configuración .yml.');
+            }
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Error generando nuevas llaves: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error regenerando certificado Nebula: ' . $e->getMessage());
         }
 
-        $oldPublicKey = $device->public_key;
-        $isDeviceExpired = !empty($device->expires_at) && strtotime($device->expires_at) < time();
-
-        // 2. Si el dispositivo y la red están activos y vigentes, aplicar rotación en el servidor WireGuard
-        if ($device->active && $network->active && !$isDeviceExpired) {
-            try {
-                $wg = WireguardService::fromSettings(5);
-                $wg->setTimeout(30);
-                // Quitar clave antigua y agregar clave nueva
-                $wg->removePeer($oldPublicKey);
-                $wg->addPeer($newPublicKey, $device->ip_address);
-                $wg->saveConfig();
-            } catch (\Throwable $e) {
-                log_message('error', 'Fallo al rotar peer en servidor WireGuard: ' . $e->getMessage());
-                return redirect()->back()->with('error', 'No se pudo actualizar la clave en el servidor VPN: ' . esc($e->getMessage()));
-            }
-        } elseif ($device->active && (!$network->active || $isDeviceExpired)) {
-            // Asegurar que la clave antigua no permanezca registrada en el servidor VPN
-            try {
-                $wg = WireguardService::fromSettings(5);
-                $wg->setTimeout(30);
-                $wg->removePeer($oldPublicKey);
-                $wg->saveConfig();
-            } catch (\Throwable $e) {
-                // Silenciar fallo si el peer ya no existía
-            }
-        }
-
-        // 3. Persistir nuevas llaves en la base de datos (DeviceModel se encarga de cifrar la private_key)
-        $updateData = [
-            'public_key'  => $newPublicKey,
-            'private_key' => $newPrivateKey,
-        ];
-
-        if ($this->deviceModel->update($id, $updateData)) {
-            \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó llaves criptográficas del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
-            return redirect()->to("devices/show/{$id}")->with('message', '¡Llaves regeneradas con éxito! Recuerda descargar la nueva configuración o escanear el nuevo código QR.');
-        }
-
-        // Revertir cambio en servidor WireGuard en caso de fallo en BD
-        if ($device->active && $network->active && !$isDeviceExpired) {
-            $this->bestEffort(function() use ($device, $oldPublicKey, $newPublicKey) {
-                $wg = WireguardService::fromSettings(5);
-                $wg->removePeer($newPublicKey);
-                $wg->addPeer($oldPublicKey, $device->ip_address);
-                $wg->saveConfig();
-            }, 'revertir rotación de llaves para el nodo ' . $id);
-        }
-
-        return redirect()->back()->with('error', 'Error al guardar las nuevas llaves en la base de datos.');
+        return redirect()->back()->with('error', 'Error al guardar el nuevo certificado Nebula.');
     }
 
     // ---------------------------------------------------------------------
@@ -709,23 +643,11 @@ class DeviceController extends BaseController
             }
         }
 
-        // Aplicar primero en el servidor. Si falla, no se cambia el estado en la BD.
-        try {
-            $this->pushPeer($device, $newActiveStatus);
-        } catch (\Throwable $e) {
-            log_message('error', 'No se pudo cambiar el estado del nodo ' . $id . ' en WireGuard: ' . $e->getMessage());
-            return redirect()->to("networks/{$networkId}/devices")
-                ->with('error', 'No se pudo aplicar el cambio en el servidor VPN. Detalle: ' . esc($e->getMessage()));
-        }
-
         if ($this->deviceModel->update($id, ['active' => $newActiveStatus ? 1 : 0])) {
             $status = $newActiveStatus ? 'activado' : 'desactivado';
             \App\Models\AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}");
             return redirect()->to("networks/{$networkId}/devices")->with('message', "Nodo {$status}.");
         }
-
-        // Revertir el cambio en el servidor
-        $this->bestEffort(fn () => $this->pushPeer($device, !$newActiveStatus), 'revertir estado del nodo ' . $id);
 
         return redirect()->to("networks/{$networkId}/devices")->with('error', 'Error al cambiar estado.');
     }
@@ -759,33 +681,14 @@ class DeviceController extends BaseController
             ])->setStatusCode(403);
         }
 
-        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        if (empty($decryptedPrivateKey)) {
+        try {
+            $payload = $this->buildDeviceConfigPayload($network, $device);
+        } catch (\RuntimeException $e) {
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No se pudo desencriptar la llave privada del nodo.'
-            ])->setStatusCode(500);
-        }
-
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
-        if (empty($serverPublicKey)) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'La clave pública del servidor WireGuard no está configurada. Por favor, ve a Ajustes > WireGuard y prueba la conexión para autodescubrirla.'
+                'message' => $e->getMessage()
             ])->setStatusCode(400);
         }
-
-        $serverEndpoint = $this->resolveServerEndpoint();
-
-        $configString = $this->buildConfigContent(
-            $decryptedPrivateKey,
-            $device->ip_address,
-            $serverPublicKey,
-            $network->cidr,
-            $serverEndpoint,
-            $network->dns,
-            $device->routing_mode ?? 'split'
-        );
 
         \App\Models\AuditLogModel::log('DEVICE_VIEW_KEYS', "Visualizó configuración y claves del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
 
@@ -795,7 +698,9 @@ class DeviceController extends BaseController
                 'id'         => $device->id,
                 'name'       => $device->name,
                 'ip_address' => $device->ip_address,
-                'config'     => $configString
+                'engine'     => $network->engine ?? 'wireguard',
+                'filename'   => $payload['filename'],
+                'config'     => $payload['content'],
             ]
         ]);
     }
@@ -828,37 +733,19 @@ class DeviceController extends BaseController
             return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se puede descargar la configuración de un nodo inactivo o expirado.');
         }
 
-        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        if (empty($decryptedPrivateKey)) {
-            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'No se pudo desencriptar la llave privada del nodo.');
+        try {
+            $payload = $this->buildDeviceConfigPayload($network, $device);
+        } catch (\RuntimeException $e) {
+            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', $e->getMessage());
         }
 
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
-        if (empty($serverPublicKey)) {
-            return redirect()->to('/networks/' . $network->id . '/devices')->with('error', 'La clave pública del servidor WireGuard no está configurada. Ve a Ajustes > WireGuard.');
-        }
-
-        $serverEndpoint = $this->resolveServerEndpoint();
-
-        $configString = $this->buildConfigContent(
-            $decryptedPrivateKey,
-            $device->ip_address,
-            $serverPublicKey,
-            $network->cidr,
-            $serverEndpoint,
-            $network->dns,
-            $device->routing_mode ?? 'split'
-        );
-
-        $filename = url_title($device->name, '-', true) . '.conf';
-
-        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó configuración .conf del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó configuración {$payload['filename']} del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
 
         return $this->response->setHeader('Content-Type', 'text/plain')
-                                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                                ->setHeader('Content-Disposition', 'attachment; filename="' . $payload['filename'] . '"')
                                 ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
                                 ->setHeader('Pragma', 'no-cache')
-                                ->setBody($configString);
+                                ->setBody($payload['content']);
     }
 
     // ---------------------------------------------------------------------
@@ -960,24 +847,13 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'No se puede enviar la configuración de un nodo inactivo o expirado'])->setStatusCode(400);
         }
 
-        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
-        if (empty($decryptedPrivateKey) || empty($serverPublicKey)) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Configuración de WireGuard incompleta o clave ilegible'])->setStatusCode(400);
+        try {
+            $payload       = $this->buildDeviceConfigPayload($network, $device);
+            $configContent = $payload['content'];
+            $filename      = $payload['filename'];
+        } catch (\RuntimeException $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()])->setStatusCode(400);
         }
-
-        $serverEndpoint = $this->resolveServerEndpoint();
-        $configContent = $this->buildConfigContent(
-            $decryptedPrivateKey,
-            $device->ip_address,
-            $serverPublicKey,
-            $network->cidr,
-            $serverEndpoint,
-            $network->dns,
-            $device->routing_mode ?? 'split'
-        );
-
-        $filename = url_title($device->name, '-', true) . '.conf';
 
         try {
             $settings = service('settings');
@@ -1213,19 +1089,14 @@ class DeviceController extends BaseController
             ]);
         }
 
-        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
-        $serverEndpoint = $this->resolveServerEndpoint();
-
-        $configString = $this->buildConfigContent(
-            $decryptedPrivateKey,
-            $device->ip_address,
-            $serverPublicKey,
-            $network->cidr,
-            $serverEndpoint,
-            $network->dns,
-            $device->routing_mode ?? 'split'
-        );
+        try {
+            $payload      = $this->buildDeviceConfigPayload($network, $device);
+            $configString = $payload['content'];
+        } catch (\RuntimeException $e) {
+            return view('errors/html/error_404', [
+                'message' => $e->getMessage()
+            ]);
+        }
 
         $data = [
             'token'   => $token,
@@ -1290,21 +1161,15 @@ class DeviceController extends BaseController
             ]);
         }
 
-        $decryptedPrivateKey = $this->deviceModel->decryptKey($device->private_key);
-        $serverPublicKey = service('settings')->get('WireGuard.publicKey');
-        $serverEndpoint = $this->resolveServerEndpoint();
-
-        $configString = $this->buildConfigContent(
-            $decryptedPrivateKey,
-            $device->ip_address,
-            $serverPublicKey,
-            $network->cidr,
-            $serverEndpoint,
-            $network->dns,
-            $device->routing_mode ?? 'split'
-        );
-
-        $filename = url_title($device->name, '-', true) . '.conf';
+        try {
+            $payload      = $this->buildDeviceConfigPayload($network, $device);
+            $configString = $payload['content'];
+            $filename     = $payload['filename'];
+        } catch (\RuntimeException $e) {
+            return view('errors/html/error_404', [
+                'message' => $e->getMessage()
+            ]);
+        }
 
         return $this->response->setHeader('Content-Type', 'text/plain')
                                 ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
@@ -1351,54 +1216,21 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
-    // Helper: Formatear contenido del archivo .conf
+    // Helper: Construye el contenido de configuración Nebula (.yml)
     // ---------------------------------------------------------------------
-    protected function buildConfigContent($privateKey, $ipAddress, $serverPublicKey, $allowedIps, $serverEndpoint, $dns = null, $routingMode = 'split')
+    protected function buildDeviceConfigPayload(object $network, object $device): array
     {
-        // Limpiar endpoint de esquemas (http://, https://) y barras diagonales accidentales
-        $serverEndpoint = trim($serverEndpoint);
-        $serverEndpoint = preg_replace('/^https?:\/\//i', '', $serverEndpoint);
-        $serverEndpoint = rtrim($serverEndpoint, '/');
-
-        // Extraer la máscara de la subred del CIDR de la red para configurar la interfaz del cliente correctamente
-        $mask = '24';
-        if (strpos($allowedIps, '/') !== false) {
-            $parts = explode('/', $allowedIps);
-            $mask = trim(end($parts));
+        $slug         = url_title($device->name, '-', true) ?: 'device';
+        $decryptedKey = $this->deviceModel->decryptKey((string) $device->nebula_key);
+        if (empty($device->nebula_crt) || $decryptedKey === '' || empty($network->nebula_ca_crt)) {
+            throw new \RuntimeException('No se pudo desencriptar el certificado o la llave privada Nebula del nodo.');
         }
 
-        $config = "[Interface]\n" .
-                  "PrivateKey = {$privateKey}\n" .
-                  "Address = {$ipAddress}/{$mask}\n";
-
-        if (!empty($dns)) {
-            // Sanitizar DNS contra inyección de nuevas líneas o directivas en el .conf
-            $cleanDns = [];
-            foreach (explode(',', (string) $dns) as $entry) {
-                $entry = trim(preg_replace('/[\r\n\0]/', '', $entry));
-                if ($entry !== '' && (filter_var($entry, FILTER_VALIDATE_IP) !== false || preg_match('/^[a-zA-Z0-9.-]+$/', $entry))) {
-                    $cleanDns[] = $entry;
-                }
-            }
-            if (!empty($cleanDns)) {
-                $config .= "DNS = " . implode(', ', $cleanDns) . "\n";
-            }
-        }
-                  
-        // Modo de enrutamiento: Full-Tunnel (todo el tráfico / Internet) vs Split-Tunnel (solo red local)
-        if ($routingMode === 'full') {
-            $allowedIpsString = '0.0.0.0/0, ::/0';
-        } else {
-            $allowedIpsString = $allowedIps;
-        }
-        
-        $config .= "\n[Peer]\n" .
-                   "PublicKey = {$serverPublicKey}\n" .
-                   "AllowedIPs = {$allowedIpsString}\n" .
-                   "Endpoint = {$serverEndpoint}\n" .
-                   "PersistentKeepalive = 25\n";
-                     
-        return $config;
+        return [
+            'content'   => NebulaService::buildClientConfig($network, $device, $device->nebula_crt, $decryptedKey),
+            'filename'  => $slug . '.yml',
+            'extension' => 'yml',
+        ];
     }
 
     // ---------------------------------------------------------------------
@@ -1461,81 +1293,11 @@ class DeviceController extends BaseController
     }
 
     // ---------------------------------------------------------------------
-    // Helper: Registrar o quitar un peer en el servidor WireGuard.
-    // Lanza excepción si el servidor no confirma el cambio.
-    // ---------------------------------------------------------------------
-    protected function pushPeer(object $device, bool $add): void
-    {
-        $wg = WireguardService::fromSettings(5);
-        $wg->setTimeout(30);
-
-        if ($add) {
-            $network = $this->networkModel->find($device->network_id);
-            if (!$network || !$network->active) {
-                throw new \RuntimeException('No se puede sincronizar el nodo con WireGuard porque la red está inactiva.');
-            }
-            if (!empty($device->expires_at) && strtotime($device->expires_at) < time()) {
-                throw new \RuntimeException('No se puede sincronizar el nodo con WireGuard porque ha expirado.');
-            }
-            // Regenerar firewall/direcciones por si la red del nodo es nueva
-            $wg->syncFirewall();
-            $wg->addPeer($device->public_key, $device->ip_address);
-        } else {
-            $wg->removePeer($device->public_key);
-        }
-
-        $wg->saveConfig();
-    }
-
-    // ---------------------------------------------------------------------
-    // Helper: Ejecutar una acción de reversión sin interrumpir el flujo
-    // ---------------------------------------------------------------------
-    protected function bestEffort(callable $action, string $context): void
-    {
-        try {
-            $action();
-        } catch (\Throwable $e) {
-            log_message('critical', "Fallo al {$context}. Ejecuta la sincronización desde Mantenimiento: " . $e->getMessage());
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // Helper: Estado en tiempo real de un peer (null si no hay conexión)
+    // Helper: Estado en tiempo real de un peer (Nebula opera en modo P2P directo)
     // ---------------------------------------------------------------------
     protected function fetchPeerStatus(object $device): ?array
     {
-        try {
-            $dump = WireguardService::cachedDump(5, 5);
-        } catch (\Throwable $e) {
-            log_message('notice', 'No se pudo obtener estado WireGuard en tiempo real para nodo ' . $device->id . ': ' . $e->getMessage());
-            return null;
-        }
-
-        $peer = $dump['peers'][$device->public_key] ?? null;
-        if (!$peer) {
-            return null;
-        }
-
-        // Separar IP y puerto del endpoint (compatible con IPv6 entre corchetes)
-        $endpoint = $peer['endpoint'];
-        $publicIp = null;
-        $port     = null;
-        if ($endpoint && ($pos = strrpos($endpoint, ':')) !== false) {
-            $publicIp = trim(substr($endpoint, 0, $pos), '[]');
-            $port     = substr($endpoint, $pos + 1);
-        }
-
-        return [
-            'connected'        => $peer['connected'],
-            'endpoint'         => $endpoint,
-            'public_ip'        => $publicIp,
-            'port'             => $port,
-            'latest_handshake' => $peer['latest_handshake'] ?: null,
-            'remote_time'      => $dump['remote_time'],
-            'rx_bytes'         => $peer['rx_bytes'],
-            'tx_bytes'         => $peer['tx_bytes'],
-            'last_seen'        => $this->updateLastSeenFromHandshake($device, $peer['latest_handshake']),
-        ];
+        return null;
     }
 
     // ---------------------------------------------------------------------
@@ -1552,7 +1314,6 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Dispositivo no encontrado'])->setStatusCode(404);
         }
 
-        // Obtener red para comprobar permisos
         $network = $this->networkModel->find($device->network_id);
         if (!$network) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Red no encontrada'])->setStatusCode(404);
@@ -1561,30 +1322,35 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'No tienes permisos para esta red'])->setStatusCode(403);
         }
 
-        try {
-            $wg = WireguardService::fromSettings(10);
+        if (!NebulaService::isSshConfigured()) {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'El acceso SSH remoto no está configurado en Ajustes > Nebula (P2P).',
+            ]);
+        }
 
-            // Ejecutar ping enviando 4 paquetes, timeout 2 segundos por paquete
-            $output     = $wg->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
-            $exitStatus = $wg->lastExitStatus();
+        try {
+            $ssh        = NebulaService::sshFromSettings(10);
+            $output     = (string) $ssh->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
+            $exitStatus = $ssh->getExitStatus();
 
             if ($exitStatus === 0) {
                 return $this->response->setJSON([
                     'status' => 'success',
                     'output' => $output
                 ]);
-            } else {
-                return $this->response->setJSON([
-                    'status' => 'error',
-                    'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
-                    'output' => $output
-                ]);
             }
+
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
+                'output'  => $output
+            ]);
         } catch (\Throwable $e) {
             return $this->response->setJSON([
-                'status' => 'error',
-                'message' => 'Error de conexión SSH con el servidor VPN.',
-                'output' => $e->getMessage()
+                'status'  => 'error',
+                'message' => 'Error de conexión SSH con el servidor.',
+                'output'  => $e->getMessage()
             ]);
         }
     }
@@ -1603,40 +1369,11 @@ class DeviceController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Acceso denegado.'])->setStatusCode(403);
         }
 
-        $peers = [];
-        try {
-            $dump       = WireguardService::cachedDump(5, 5);
-            $remoteTime = $dump['remote_time'];
-
-            // Solo se devuelven los peers de esta red (no exponer datos de otras redes)
-            $devices = $this->deviceModel->where('network_id', $networkId)->findAll();
-            foreach ($devices as $device) {
-                $peer = $dump['peers'][$device->public_key] ?? null;
-                if (!$peer) {
-                    continue;
-                }
-
-                $lastSeen = $this->updateLastSeenFromHandshake($device, $peer['latest_handshake']);
-
-                $peers[$device->public_key] = [
-                    'connected' => ((int) $device->active === 1) && !empty($peer['connected']),
-                    'endpoint' => $peer['endpoint'],
-                    'latest_handshake' => $peer['latest_handshake'],
-                    'last_seen' => $lastSeen,
-                    'last_seen_date' => $lastSeen ? date('d/m/Y', strtotime($lastSeen)) : null,
-                    'last_seen_time' => $lastSeen ? date('H:i', strtotime($lastSeen)) : null,
-                    'rx' => $peer['rx_bytes'],
-                    'tx' => $peer['tx_bytes'],
-                ];
-            }
-        } catch (\Throwable $e) {
-            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
-        }
-
         return $this->response->setJSON([
-            'success' => true,
-            'remoteTime' => $remoteTime,
-            'peers' => $peers
+            'success'    => true,
+            'engine'     => 'nebula',
+            'remoteTime' => time(),
+            'peers'      => [],
         ]);
     }
 
@@ -1692,120 +1429,38 @@ class DeviceController extends BaseController
     }
 
     /**
-     * Resuelve de forma segura el endpoint del servidor WireGuard (evitando inyecciones HTTP Host).
-     */
-    protected function resolveServerEndpoint(): string
-    {
-        $settings = service('settings');
-        $endpoint = trim((string) $settings->get('WireGuard.endpoint'));
-        if (!empty($endpoint)) {
-            return $endpoint;
-        }
-
-        // Si no está configurado explícitamente, usar el Host SSH del servidor VPN
-        $sshHost = trim((string) $settings->get('WireGuard.sshHost'));
-        if (!empty($sshHost)) {
-            return $sshHost . ':51820';
-        }
-
-        // Fallback al hostname seguro configurado en la app (baseURL)
-        $baseHost = parse_url(config('App')->baseURL, PHP_URL_HOST);
-        if (!empty($baseHost) && $baseHost !== 'localhost' && $baseHost !== '127.0.0.1') {
-            return $baseHost . ':51820';
-        }
-
-        return 'vpn.tudominio.com:51820';
-    }
-
-    /**
-     * Construye los datos de telemetría y tráfico de WireGuard para los nodos de la red.
+     * Construye los datos de telemetría resumen para los nodos Nebula de la red.
      */
     protected function buildNetworkTelemetry(array $devices): array
     {
-        $telemetry = [
-            'isConfigured'     => WireguardService::isConfigured(),
-            'isInterfaceUp'    => false,
+        $activeCount = 0;
+        $now         = time();
+        foreach ($devices as $dev) {
+            $expired = !empty($dev->expires_at) && strtotime($dev->expires_at) < $now;
+            if ((int) $dev->active === 1 && !$expired) {
+                $activeCount++;
+            }
+        }
+
+        $total = count($devices);
+
+        return [
+            'isConfigured'     => NebulaService::isConfigured(),
+            'isInterfaceUp'    => NebulaService::isConfigured(),
             'totalRxBytes'     => 0,
             'totalTxBytes'     => 0,
             'formattedRx'      => '0 B',
             'formattedTx'      => '0 B',
             'formattedTotal'   => '0 B',
-            'onlineDevices'    => 0,
-            'offlineDevices'   => count($devices),
-            'totalDevices'     => count($devices),
-            'healthPercentage' => 0,
+            'onlineDevices'    => $activeCount,
+            'offlineDevices'   => max(0, $total - $activeCount),
+            'totalDevices'     => $total,
+            'healthPercentage' => $total > 0 ? (int) round(($activeCount / $total) * 100) : 0,
             'trafficLabels'    => [],
             'trafficRx'        => [],
             'trafficTx'        => [],
             'hasTrafficData'   => false,
         ];
-
-        if (! $telemetry['isConfigured'] || empty($devices)) {
-            return $telemetry;
-        }
-
-        try {
-            $dump  = WireguardService::cachedDump(5, 3);
-            $peers = $dump['peers'] ?? [];
-            $telemetry['isInterfaceUp'] = true;
-
-            $onlineCount     = 0;
-            $trafficByDevice = [];
-
-            foreach ($devices as $dev) {
-                $peer = $peers[$dev->public_key] ?? null;
-                // En WireGuard (servidor):
-                // tx_bytes = servidor transmite al nodo -> Descarga (Download / RX cliente)
-                // rx_bytes = servidor recibe del nodo   -> Subida (Upload / TX cliente)
-                $download = (int) ($peer['tx_bytes'] ?? 0);
-                $upload   = (int) ($peer['rx_bytes'] ?? 0);
-                $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
-
-                if ($isConnected) {
-                    $onlineCount++;
-                }
-
-                $telemetry['totalRxBytes'] += $download; // Total Descarga
-                $telemetry['totalTxBytes'] += $upload;   // Total Subida
-
-                $trafficByDevice[] = [
-                    'name'  => $dev->name . ' (' . $dev->ip_address . ')',
-                    'rx'    => $download, // Descarga
-                    'tx'    => $upload,   // Subida
-                    'total' => $download + $upload,
-                ];
-            }
-
-            $telemetry['onlineDevices']    = $onlineCount;
-            $telemetry['offlineDevices']   = max(0, $telemetry['totalDevices'] - $onlineCount);
-            $telemetry['healthPercentage'] = $telemetry['totalDevices'] > 0
-                ? (int) round(($onlineCount / $telemetry['totalDevices']) * 100)
-                : 0;
-
-            $telemetry['formattedRx']    = self::formatBytes($telemetry['totalRxBytes']);
-            $telemetry['formattedTx']    = self::formatBytes($telemetry['totalTxBytes']);
-            $telemetry['formattedTotal'] = self::formatBytes($telemetry['totalRxBytes'] + $telemetry['totalTxBytes']);
-
-            usort($trafficByDevice, fn ($a, $b) => $b['total'] <=> $a['total']);
-
-            $topDevices    = array_slice($trafficByDevice, 0, 8);
-            $hasAnyTraffic = false;
-
-            foreach ($topDevices as $item) {
-                if ($item['rx'] > 0 || $item['tx'] > 0) {
-                    $hasAnyTraffic = true;
-                }
-                $telemetry['trafficLabels'][] = $item['name'];
-                $telemetry['trafficRx'][]     = $item['rx'];
-                $telemetry['trafficTx'][]     = $item['tx'];
-            }
-
-            $telemetry['hasTrafficData'] = $hasAnyTraffic;
-        } catch (\Throwable $e) {
-            log_message('notice', 'Network telemetry notice: ' . $e->getMessage());
-        }
-
-        return $telemetry;
     }
 
     /**

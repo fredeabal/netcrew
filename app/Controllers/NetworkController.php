@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Libraries\WireguardService;
+use App\Libraries\NebulaService;
 use App\Models\NetworkModel;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -100,7 +100,7 @@ class NetworkController extends BaseController
 
         // Verificar solapamiento con redes restringidas
         $settings = service('settings');
-        $restricted = $settings->get('WireGuard.restrictedCidrs');
+        $restricted = $settings->get('Nebula.restrictedCidrs');
         if (!empty($restricted)) {
             $restrictedList = array_map('trim', explode(',', $restricted));
             foreach ($restrictedList as $resCidr) {
@@ -113,19 +113,18 @@ class NetworkController extends BaseController
             }
         }
 
+        $data['engine'] = 'nebula';
 
+        try {
+            $ca = NebulaService::createCa((string) ($data['name'] ?? 'NetCrew'));
+            $data['nebula_ca_crt'] = $ca['crt'];
+            $data['nebula_ca_key'] = $ca['key'];
+        } catch (\Throwable $e) {
+            return redirect()->back()->withInput()->with('error', 'No se pudo generar la CA de Nebula: ' . $e->getMessage());
+        }
 
         if ($this->networkModel->save($data)) {
-            // Sincronizar firewall de WireGuard si el servidor está configurado
-            if (WireguardService::isConfigured()) {
-                try {
-                    WireguardService::fromSettings(5)->syncFirewall();
-                } catch (\Throwable $e) {
-                    log_message('notice', 'No se pudo sincronizar el firewall de WireGuard tras crear la red: ' . $e->getMessage());
-                }
-            }
-
-            return redirect()->to('/networks')->with('message', 'Red creada.');
+            return redirect()->to('/networks')->with('message', 'Red Nebula P2P creada.');
         }
 
         return redirect()->back()->withInput()->with('errors', $this->networkModel->errors());
@@ -219,7 +218,7 @@ class NetworkController extends BaseController
 
         // Verificar solapamiento con redes restringidas
         $settings = service('settings');
-        $restricted = $settings->get('WireGuard.restrictedCidrs');
+        $restricted = $settings->get('Nebula.restrictedCidrs');
         if (!empty($restricted)) {
             $restrictedList = array_map('trim', explode(',', $restricted));
             foreach ($restrictedList as $resCidr) {
@@ -246,18 +245,7 @@ class NetworkController extends BaseController
             return redirect()->back()->withInput()->with('error', "Capacidad excedida<br><small class='text-muted'>Esta red admite un máximo de {$maxNodes} nodos (actualmente tienes {$currentNodesCount}).</small>");
         }
 
-        $cidrChanged = ($data['cidr'] !== $network->cidr);
-
         if ($this->networkModel->update($id, $data)) {
-            // Si el CIDR cambió en una red vacía, regenerar el script y reglas de firewall
-            if ($cidrChanged && WireguardService::isConfigured()) {
-                try {
-                    WireguardService::fromSettings(5)->syncFirewall();
-                } catch (\Throwable $e) {
-                    log_message('notice', 'No se pudo actualizar el firewall tras modificar la red: ' . $e->getMessage());
-                }
-            }
-
             return redirect()->to('/networks')->with('message', 'Red actualizada.');
         }
 
@@ -282,26 +270,7 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Sin permisos.');
         }
 
-        // 1. Limpiar peers en el servidor WireGuard y regenerar firewall
-        if (WireguardService::isConfigured()) {
-            try {
-                $deviceModel = new \App\Models\DeviceModel();
-                $devices     = $deviceModel->where('network_id', $id)->findAll();
-                $keys        = array_filter(array_column($devices, 'public_key'));
-
-                $wg = WireguardService::fromSettings(5);
-                if (!empty($keys)) {
-                    $wg->removePeers($keys);
-                    $wg->saveConfig();
-                }
-                // Actualizar firewall y direcciones en la interfaz excluyendo la red a borrar
-                $wg->syncFirewall(WireguardService::networkCidrs((int)$id));
-            } catch (\Throwable $e) {
-                log_message('error', 'Excepción al desasociar red de WireGuard: ' . $e->getMessage());
-            }
-        }
-
-        // 2. Transacción de base de datos para eliminar dispositivos y la red
+        // Transacción de base de datos para eliminar dispositivos y la red
         $db = \Config\Database::connect();
         $db->transStart();
 
@@ -341,29 +310,6 @@ class NetworkController extends BaseController
         $network->active = !$network->active;
 
         if ($this->networkModel->save($network)) {
-            // Sincronizar peers si el servidor está configurado
-            if (WireguardService::isConfigured()) {
-                try {
-                    $deviceModel = new \App\Models\DeviceModel();
-                    $devices     = $deviceModel->where('network_id', $id)->findAll();
-                    $wg          = WireguardService::fromSettings(5);
-
-                    if (!$network->active) {
-                        // Remover peers de la red desactivada
-                        $keys = array_filter(array_column($devices, 'public_key'));
-                        if (!empty($keys)) {
-                            $wg->removePeers($keys);
-                            $wg->saveConfig();
-                        }
-                    } else {
-                        // Restaurar los nodos activos de la BD
-                        $wg->syncPeers();
-                    }
-                } catch (\Throwable $e) {
-                    log_message('notice', 'No se pudo sincronizar WireGuard tras cambiar estado de red: ' . $e->getMessage());
-                }
-            }
-
             $status = $network->active ? 'activada' : 'desactivada';
             return redirect()->to('/networks')->with('message', "Red {$status}.");
         }
@@ -456,5 +402,46 @@ class NetworkController extends BaseController
         }
 
         return implode(', ', $clean);
+    }
+
+    // ---------------------------------------------------------------------
+    // Descargar configuración del servidor Lighthouse para redes Nebula
+    // ---------------------------------------------------------------------
+    public function downloadLighthouseConfig($id)
+    {
+        $network = $this->networkModel->find($id);
+        if (!$network) {
+            return redirect()->to('/networks')->with('error', 'Red no encontrada.');
+        }
+
+        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+            return redirect()->to('/networks')->with('error', 'No tienes permisos para acceder a esta red.');
+        }
+
+        if (empty($network->nebula_ca_crt)) {
+            return redirect()->to('/networks')->with('error', 'Esta red no tiene una CA de Nebula configurada.');
+        }
+
+        $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+        if (empty($network->nebula_ca_crt) || $caKey === '') {
+            return redirect()->to('/networks')->with('error', 'No se pudo descifrar la CA de Nebula de esta red.');
+        }
+
+        try {
+            $lighthouseIp = NebulaService::getLighthouseVpnIp($network->cidr) . '/24';
+            $cert         = NebulaService::signDeviceCert(
+                $network->nebula_ca_crt,
+                $caKey,
+                'lighthouse-' . $network->id,
+                $lighthouseIp,
+                'lighthouse,devices'
+            );
+            $yaml = NebulaService::buildLighthouseConfig($network, $cert['crt'], $cert['key']);
+        } catch (\Throwable $e) {
+            return redirect()->to('/networks')->with('error', 'Error generando configuración Lighthouse: ' . $e->getMessage());
+        }
+
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $network->name);
+        return $this->response->download("lighthouse-{$safeName}.yml", $yaml);
     }
 }

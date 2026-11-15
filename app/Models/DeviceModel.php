@@ -12,7 +12,7 @@ class DeviceModel extends Model
     protected $returnType       = 'object';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['network_id', 'name', 'ip_address', 'public_key', 'private_key', 'active', 'os', 'device_type', 'routing_mode', 'expires_at', 'last_seen'];
+    protected $allowedFields    = ['network_id', 'name', 'ip_address', 'public_key', 'private_key', 'nebula_crt', 'nebula_key', 'nebula_groups', 'active', 'os', 'device_type', 'routing_mode', 'expires_at', 'last_seen'];
 
     // Dates
     protected $useTimestamps = true;
@@ -64,13 +64,16 @@ class DeviceModel extends Model
     protected $cleanValidationRules = true;
 
     /**
-     * Callback para encriptar la llave privada antes de guardarla.
+     * Callback para encriptar la llave privada (WireGuard y Nebula) antes de guardarla.
      */
     protected function encryptPrivateKey(array $data)
     {
+        $encrypter = \Config\Services::encrypter();
         if (isset($data['data']['private_key'])) {
-            $encrypter = \Config\Services::encrypter();
             $data['data']['private_key'] = base64_encode($encrypter->encrypt($data['data']['private_key']));
+        }
+        if (!empty($data['data']['nebula_key'])) {
+            $data['data']['nebula_key'] = base64_encode($encrypter->encrypt($data['data']['nebula_key']));
         }
         return $data;
     }

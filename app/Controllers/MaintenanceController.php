@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
-use App\Libraries\WireguardService;
+use App\Libraries\NebulaService;
 use App\Models\DeviceModel;
 
 class MaintenanceController extends BaseController
@@ -20,16 +20,7 @@ class MaintenanceController extends BaseController
         $logsStats    = $this->getDirStats(WRITEPATH . 'logs');
         $cacheStats   = $this->getDirStats(WRITEPATH . 'cache');
 
-        $isWgConfigured = WireguardService::isConfigured();
-        $isWgUp         = false;
-
-        if ($isWgConfigured) {
-            try {
-                $isWgUp = WireguardService::fromSettings(2)->isInterfaceUp();
-            } catch (\Throwable $e) {
-                $isWgUp = false;
-            }
-        }
+        $isNebulaConfigured = NebulaService::isConfigured();
 
         $data = [
             'title' => 'Mantenimiento del Sistema',
@@ -41,67 +32,14 @@ class MaintenanceController extends BaseController
                 'logsSize'       => $this->formatBytes($logsStats['size']),
                 'cacheCount'     => $cacheStats['count'],
                 'cacheSize'      => $this->formatBytes($cacheStats['size']),
-                'isWgConfigured' => $isWgConfigured,
-                'isWgUp'         => $isWgUp,
+                'isWgConfigured' => $isNebulaConfigured,
+                'isWgUp'         => $isNebulaConfigured,
             ],
         ];
 
         echo view('template/header', $data);
         echo view('settings/maintenance', $data);
         echo view('template/footer');
-    }
-
-    // ---------------------------------------------------------------------
-    // Sincronización y reconciliación de la configuración de WireGuard
-    // ---------------------------------------------------------------------
-    public function clearGhostPeers()
-    {
-        $syncResult = $this->syncWireguardPeers();
-
-        if ($syncResult['success']) {
-            return redirect()->to(base_url('settings/maintenance'))->with('message', $syncResult['message']);
-        }
-
-        return redirect()->to(base_url('settings/maintenance'))->with('error', $syncResult['message']);
-    }
-
-    // ---------------------------------------------------------------------
-    // Sincronizar y reparar reglas de firewall y reenvío de paquetes (ip_forward)
-    // ---------------------------------------------------------------------
-    public function syncFirewall()
-    {
-        if (! WireguardService::isConfigured()) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'El servidor SSH de WireGuard no está configurado.');
-        }
-
-        try {
-            $wg = WireguardService::fromSettings(10);
-            $wg->syncFirewall();
-
-            return redirect()->to(base_url('settings/maintenance'))->with(
-                'message',
-                'Reglas de firewall y reenvío de paquetes (ip_forward) sincronizadas y aplicadas correctamente en el servidor.'
-            );
-        } catch (\Throwable $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al sincronizar firewall: ' . esc($e->getMessage()));
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // Reiniciar servicio WireGuard
-    // ---------------------------------------------------------------------
-    public function restartWireguard()
-    {
-        try {
-            $wg        = WireguardService::fromSettings(10);
-            $interface = $wg->getInterface();
-
-            $wg->run('systemctl restart ' . escapeshellarg('wg-quick@' . $interface));
-
-            return redirect()->to(base_url('settings/maintenance'))->with('message', "El servicio WireGuard ({$interface}) ha sido reiniciado correctamente.");
-        } catch (\Throwable $e) {
-            return redirect()->to(base_url('settings/maintenance'))->with('error', 'Error al reiniciar WireGuard: ' . esc($e->getMessage()));
-        }
     }
 
     // ---------------------------------------------------------------------
@@ -124,56 +62,12 @@ class MaintenanceController extends BaseController
             $dbMsg = "<br><small class='text-danger'>Error al optimizar BD: " . esc($e->getMessage()) . '</small>';
         }
 
-        // Ejecutar la sincronización de WireGuard (peers y firewall)
-        $syncResult = $this->syncWireguardPeers();
-        $ghostMsg   = '';
-        if ($syncResult['success']) {
-            $ghostMsg = "<br><small class='text-muted'>" . $syncResult['message'] . '</small>';
-        } else {
-            $ghostMsg = "<br><small class='text-danger'>Aviso WireGuard: " . $syncResult['message'] . '</small>';
-        }
-
         $totalCleaned = $sessionsCount + $debugCount + $logsCount + $cacheCount;
 
         return redirect()->to(base_url('settings/maintenance'))->with(
             'message',
-            "Mantenimiento general completado.<br><small class='text-muted'>{$totalCleaned} archivos eliminados ({$sessionsCount} sesiones, {$debugCount} debugs, {$logsCount} logs, {$cacheCount} caché).</small>{$dbMsg}{$ghostMsg}"
+            "Mantenimiento general completado.<br><small class='text-muted'>{$totalCleaned} archivos eliminados ({$sessionsCount} sesiones, {$debugCount} debugs, {$logsCount} logs, {$cacheCount} caché).</small>{$dbMsg}"
         );
-    }
-
-    // ---------------------------------------------------------------------
-    // Helper: Sincroniza y reconcilia los peers y el firewall entre la BD y el servidor
-    // ---------------------------------------------------------------------
-    private function syncWireguardPeers(): array
-    {
-        if (! WireguardService::isConfigured()) {
-            return ['success' => false, 'message' => 'El servidor SSH de WireGuard no está configurado.'];
-        }
-
-        try {
-            $wg  = WireguardService::fromSettings(10);
-            $res = $wg->syncPeers();
-
-            // Sincronizar también las reglas de firewall y reenvío ip_forward
-            $wg->syncFirewall();
-
-            $msgParts = [];
-            if ($res['removed'] > 0) {
-                $msgParts[] = "{$res['removed']} fantasmas eliminados";
-            }
-            if ($res['restored'] > 0) {
-                $msgParts[] = "{$res['restored']} activos restaurados";
-            }
-            if (empty($msgParts)) {
-                $msgParts[] = 'peers y firewall sincronizados';
-            }
-
-            $finalMsg = 'Sincronización VPN completada (' . implode(', ', $msgParts) . ')';
-
-            return ['success' => true, 'message' => $finalMsg];
-        } catch (\Throwable $e) {
-            return ['success' => false, 'message' => 'Error WireGuard: ' . $e->getMessage()];
-        }
     }
 
     // ---------------------------------------------------------------------

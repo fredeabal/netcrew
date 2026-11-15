@@ -13,7 +13,7 @@ class NetworkModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'owner_id', 'name', 'cidr', 'dns', 'active'
+        'owner_id', 'name', 'cidr', 'dns', 'active', 'engine', 'nebula_ca_crt', 'nebula_ca_key'
     ];
 
     // Dates
@@ -23,6 +23,8 @@ class NetworkModel extends Model
     protected $updatedField  = 'updated_at';
 
     // Callbacks
+    protected $beforeInsert = ['encryptCaKey'];
+    protected $beforeUpdate = ['encryptCaKey'];
 
     // Validation
     protected $validationRules      = [
@@ -31,6 +33,7 @@ class NetworkModel extends Model
         'cidr'     => 'required|min_length[9]|max_length[45]|is_unique[networks.cidr,id,{id}]',
         'dns'      => 'permit_empty|string|max_length[255]',
         'owner_id' => 'required|integer',
+        'engine'   => 'permit_empty|in_list[wireguard,nebula]',
     ];
     protected $validationMessages   = [
         'name' => [
@@ -79,5 +82,29 @@ class NetworkModel extends Model
         return $builder->paginate($perPage, 'networks');
     }
 
+    /**
+     * Cifra la llave privada de la CA de Nebula antes de persistirla.
+     */
+    protected function encryptCaKey(array $data): array
+    {
+        if (!empty($data['data']['nebula_ca_key'])) {
+            $encrypter = \Config\Services::encrypter();
+            $data['data']['nebula_ca_key'] = base64_encode($encrypter->encrypt($data['data']['nebula_ca_key']));
+        }
+        return $data;
+    }
 
+    /**
+     * Descifra la llave privada de la CA de Nebula.
+     */
+    public function decryptCaKey(string $encryptedKey): string
+    {
+        try {
+            $encrypter = \Config\Services::encrypter();
+            return $encrypter->decrypt(base64_decode($encryptedKey));
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al desencriptar llave CA de Nebula: ' . $e->getMessage());
+            return '';
+        }
+    }
 }

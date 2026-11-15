@@ -14,9 +14,9 @@
                 </nav>
             </div>
             <div class="flex-shrink-0 text-end">
-                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?>">
+                <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($stats['isWgUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Configurado' : 'Sin configurar' ?>">
                     <span class="status-indicator-dot <?= ($stats['isWgUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-                    <span class="d-none d-sm-inline">WireGuard <?= ($stats['isWgUp'] ?? false) ? 'Online' : 'Inactivo' ?></span>
+                    <span class="d-none d-sm-inline">Nebula P2P <?= ($stats['isWgUp'] ?? false) ? 'Configurado' : 'Sin configurar' ?></span>
                     <span class="d-inline d-sm-none"><?= ($stats['isWgUp'] ?? false) ? 'Activo' : 'Off' ?></span>
                 </div>
             </div>
@@ -106,7 +106,7 @@
                         <i class="ti ti-wand fs-6 text-primary"></i>
                         <h5 class="card-title fw-bold text-primary mb-0">Mantenimiento Completo</h5>
                     </div>
-                    <p class="card-text text-muted mb-0">Limpia sesiones, logs y caché, optimiza la base de datos (VACUUM) y sincroniza WireGuard.</p>
+                    <p class="card-text text-muted mb-0">Limpia sesiones, logs y caché, y optimiza la base de datos (VACUUM).</p>
                 </div>
                 <div class="mt-3">
                     <form action="<?= base_url('settings/maintenance/clear-all') ?>" method="POST" data-confirm="¿Estás seguro de que deseas ejecutar el mantenimiento completo del sistema? Se limpiarán temporales, caché y se optimizará la base de datos.">
@@ -179,82 +179,6 @@
         </div>
     </div>
 
-    <!-- ================= SECCIÓN: RED Y CONECTIVIDAD WIREGUARD ================= -->
-
-    <!-- Sincronizar Servidor VPN -->
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 shadow-none border">
-            <div class="card-body d-flex flex-column justify-content-between">
-                <div>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="p-2 rounded bg-light-primary text-primary d-flex align-items-center justify-content-center">
-                            <i class="ti ti-refresh fs-7"></i>
-                        </div>
-                        <h5 class="fw-bold mb-0">Reconciliar Peers</h5>
-                    </div>
-                    <p class="text-muted fs-2">Sincroniza peers con WireGuard: elimina nodos huérfanos y restaura los activos.</p>
-                </div>
-                <div class="mt-3">
-                    <form action="<?= base_url('settings/maintenance/clear-ghost-peers') ?>" method="POST" data-confirm="¿Deseas reconciliar los peers con el servidor WireGuard? Se eliminarán los nodos inactivos y se restaurarán los activos.">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-primary btn-sm w-100 shadow-none">
-                            <i class="ti ti-refresh me-1"></i> Sincronizar Peers
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reparar Firewall y Enrutamiento -->
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 shadow-none border">
-            <div class="card-body d-flex flex-column justify-content-between">
-                <div>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="p-2 rounded bg-light-primary text-primary d-flex align-items-center justify-content-center">
-                            <i class="ti ti-shield-check fs-7"></i>
-                        </div>
-                        <h5 class="fw-bold mb-0">Reparar Firewall</h5>
-                    </div>
-                    <p class="text-muted fs-2">Reaplica reglas de firewall y reenvío (<code>ip_forward=1</code>) entre nodos.</p>
-                </div>
-                <div class="mt-3">
-                    <form action="<?= base_url('settings/maintenance/sync-firewall') ?>" method="POST" data-confirm="¿Deseas reconstruir y reaplicar las reglas de firewall y reenvío de paquetes en el servidor WireGuard?">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-primary btn-sm w-100 shadow-none">
-                            <i class="ti ti-shield-check me-1"></i> Reparar Firewall
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reiniciar WireGuard -->
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 shadow-none border">
-            <div class="card-body d-flex flex-column justify-content-between">
-                <div>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="p-2 rounded bg-danger-subtle text-danger d-flex align-items-center justify-content-center">
-                            <i class="ti ti-power fs-7"></i>
-                        </div>
-                        <h5 class="fw-bold mb-0">Reiniciar Servicio</h5>
-                    </div>
-                    <p class="text-muted fs-2">Reinicia la interfaz del servicio WireGuard en el servidor.</p>
-                </div>
-                <div class="mt-3">
-                    <form action="<?= base_url('settings/maintenance/restart-wireguard') ?>" method="POST" data-confirm="¿Estás seguro de que deseas reiniciar el servicio WireGuard? Las conexiones activas se reconectarán brevemente.">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="btn btn-danger btn-sm w-100 shadow-none">
-                            <i class="ti ti-power me-1"></i> Reiniciar WireGuard
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>

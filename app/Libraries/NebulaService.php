@@ -1,0 +1,595 @@
+<?php
+
+namespace App\Libraries;
+
+use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Net\SSH2;
+use RuntimeException;
+use Throwable;
+
+/**
+ * Servicio centralizado para gestionar redes P2P basadas en Nebula.
+ *
+ * Responsabilidades:
+ * - Generar Autoridades Certificadoras (CA) por red mediante `nebula-cert`.
+ * - Firmar certificados de dispositivos con su IP, grupos y expiración.
+ * - Construir archivos `config.yml` listos para clientes (con hole-punching P2P y relay opcional).
+ * - Generar configuración del nodo Lighthouse para el servidor.
+ *
+ * Puede ejecutar `nebula-cert` localmente o, si no está instalado en el servidor web,
+ * delegar la ejecución al servidor remoto vía SSH2.
+ */
+class NebulaService
+{
+    public const DEFAULT_PORT = 4242;
+
+    /**
+     * Indica si Nebula tiene un host de Lighthouse configurado.
+     */
+    public static function isConfigured(): bool
+    {
+        $endpoint = self::resolveLighthouseEndpoint();
+        return $endpoint['host'] !== '';
+    }
+
+    /**
+     * Indica si la conexión SSH opcional de Nebula está configurada.
+     */
+    public static function isSshConfigured(): bool
+    {
+        $settings = service('settings');
+        return !empty($settings->get('Nebula.sshHost')) && !empty($settings->get('Nebula.sshUser'));
+    }
+
+    /**
+     * Crea una sesión SSH2 usando los ajustes de Nebula.
+     */
+    public static function sshFromSettings(int $timeout = 8): SSH2
+    {
+        $settings = service('settings');
+        $host     = (string) $settings->get('Nebula.sshHost');
+        $user     = (string) $settings->get('Nebula.sshUser');
+        $port     = (int) ($settings->get('Nebula.sshPort') ?: 22);
+        $authType = (string) ($settings->get('Nebula.sshAuthType') ?: 'password');
+
+        if ($host === '' || $user === '') {
+            throw new RuntimeException('La configuración SSH de Nebula está incompleta.');
+        }
+
+        if ($authType === 'key') {
+            $encKey = (string) $settings->get('Nebula.sshPrivateKey');
+            $cred   = $encKey !== '' ? self::decryptSetting($encKey) : '';
+            if ($cred === '') {
+                throw new RuntimeException('No se ha configurado ninguna llave privada SSH.');
+            }
+            $loginCred = PublicKeyLoader::load($cred);
+        } else {
+            $encPass   = (string) $settings->get('Nebula.sshPassword');
+            $loginCred = $encPass !== '' ? self::decryptSetting($encPass) : '';
+        }
+
+        $ssh = new SSH2($host, $port, $timeout);
+        if (!$ssh->login($user, $loginCred)) {
+            throw new RuntimeException('Fallo de autenticación SSH.');
+        }
+
+        return $ssh;
+    }
+
+    protected static function decryptSetting(string $encrypted): string
+    {
+        try {
+            return (string) \Config\Services::encrypter()->decrypt(base64_decode($encrypted));
+        } catch (Throwable $e) {
+            throw new RuntimeException('No se pudo desencriptar la credencial SSH guardada.', 0, $e);
+        }
+    }
+
+    /**
+     * Resuelve el host y puerto público del servidor Lighthouse.
+     *
+     * @return array{host: string, port: int}
+     */
+    public static function resolveLighthouseEndpoint(): array
+    {
+        $settings = service('settings');
+        $host     = trim((string) $settings->get('Nebula.lighthouseHost'));
+        $port     = (int) ($settings->get('Nebula.lighthousePort') ?: self::DEFAULT_PORT);
+
+        if ($host === '') {
+            $host = trim((string) $settings->get('Nebula.sshHost'));
+        }
+
+        if ($port < 1 || $port > 65535) {
+            $port = self::DEFAULT_PORT;
+        }
+
+        return [
+            'host' => $host,
+            'port' => $port,
+        ];
+    }
+
+    /**
+     * Devuelve la IP VPN del Lighthouse dentro del rango de la red (primer host .1).
+     */
+    public static function getLighthouseVpnIp(string $cidr): string
+    {
+        $ipPart = explode('/', $cidr)[0];
+        $octets = explode('.', $ipPart);
+        if (count($octets) === 4) {
+            $octets[3] = '1';
+            return implode('.', $octets);
+        }
+
+        return '10.10.10.1';
+    }
+
+    /**
+     * Localiza el binario `nebula-cert` en el sistema local.
+     */
+    public static function findLocalBinary(): ?string
+    {
+        $candidates = [
+            '/opt/homebrew/bin/nebula-cert',
+            '/usr/local/bin/nebula-cert',
+            '/usr/bin/nebula-cert',
+            '/bin/nebula-cert',
+        ];
+
+        foreach ($candidates as $path) {
+            if (is_file($path) && is_executable($path)) {
+                return $path;
+            }
+        }
+
+        $which = @shell_exec('command -v nebula-cert 2>/dev/null');
+        $which = is_string($which) ? trim($which) : '';
+        if ($which !== '' && is_file($which) && is_executable($which)) {
+            return $which;
+        }
+
+        return null;
+    }
+
+    /**
+     * Comprueba la disponibilidad de `nebula-cert` local y/o remotamente por SSH.
+     *
+     * @return array{local: bool, remote: bool, binaryPath: string|null, message: string}
+     */
+    public static function testAvailability(): array
+    {
+        $localBin = self::findLocalBinary();
+        if ($localBin !== null) {
+            $version = trim((string) @shell_exec(escapeshellarg($localBin) . ' -version 2>&1'));
+            return [
+                'local'      => true,
+                'remote'     => false,
+                'binaryPath' => $localBin,
+                'message'    => 'nebula-cert disponible localmente (' . ($version ?: $localBin) . ').',
+            ];
+        }
+
+        if (self::isSshConfigured()) {
+            try {
+                $ssh = self::sshFromSettings(5);
+                $out = trim((string) $ssh->exec('command -v nebula-cert || ls /usr/local/bin/nebula-cert 2>/dev/null'));
+                if ($out !== '' && $ssh->getExitStatus() === 0) {
+                    $ver = trim((string) $ssh->exec(escapeshellarg($out) . ' -version 2>&1'));
+                    return [
+                        'local'      => false,
+                        'remote'     => true,
+                        'binaryPath' => $out,
+                        'message'    => 'nebula-cert disponible vía SSH (' . ($ver ?: $out) . ').',
+                    ];
+                }
+            } catch (Throwable $e) {
+                return [
+                    'local'      => false,
+                    'remote'     => false,
+                    'binaryPath' => null,
+                    'message'    => 'No se encontró nebula-cert localmente y falló la comprobación SSH: ' . $e->getMessage(),
+                ];
+            }
+        }
+
+        return [
+            'local'      => false,
+            'remote'     => false,
+            'binaryPath' => null,
+            'message'    => 'No se encontró el binario nebula-cert ni en el servidor local ni vía SSH. Instálalo (ej. apt install nebula / brew install nebula) para generar certificados.',
+        ];
+    }
+
+    /**
+     * Genera un par de certificados CA (ca.crt y ca.key) para una red Nebula.
+     *
+     * @return array{crt: string, key: string}
+     */
+    public static function createCa(string $networkName, int $durationDays = 3650): array
+    {
+        $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $networkName) ?: 'NetCrew';
+        $hours    = max(24, $durationDays * 24) . 'h';
+
+        $localBin = self::findLocalBinary();
+        if ($localBin !== null) {
+            $tmpDir = sys_get_temp_dir() . '/nc_nebula_ca_' . bin2hex(random_bytes(8));
+            if (!mkdir($tmpDir, 0700, true) && !is_dir($tmpDir)) {
+                throw new RuntimeException('No se pudo crear el directorio temporal para la CA de Nebula.');
+            }
+
+            try {
+                $crtPath = $tmpDir . '/ca.crt';
+                $keyPath = $tmpDir . '/ca.key';
+                $cmd     = sprintf(
+                    '%s ca -name %s -duration %s -out-crt %s -out-key %s 2>&1',
+                    escapeshellarg($localBin),
+                    escapeshellarg($safeName),
+                    escapeshellarg($hours),
+                    escapeshellarg($crtPath),
+                    escapeshellarg($keyPath)
+                );
+
+                exec($cmd, $output, $code);
+                if ($code !== 0 || !is_file($crtPath) || !is_file($keyPath)) {
+                    throw new RuntimeException('Error al generar la CA de Nebula: ' . implode("\n", $output));
+                }
+
+                return [
+                    'crt' => (string) file_get_contents($crtPath),
+                    'key' => (string) file_get_contents($keyPath),
+                ];
+            } finally {
+                @unlink($tmpDir . '/ca.crt');
+                @unlink($tmpDir . '/ca.key');
+                @rmdir($tmpDir);
+            }
+        }
+
+        if (self::isSshConfigured()) {
+            $ssh       = self::sshFromSettings(10);
+            $remoteBin = trim((string) $ssh->exec('command -v nebula-cert || echo ""'));
+            if ($remoteBin === '') {
+                throw new RuntimeException('No se encontró nebula-cert ni localmente ni en el servidor SSH.');
+            }
+
+            $remoteDir = '/tmp/nc_nebula_ca_' . bin2hex(random_bytes(8));
+            try {
+                $cmd = sprintf(
+                    'mkdir -p %s && chmod 700 %s && %s ca -name %s -duration %s -out-crt %s/ca.crt -out-key %s/ca.key && cat %s/ca.crt && echo "---NC_SPLIT---" && cat %s/ca.key',
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteBin),
+                    escapeshellarg($safeName),
+                    escapeshellarg($hours),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir)
+                );
+                $out = (string) $ssh->exec($cmd);
+                if ($ssh->getExitStatus() !== 0 || strpos($out, '---NC_SPLIT---') === false) {
+                    throw new RuntimeException('Error generando la CA de Nebula por SSH: ' . $out);
+                }
+                [$crt, $key] = explode('---NC_SPLIT---', $out, 2);
+                return [
+                    'crt' => trim($crt) . "\n",
+                    'key' => trim($key) . "\n",
+                ];
+            } finally {
+                $ssh->exec('rm -rf ' . escapeshellarg($remoteDir));
+            }
+        }
+
+        throw new RuntimeException('El binario nebula-cert no está instalado en este servidor ni configurado vía SSH.');
+    }
+
+    /**
+     * Firma un certificado de dispositivo/nodo con la CA de la red.
+     *
+     * @return array{crt: string, key: string, fingerprint: string}
+     */
+    public static function signDeviceCert(
+        string $caCrt,
+        string $caKey,
+        string $deviceName,
+        string $ipCidr,
+        string $groups = 'devices',
+        ?string $expiresAt = null
+    ): array {
+        $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '-', $deviceName) ?: 'node';
+
+        $durationHours = 43800;
+        if (!empty($expiresAt)) {
+            $diffSeconds   = max(3600, strtotime($expiresAt) - time());
+            $durationHours = (int) ceil($diffSeconds / 3600);
+        }
+        $duration = $durationHours . 'h';
+
+        $cleanGroups = array_filter(array_map(static function ($g) {
+            return preg_replace('/[^a-zA-Z0-9_-]/', '', trim($g));
+        }, explode(',', $groups)));
+        $groupsArg = !empty($cleanGroups) ? implode(',', $cleanGroups) : 'devices';
+
+        $localBin = self::findLocalBinary();
+        if ($localBin !== null) {
+            $tmpDir = sys_get_temp_dir() . '/nc_nebula_sign_' . bin2hex(random_bytes(8));
+            if (!mkdir($tmpDir, 0700, true) && !is_dir($tmpDir)) {
+                throw new RuntimeException('No se pudo crear directorio temporal para firmar el certificado Nebula.');
+            }
+
+            try {
+                $caCrtPath = $tmpDir . '/ca.crt';
+                $caKeyPath = $tmpDir . '/ca.key';
+                $crtPath   = $tmpDir . '/node.crt';
+                $keyPath   = $tmpDir . '/node.key';
+
+                file_put_contents($caCrtPath, $caCrt);
+                file_put_contents($caKeyPath, $caKey);
+                chmod($caKeyPath, 0600);
+
+                $cmd = sprintf(
+                    '%s sign -ca-crt %s -ca-key %s -name %s -ip %s -groups %s -duration %s -out-crt %s -out-key %s 2>&1',
+                    escapeshellarg($localBin),
+                    escapeshellarg($caCrtPath),
+                    escapeshellarg($caKeyPath),
+                    escapeshellarg($safeName),
+                    escapeshellarg($ipCidr),
+                    escapeshellarg($groupsArg),
+                    escapeshellarg($duration),
+                    escapeshellarg($crtPath),
+                    escapeshellarg($keyPath)
+                );
+
+                exec($cmd, $output, $code);
+                if ($code !== 0 || !is_file($crtPath) || !is_file($keyPath)) {
+                    throw new RuntimeException('Error al firmar certificado Nebula: ' . implode("\n", $output));
+                }
+
+                $crt = (string) file_get_contents($crtPath);
+                $key = (string) file_get_contents($keyPath);
+
+                return [
+                    'crt'         => $crt,
+                    'key'         => $key,
+                    'fingerprint' => 'nebula-' . hash('sha256', $crt),
+                ];
+            } finally {
+                @unlink($tmpDir . '/ca.crt');
+                @unlink($tmpDir . '/ca.key');
+                @unlink($tmpDir . '/node.crt');
+                @unlink($tmpDir . '/node.key');
+                @rmdir($tmpDir);
+            }
+        }
+
+        if (self::isSshConfigured()) {
+            $ssh       = self::sshFromSettings(10);
+            $remoteBin = trim((string) $ssh->exec('command -v nebula-cert || echo ""'));
+            if ($remoteBin === '') {
+                throw new RuntimeException('No se encontró nebula-cert ni localmente ni en el servidor SSH.');
+            }
+
+            $remoteDir = '/tmp/nc_nebula_sign_' . bin2hex(random_bytes(8));
+            try {
+                $caCrtB64 = base64_encode($caCrt);
+                $caKeyB64 = base64_encode($caKey);
+
+                $cmd = sprintf(
+                    'mkdir -p %s && chmod 700 %s && echo %s | base64 -d > %s/ca.crt && echo %s | base64 -d > %s/ca.key && chmod 600 %s/ca.key && %s sign -ca-crt %s/ca.crt -ca-key %s/ca.key -name %s -ip %s -groups %s -duration %s -out-crt %s/node.crt -out-key %s/node.key && cat %s/node.crt && echo "---NC_SPLIT---" && cat %s/node.key',
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($caCrtB64),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($caKeyB64),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteBin),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($safeName),
+                    escapeshellarg($ipCidr),
+                    escapeshellarg($groupsArg),
+                    escapeshellarg($duration),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir)
+                );
+
+                $out = (string) $ssh->exec($cmd);
+                if ($ssh->getExitStatus() !== 0 || strpos($out, '---NC_SPLIT---') === false) {
+                    throw new RuntimeException('Error firmando certificado Nebula por SSH: ' . $out);
+                }
+
+                [$crt, $key] = explode('---NC_SPLIT---', $out, 2);
+                $crt = trim($crt) . "\n";
+                $key = trim($key) . "\n";
+
+                return [
+                    'crt'         => $crt,
+                    'key'         => $key,
+                    'fingerprint' => 'nebula-' . hash('sha256', $crt),
+                ];
+            } finally {
+                $ssh->exec('rm -rf ' . escapeshellarg($remoteDir));
+            }
+        }
+
+        throw new RuntimeException('El binario nebula-cert no está instalado en este servidor ni configurado vía SSH.');
+    }
+
+    /**
+     * Construye el archivo `config.yml` de Nebula para un dispositivo cliente (modo P2P Mesh).
+     */
+    public static function buildClientConfig(object $network, object $device, string $decryptedCrt, string $decryptedKey): string
+    {
+        $settings        = service('settings');
+        $endpoint        = self::resolveLighthouseEndpoint();
+        $lighthouseHost  = $endpoint['host'] !== '' ? $endpoint['host'] : 'YOUR_LIGHTHOUSE_PUBLIC_IP';
+        $lighthousePort  = $endpoint['port'];
+        $lighthouseVpnIp = self::getLighthouseVpnIp($network->cidr);
+        $relayEnabled    = (bool) ($settings->get('Nebula.relayEnabled') ?? true);
+        $cipher          = (string) ($settings->get('Nebula.cipher') ?: 'aes');
+        if (!in_array($cipher, ['aes', 'chacha20'], true)) {
+            $cipher = 'aes';
+        }
+
+        $caBlock  = self::indentPem((string) $network->nebula_ca_crt, 4);
+        $crtBlock = self::indentPem($decryptedCrt, 4);
+        $keyBlock = self::indentPem($decryptedKey, 4);
+
+        $relayConfig = $relayEnabled
+            ? "relay:\n  relays:\n    - {$lighthouseVpnIp}\n  am_relay: false\n  use_relays: true\n"
+            : "relay:\n  am_relay: false\n  use_relays: false\n";
+
+        return <<<YAML
+# Configuración Nebula P2P Mesh generada por NetCrew
+# Red: {$network->name} ({$network->cidr})
+# Nodo: {$device->name} ({$device->ip_address})
+
+pki:
+  ca: |
+{$caBlock}
+  cert: |
+{$crtBlock}
+  key: |
+{$keyBlock}
+
+static_host_map:
+  "{$lighthouseVpnIp}": ["{$lighthouseHost}:{$lighthousePort}"]
+
+lighthouse:
+  am_lighthouse: false
+  interval: 60
+  hosts:
+    - "{$lighthouseVpnIp}"
+
+listen:
+  host: 0.0.0.0
+  port: 0
+
+punchy:
+  punch: true
+  respond: true
+
+{$relayConfig}
+tun:
+  disabled: false
+  dev: nebula1
+  drop_local_broadcast: false
+  drop_multicast: false
+  tx_queue: 500
+  mtu: 1300
+
+cipher: {$cipher}
+
+logging:
+  level: info
+  format: text
+
+firewall:
+  outbound_action: drop
+  inbound_action: drop
+  outbound:
+    - port: any
+      proto: any
+      host: any
+  inbound:
+    - port: any
+      proto: icmp
+      host: any
+    - port: any
+      proto: any
+      group: devices
+
+YAML;
+    }
+
+    /**
+     * Construye el `config.yml` para el servidor Lighthouse de una red Nebula.
+     */
+    public static function buildLighthouseConfig(object $network, string $lighthouseCrt, string $lighthouseKey): string
+    {
+        $settings     = service('settings');
+        $endpoint     = self::resolveLighthouseEndpoint();
+        $port         = $endpoint['port'];
+        $relayEnabled = (bool) ($settings->get('Nebula.relayEnabled') ?? true);
+        $cipher       = (string) ($settings->get('Nebula.cipher') ?: 'aes');
+        if (!in_array($cipher, ['aes', 'chacha20'], true)) {
+            $cipher = 'aes';
+        }
+
+        $caBlock  = self::indentPem((string) $network->nebula_ca_crt, 4);
+        $crtBlock = self::indentPem($lighthouseCrt, 4);
+        $keyBlock = self::indentPem($lighthouseKey, 4);
+        $amRelay  = $relayEnabled ? 'true' : 'false';
+
+        return <<<YAML
+# Configuración de Servidor Lighthouse Nebula generada por NetCrew
+# Red: {$network->name} ({$network->cidr})
+
+pki:
+  ca: |
+{$caBlock}
+  cert: |
+{$crtBlock}
+  key: |
+{$keyBlock}
+
+static_host_map: {}
+
+lighthouse:
+  am_lighthouse: true
+
+listen:
+  host: 0.0.0.0
+  port: {$port}
+
+punchy:
+  punch: true
+  respond: true
+
+relay:
+  am_relay: {$amRelay}
+  use_relays: false
+
+tun:
+  disabled: false
+  dev: nebula1
+  mtu: 1300
+
+cipher: {$cipher}
+
+logging:
+  level: info
+  format: text
+
+firewall:
+  outbound_action: drop
+  inbound_action: drop
+  outbound:
+    - port: any
+      proto: any
+      host: any
+  inbound:
+    - port: any
+      proto: icmp
+      host: any
+    - port: any
+      proto: any
+      group: devices
+
+YAML;
+    }
+
+    /**
+     * Indenta un certificado o llave PEM para insertarlo limpiamente en un bloque YAML literal `|`.
+     */
+    protected static function indentPem(string $pem, int $spaces = 4): string
+    {
+        $pad   = str_repeat(' ', $spaces);
+        $lines = preg_split("/\r\n|\n|\r/", trim($pem));
+        return implode("\n", array_map(static fn ($line) => $pad . $line, $lines));
+    }
+}

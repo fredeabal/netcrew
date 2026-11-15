@@ -76,6 +76,7 @@
                        <?php else: ?>
                          <span class="net-name"><?= esc($net->name) ?></span>
                        <?php endif; ?>
+                       <span class="badge bg-info-subtle text-info rounded-pill fs-2 fw-medium">Nebula P2P</span>
                      </div>
                    </td>
                    <td class="text-center"><span class="net-mono"><?= esc($net->cidr) ?></span></td>
@@ -95,6 +96,11 @@
                         <li>
                           <a href="<?= site_url('networks/' . $net->id . '/devices') ?>" class="dropdown-item d-flex align-items-center gap-2">
                             <i class="ti ti-devices"></i> Administrar Nodos
+                          </a>
+                        </li>
+                        <li>
+                          <a href="<?= site_url('networks/' . $net->id . '/lighthouse-config') ?>" class="dropdown-item d-flex align-items-center gap-2">
+                            <i class="ti ti-radar"></i> Config Lighthouse (.yml)
                           </a>
                         </li>
                         <?php endif; ?>

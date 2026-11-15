@@ -105,7 +105,7 @@
               <i class="ti ti-alert-triangle fs-6 me-3"></i>
               <div>
                 <strong>Servidor WireGuard no configurado:</strong> El host SSH central no está enlazado aún.
-                <a href="<?= site_url('settings/wireguard') ?>" class="alert-link ms-1">Configurar ahora</a>.
+                <a href="<?= site_url('settings/nebula') ?>" class="alert-link ms-1">Configurar ahora</a>.
               </div>
             </div>
           <?php elseif (empty($telemetry['trafficLabels'])): ?>

@@ -42,13 +42,10 @@ $routes->group('settings', ['filter' => ['session', 'permission:admin.settings']
     $routes->get('smtp', 'SmtpController::smtp');
     $routes->post('smtp/update', 'SmtpController::smtpUpdate');
     $routes->post('smtp/test', 'SmtpController::smtpTest');
-    $routes->get('wireguard', 'WireguardController::wireguard');
-    $routes->post('wireguard/update', 'WireguardController::wireguardUpdate');
-    $routes->post('wireguard/test', 'WireguardController::wireguardTest');
+    $routes->get('nebula', 'NebulaController::index');
+    $routes->post('nebula/update', 'NebulaController::update');
+    $routes->post('nebula/test', 'NebulaController::test');
     $routes->get('maintenance', 'MaintenanceController::maintenance');
-    $routes->post('maintenance/clear-ghost-peers', 'MaintenanceController::clearGhostPeers');
-    $routes->post('maintenance/sync-firewall', 'MaintenanceController::syncFirewall');
-    $routes->post('maintenance/restart-wireguard', 'MaintenanceController::restartWireguard');
     $routes->post('maintenance/clear-all', 'MaintenanceController::clearAll');
     $routes->get('maintenance/backup/download', 'MaintenanceController::downloadBackup');
     $routes->post('maintenance/backup/restore', 'MaintenanceController::restoreBackup');
@@ -63,6 +60,7 @@ $routes->group('networks', ['filter' => 'session'], static function ($routes) {
     $routes->post('update/(:num)', 'NetworkController::update/$1', ['filter' => 'permission:networks.edit']);
     $routes->post('delete/(:num)', 'NetworkController::delete/$1', ['filter' => 'permission:networks.delete']);
     $routes->post('toggle-active/(:num)', 'NetworkController::toggleActive/$1', ['filter' => 'permission:networks.edit']);
+    $routes->get('(:num)/lighthouse-config', 'NetworkController::downloadLighthouseConfig/$1', ['filter' => 'permission:networks.view']);
     $routes->get('(:num)/devices', 'DeviceController::index/$1', ['filter' => 'permission:devices.view']);
     $routes->get('(:num)/devices/create', 'DeviceController::create/$1', ['filter' => 'permission:devices.create']);
 });
@@ -87,7 +85,7 @@ $routes->group('devices', ['filter' => 'session'], static function ($routes) {
     $routes->post('send-email/(:num)', 'DeviceController::sendConfigEmail/$1', ['filter' => 'permission:devices.edit']);
 });
 
-// Ruta pública para enlace temporal compartido de configuración WireGuard (One-Time Link)
+// Ruta pública para enlace temporal compartido de configuración Nebula P2P (One-Time Link)
 $routes->get('connect/(:alphanum)', 'DeviceController::connectShare/$1');
 $routes->get('connect/(:alphanum)/download', 'DeviceController::downloadShare/$1');
 

@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Libraries\WireguardService;
+use App\Libraries\NebulaService;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 
@@ -18,10 +18,10 @@ class DashboardController extends BaseController
             'title' => 'Dashboard',
         ];
 
-        // Estructura base de telemetría de red
+        // Estructura base de telemetría de red (Nebula P2P)
         $telemetry = [
-            'isConfigured'     => WireguardService::isConfigured(),
-            'isInterfaceUp'    => false,
+            'isConfigured'     => NebulaService::isConfigured(),
+            'isInterfaceUp'    => NebulaService::isConfigured(),
             'totalRxBytes'     => 0,
             'totalTxBytes'     => 0,
             'formattedRx'      => '0 B',
@@ -90,126 +90,26 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Procesa la telemetría agregada por Red VPN y el tráfico real de WireGuard.
-     * Genera una métrica global orientativa que no satura aunque existan cientos de redes.
+     * Procesa la telemetría resumen de dispositivos para redes Nebula P2P.
      */
     protected function buildTelemetryData(array $devices, array $networks, array $telemetry): array
     {
         $telemetry['totalDevices'] = count($devices);
+        $activeCount = 0;
+        $now = time();
 
-        if (! $telemetry['isConfigured'] || empty($devices)) {
-            $telemetry['offlineDevices'] = $telemetry['totalDevices'];
-            return $telemetry;
+        foreach ($devices as $dev) {
+            $expired = !empty($dev->expires_at) && strtotime($dev->expires_at) < $now;
+            if ((int) $dev->active === 1 && !$expired) {
+                $activeCount++;
+            }
         }
 
-        try {
-            // Obtener estado de peers (cacheado por 5s para evitar múltiples sesiones SSH)
-            $dump  = WireguardService::cachedDump(5, 3);
-            $peers = $dump['peers'] ?? [];
-            $telemetry['isInterfaceUp'] = true;
-
-            $onlineCount = 0;
-
-            // Inicializar mapa acumulador por cada red
-            $netTrafficMap = [];
-            foreach ($networks as $net) {
-                $netTrafficMap[$net->id] = [
-                    'id'    => $net->id,
-                    'name'  => $net->name,
-                    'rx'    => 0,
-                    'tx'    => 0,
-                    'total' => 0,
-                ];
-            }
-
-            foreach ($devices as $dev) {
-                $peer = $peers[$dev->public_key] ?? null;
-                // En WireGuard (servidor):
-                // tx_bytes = bytes transmitidos hacia el nodo -> Descarga (Download / RX cliente)
-                // rx_bytes = bytes recibidos desde el nodo   -> Subida (Upload / TX cliente)
-                $download = (int) ($peer['tx_bytes'] ?? 0);
-                $upload   = (int) ($peer['rx_bytes'] ?? 0);
-                $isConnected = ((int) $dev->active === 1) && ! empty($peer['connected']);
-
-                if ($isConnected) {
-                    $onlineCount++;
-                }
-
-                $telemetry['totalRxBytes'] += $download; // Total Descarga
-                $telemetry['totalTxBytes'] += $upload;   // Total Subida
-
-                if (isset($netTrafficMap[$dev->network_id])) {
-                    $netTrafficMap[$dev->network_id]['rx']    += $download;
-                    $netTrafficMap[$dev->network_id]['tx']    += $upload;
-                    $netTrafficMap[$dev->network_id]['total'] += ($download + $upload);
-                }
-            }
-
-            $telemetry['onlineDevices']    = $onlineCount;
-            $telemetry['offlineDevices']   = max(0, $telemetry['totalDevices'] - $onlineCount);
-            $telemetry['healthPercentage'] = $telemetry['totalDevices'] > 0
-                ? (int) round(($onlineCount / $telemetry['totalDevices']) * 100)
-                : 0;
-
-            $telemetry['formattedRx']    = self::formatBytes($telemetry['totalRxBytes']);
-            $telemetry['formattedTx']    = self::formatBytes($telemetry['totalTxBytes']);
-            $telemetry['formattedTotal'] = self::formatBytes($telemetry['totalRxBytes'] + $telemetry['totalTxBytes']);
-
-            // Curva gráfica global de tráfico total acumulado (sin etiquetas ni nombres en eje X)
-            $points = [];
-            $hasAnyTraffic = false;
-
-            foreach ($netTrafficMap as $net) {
-                if ($net['rx'] > 0 || $net['tx'] > 0) {
-                    $hasAnyTraffic = true;
-                    $points[] = ['rx' => $net['rx'], 'tx' => $net['tx'], 'total' => $net['total']];
-                }
-            }
-
-            // Si hay una sola red con tráfico pero varios nodos, usamos los nodos para una curva fluida
-            if (count($points) <= 1) {
-                $devicePoints = [];
-                foreach ($devices as $dev) {
-                    $peer = $peers[$dev->public_key] ?? null;
-                    $dDownload = (int) ($peer['tx_bytes'] ?? 0);
-                    $dUpload   = (int) ($peer['rx_bytes'] ?? 0);
-                    if ($dDownload > 0 || $dUpload > 0) {
-                        $hasAnyTraffic = true;
-                        $devicePoints[] = ['rx' => $dDownload, 'tx' => $dUpload, 'total' => $dDownload + $dUpload];
-                    }
-                }
-                if (count($devicePoints) > count($points)) {
-                    $points = $devicePoints;
-                }
-            }
-
-            // Ordenar descendente para que la curva fluya estéticamente
-            usort($points, fn ($a, $b) => $b['total'] <=> $a['total']);
-
-            if (! empty($points)) {
-                foreach ($points as $p) {
-                    $telemetry['trafficRx'][] = $p['rx'];
-                    $telemetry['trafficTx'][] = $p['tx'];
-                }
-                // Si hay un único punto, generamos un decaimiento suave para que forme la onda
-                if (count($points) === 1) {
-                    $baseRx = $points[0]['rx'];
-                    $baseTx = $points[0]['tx'];
-                    $telemetry['trafficRx'] = [(int) $baseRx, (int) round($baseRx * 0.65), (int) round($baseRx * 0.25), 0];
-                    $telemetry['trafficTx'] = [(int) $baseTx, (int) round($baseTx * 0.75), (int) round($baseTx * 0.35), 0];
-                } else {
-                    // Anclaje final en 0 para que la curva descienda suavemente a la base
-                    $telemetry['trafficRx'][] = 0;
-                    $telemetry['trafficTx'][] = 0;
-                }
-            }
-
-            $telemetry['hasTrafficData'] = $hasAnyTraffic;
-
-        } catch (\Throwable $e) {
-            log_message('notice', 'Dashboard telemetry notice: ' . $e->getMessage());
-            $telemetry['offlineDevices'] = $telemetry['totalDevices'];
-        }
+        $telemetry['onlineDevices']    = $activeCount;
+        $telemetry['offlineDevices']   = max(0, $telemetry['totalDevices'] - $activeCount);
+        $telemetry['healthPercentage'] = $telemetry['totalDevices'] > 0
+            ? (int) round(($activeCount / $telemetry['totalDevices']) * 100)
+            : 0;
 
         return $telemetry;
     }

@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
-use App\Libraries\WireguardService;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 use CodeIgniter\Shield\Entities\User;
@@ -353,29 +352,10 @@ class UsersController extends BaseController
                 $deviceModel  = model(\App\Models\DeviceModel::class);
                 
                 $userNetworks = $networkModel->where('owner_id', $user->id)->findAll();
-                $keysToRemove = [];
 
+                // Borrar redes y dispositivos del usuario
                 foreach ($userNetworks as $network) {
-                    $devices = $deviceModel->where('network_id', $network->id)->findAll();
-                    foreach ($devices as $d) {
-                        if (!empty($d->public_key)) {
-                            $keysToRemove[] = $d->public_key;
-                        }
-                    }
-                    // Borrar los dispositivos (nodos) de la red
                     $deviceModel->where('network_id', $network->id)->delete();
-                }
-
-                // Borrar peers en Wireguard si hay dispositivos asociados y SSH está configurado
-                if (!empty($keysToRemove) && \App\Libraries\WireguardService::isConfigured()) {
-                    try {
-                        $wg = \App\Libraries\WireguardService::fromSettings();
-                        $wg->removePeers($keysToRemove);
-                        $wg->saveConfig();
-                        $wg->syncFirewall();
-                    } catch (\Throwable $e) {
-                        log_message('warning', 'Aviso no bloqueante: no se pudieron retirar peers en WireGuard al borrar usuario: ' . $e->getMessage());
-                    }
                 }
 
                 // Borrar las redes del usuario

@@ -89,6 +89,45 @@ code,
     filter: brightness(0.9);
 }
 
+/* =============================================
+   TABS Y NAVEGACIÓN: PRIMARY (ORANGE) Y TAMAÑO SM
+   ============================================= */
+.nav-tabs {
+    border-bottom: 0 !important;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem !important;
+}
+
+.nav-tabs .nav-link,
+.nav-pills .nav-link,
+#settingsTabs .nav-link {
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    padding: 0.4rem 0.85rem !important;
+    border-radius: 6px !important;
+    color: var(--bs-body-color, #7c8fac) !important;
+    background-color: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all 0.15s ease-in-out;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-pills .nav-link:hover,
+#settingsTabs .nav-link:hover {
+    color: var(--bs-primary, #F38020) !important;
+    background-color: var(--bs-primary-bg-subtle, rgba(243, 128, 32, 0.15)) !important;
+}
+
+.nav-tabs .nav-link.active,
+.nav-pills .nav-link.active,
+#settingsTabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: #ffffff !important;
+    background-color: var(--bs-primary, #F38020) !important;
+    border-color: var(--bs-primary, #F38020) !important;
+    box-shadow: none !important;
+}
+
 /* Forzar Success en componentes específicos */
 .btn-success {
     background-color: var(--bs-success) !important;

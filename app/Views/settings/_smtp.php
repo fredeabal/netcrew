@@ -110,20 +110,14 @@
                         </div>
                     </div>
 
-                    <!-- BOTONERA DE ACCIONES: RESPONSIVE Y CENTRADOS -->
-                    <div class="mt-4 pt-3 border-top">
-                        <div class="row g-2 justify-content-center align-items-center">
-                            <div class="col-6 col-sm-auto">
-                                <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center h-100">
-                                    <i class="ti ti-send me-1"></i>Probar
-                                </button>
-                            </div>
-                            <div class="col-6 col-sm-auto">
-                                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">
-                                    <i class="ti ti-device-floppy me-1"></i>Guardar Cambios
-                                </button>
-                            </div>
-                        </div>
+                    <!-- BOTONERA DE ACCIONES -->
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                        <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white d-inline-flex align-items-center gap-1">
+                            <i class="ti ti-send"></i> Probar
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4 d-inline-flex align-items-center gap-1">
+                            <i class="ti ti-device-floppy"></i> Guardar
+                        </button>
                     </div>
                 </form>
             </div>

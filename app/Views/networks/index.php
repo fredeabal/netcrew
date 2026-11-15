@@ -45,6 +45,9 @@
 
         <?php if (empty($networks)): ?>
           <div class="text-center py-5">
+            <div class="round-48 d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2">
+              <i class="ti ti-network fs-5"></i>
+            </div>
             <h6 class="fw-medium mb-1"><?= !empty($search) ? 'Sin resultados' : 'Aún no hay redes' ?></h6>
             <p class="text-muted fs-3 mb-0"><?= !empty($search) ? 'Ninguna red coincide con tu búsqueda' : 'Crea la primera red para empezar a añadir nodos' ?></p>
           </div>

@@ -194,6 +194,9 @@
           </div>
           <?php if (empty($devices)): ?>
             <div class="text-center py-5">
+              <div class="round-48 d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2">
+                <i class="ti ti-devices fs-5"></i>
+              </div>
               <h6 class="fw-medium mb-1">Aún no hay nodos</h6>
               <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración Nebula (.yml).</p>
             </div>

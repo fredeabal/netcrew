@@ -36,7 +36,9 @@
 
         <?php if (empty($logs)): ?>
           <div class="text-center py-5">
-            <i class="ti ti-history fs-8 text-muted d-block mb-2"></i>
+            <div class="round-48 d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2">
+              <i class="ti ti-history fs-5"></i>
+            </div>
             <h6 class="fw-semibold"><?= !empty($search) ? 'Sin resultados' : 'No hay registros de auditoría aún' ?></h6>
             <p class="text-muted mb-0 small"><?= !empty($search) ? 'Ningún registro coincide con tu búsqueda' : 'Los eventos de seguridad, cambios en redes, nodos y accesos aparecerán registrados aquí.' ?></p>
           </div>

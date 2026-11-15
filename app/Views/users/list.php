@@ -43,6 +43,9 @@
 
                 <?php if (empty($users)): ?>
                     <div class="text-center py-5">
+                        <div class="round-48 d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2">
+                            <i class="ti ti-users fs-5"></i>
+                        </div>
                         <h6 class="fw-medium mb-1"><?= !empty($search) ? 'Sin resultados' : 'Aún no hay usuarios' ?></h6>
                         <p class="text-muted fs-3 mb-0"><?= !empty($search) ? 'Ningún usuario coincide con tu búsqueda' : 'No hay otros usuarios registrados en el sistema' ?></p>
                     </div>

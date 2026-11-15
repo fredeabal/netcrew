@@ -271,11 +271,11 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           <div class="install-actions">
             <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm install-action-btn">
               <i class="ti ti-wand" aria-hidden="true"></i>
-              <span>Generar y Copiar Comando</span>
+              <span>Generar</span>
             </button>
             <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm install-action-btn">
               <i class="ti ti-download" aria-hidden="true"></i>
-              <span id="lblDownloadFile">Descargar .yml</span>
+              <span id="lblDownloadFile">Descargar</span>
             </a>
           </div>
         </div>
@@ -424,7 +424,6 @@ document.addEventListener('DOMContentLoaded', function() {
       btnGen.classList.add('d-none');
       mobBox.classList.remove('d-none');
       lnkDl.href = baseDownload + '?platform=yml';
-      lblDl.textContent = 'Descargar .yml';
       return;
     }
 
@@ -435,15 +434,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (p === 'mac') {
       cmdHint.textContent = 'Pega este comando en Terminal (macOS):';
       lnkDl.href = baseDownload + '?platform=yml';
-      lblDl.textContent = 'Descargar .yml';
     } else if (p === 'windows') {
       cmdHint.textContent = 'Pega este comando en Símbolo del sistema (CMD):';
       lnkDl.href = baseDownload + '?platform=windows';
-      lblDl.textContent = 'Descargar .bat';
     } else if (p === 'linux') {
       cmdHint.textContent = 'Pega este comando en Terminal (Linux):';
       lnkDl.href = baseDownload + '?platform=linux';
-      lblDl.textContent = 'Descargar .sh';
     }
 
     renderCommandPreview(buildCommand(p, activeToken), activeToken);

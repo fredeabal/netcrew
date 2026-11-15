@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netcrew-pwa-v26';
+const CACHE_NAME = 'netcrew-pwa-v27';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -46,8 +46,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Solo gestionar peticiones HTTP(S) GET
-  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
+  // Solo gestionar peticiones GET del mismo origen
+  if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
 
@@ -55,12 +55,16 @@ self.addEventListener('fetch', (event) => {
   // Así siempre se tiene la información más reciente de nodos y estado VPN
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          return caches.match('/');
+      fetch(request).catch(async () => {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        const rootFallback = await caches.match('/');
+        return rootFallback || new Response('Sin conexión con el servidor.', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });
       })
     );
@@ -84,7 +88,7 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return networkResponse;
-        }).catch(() => cached);
+        }).catch(() => cached || Response.error());
 
         return cached || fetchPromise;
       })
@@ -94,7 +98,10 @@ self.addEventListener('fetch', (event) => {
 
   // Comportamiento habitual para el resto de peticiones
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    fetch(request).catch(async () => {
+      const cached = await caches.match(request);
+      return cached || Response.error();
+    })
   );
 });
 

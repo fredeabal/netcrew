@@ -1327,8 +1327,12 @@ class DeviceController extends BaseController
             }
         }
 
-        if (! empty($peer['latest_handshake'])) {
-            $this->updateLastSeenFromHandshake($device, (int) $peer['latest_handshake']);
+        $effectiveTs = ! empty($peer['latest_handshake']) ? (int) $peer['latest_handshake'] : 0;
+        if (! empty($peer['connected'])) {
+            $effectiveTs = max($effectiveTs, time());
+        }
+        if ($effectiveTs > 0) {
+            $this->updateLastSeenFromHandshake($device, $effectiveTs);
         }
 
         return $peer;
@@ -1452,6 +1456,9 @@ class DeviceController extends BaseController
 
             if ($peer || $isConnected) {
                 $ts = $peer ? (int) ($peer['latest_handshake'] ?? 0) : 0;
+                if ($isConnected) {
+                    $ts = max($ts, time());
+                }
                 if ($ts > 0) {
                     $this->updateLastSeenFromHandshake($dev, $ts);
                 }

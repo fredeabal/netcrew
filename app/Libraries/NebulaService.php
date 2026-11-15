@@ -675,7 +675,7 @@ YAML;
         $raw  = '';
 
         if (is_executable('/usr/bin/journalctl') || is_executable('/bin/journalctl')) {
-            @exec('journalctl -u nebula -n 500 --no-pager 2>/dev/null', $lines, $code);
+            @exec('journalctl -u nebula -n 1000 --no-pager 2>/dev/null', $lines, $code);
             if ($code === 0 && ! empty($lines)) {
                 $raw = implode("\n", $lines);
             }
@@ -684,7 +684,7 @@ YAML;
         if ($raw === '' && self::isSshConfigured()) {
             try {
                 $ssh = self::sshFromSettings(6);
-                $raw = (string) $ssh->exec('journalctl -u nebula -n 500 --no-pager 2>/dev/null');
+                $raw = (string) $ssh->exec('journalctl -u nebula -n 1000 --no-pager 2>/dev/null');
             } catch (\Throwable $e) {
                 log_message('warning', 'No se pudo leer telemetría Nebula por SSH: ' . $e->getMessage());
             }
@@ -733,8 +733,9 @@ YAML;
                 $port      = substr($addr, $lastColon + 1);
             }
 
+            // En Nebula los handshakes no se repiten cada pocos minutos; el túnel permanece abierto hasta Close/Goodbye
             $entry = [
-                'connected'        => ($now - $ts) <= 300,
+                'connected'        => ($now - $ts) <= 86400,
                 'endpoint'         => $addr,
                 'public_ip'        => $publicIp,
                 'port'             => $port,
@@ -771,7 +772,8 @@ YAML;
 
     /**
      * Comprueba en tiempo real qué IPs VPN responden a ICMP desde la interfaz nebula1
-     * (local o vía SSH en el Lighthouse). Devuelve un mapa [ip => true] o null si no hay interfaz tun.
+     * (local o vía SSH en el Lighthouse) o desde una interfaz utun local en macOS.
+     * Devuelve un mapa [ip => true] o null si no hay interfaz tun disponible.
      *
      * @param string[] $ips
      * @return array<string, bool>|null
@@ -791,42 +793,94 @@ YAML;
         }
 
         $escapedList = implode(' ', array_map('escapeshellarg', $validIps));
-        $probeCmd    = 'sh -c ' . escapeshellarg("for ip in {$escapedList}; do (ping -c 1 -W 1 \"\$ip\" >/dev/null 2>&1 && echo \"\$ip\") & done; wait");
+        $linuxProbe  = 'sh -c ' . escapeshellarg("for ip in {$escapedList}; do (ping -c 2 -i 0.2 -W 2 \"\$ip\" >/dev/null 2>&1 && echo \"\$ip\") & done; wait");
+        $hasTunCmd   = 'test -d /sys/class/net/nebula1 || PATH="$PATH:/sbin:/usr/sbin" ip link show nebula1 >/dev/null 2>&1';
 
-        @exec('ip link show nebula1 >/dev/null 2>&1', $tunOut, $tunCode);
+        @exec($hasTunCmd, $tunOut, $tunCode);
         if ($tunCode === 0) {
-            @exec($probeCmd, $out, $code);
-            $reachable = [];
-            foreach ($out as $line) {
-                $line = trim((string) $line);
-                if (filter_var($line, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                    $reachable[$line] = true;
-                }
-            }
-            return $reachable;
+            @exec($linuxProbe, $out);
+            return self::parseReachableIpLines($out);
         }
 
         if (self::isSshConfigured()) {
             try {
                 $ssh = self::sshFromSettings(6);
-                $hasTun = trim((string) $ssh->exec('ip link show nebula1 >/dev/null 2>&1 && echo UP || echo DOWN'));
+                $hasTun = trim((string) $ssh->exec($hasTunCmd . ' && echo UP || echo DOWN'));
                 if ($hasTun === 'UP') {
-                    $raw = (string) $ssh->exec($probeCmd);
-                    $reachable = [];
-                    foreach (preg_split("/\r\n|\n|\r/", $raw) as $line) {
-                        $line = trim($line);
-                        if (filter_var($line, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                            $reachable[$line] = true;
-                        }
-                    }
-                    return $reachable;
+                    $raw = (string) $ssh->exec($linuxProbe);
+                    return self::parseReachableIpLines(preg_split("/\r\n|\n|\r/", $raw) ?: []);
                 }
             } catch (\Throwable $e) {
                 log_message('warning', 'No se pudo sondear IPs Nebula por SSH: ' . $e->getMessage());
             }
         }
 
+        // En macOS (entorno local conectado al mesh Nebula), sondear vía utun si comparte subred /24
+        if (PHP_OS_FAMILY === 'Darwin' && self::hasLocalDarwinNebulaSubnet($validIps)) {
+            $darwinProbe = 'sh -c ' . escapeshellarg("for ip in {$escapedList}; do (ping -c 2 -i 0.2 -W 1500 \"\$ip\" >/dev/null 2>&1 && echo \"\$ip\") & done; wait");
+            @exec($darwinProbe, $out);
+            return self::parseReachableIpLines($out);
+        }
+
         return null;
+    }
+
+    /**
+     * Extrae IPs IPv4 válidas de las líneas devueltas por el sondeo paralelo.
+     *
+     * @param string[] $lines
+     * @return array<string, bool>
+     */
+    protected static function parseReachableIpLines(array $lines): array
+    {
+        $reachable = [];
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if (filter_var($line, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $reachable[$line] = true;
+            }
+        }
+        return $reachable;
+    }
+
+    /**
+     * Comprueba si el host macOS local tiene una interfaz utun activa en la misma subred /24.
+     *
+     * @param string[] $ips
+     */
+    protected static function hasLocalDarwinNebulaSubnet(array $ips): bool
+    {
+        $prefixes = [];
+        foreach ($ips as $ip) {
+            $parts = explode('.', $ip);
+            if (count($parts) === 4) {
+                $prefixes[$parts[0] . '.' . $parts[1] . '.' . $parts[2]] = true;
+            }
+        }
+        if (empty($prefixes)) {
+            return false;
+        }
+
+        @exec('ifconfig 2>/dev/null', $lines, $code);
+        if ($code !== 0 || empty($lines)) {
+            return false;
+        }
+
+        $inUtun = false;
+        foreach ($lines as $line) {
+            if (preg_match('/^([a-z0-9]+):/i', $line, $m)) {
+                $inUtun = str_starts_with(strtolower($m[1]), 'utun');
+                continue;
+            }
+            if ($inUtun && preg_match('/^\s+inet\s+([0-9.]+)/', $line, $m)) {
+                $parts = explode('.', $m[1]);
+                if (count($parts) === 4 && isset($prefixes[$parts[0] . '.' . $parts[1] . '.' . $parts[2]])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

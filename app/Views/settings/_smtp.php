@@ -96,7 +96,7 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label for="smtp_crypto" class="form-label fw-semibold">Cifrado (Crypto)</label>
-                                <select class="select2 form-control custom-select" id="smtp_crypto" name="smtp_crypto">
+                                <select class="select2 form-control custom-select" id="smtp_crypto" name="smtp_crypto" style="width: 100%">
                                     <option value="" <?= old('smtp_crypto', $smtp_crypto ?? '') === '' ? 'selected' : '' ?>>Ninguno</option>
                                     <option value="tls" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'tls' ? 'selected' : '' ?>>TLS</option>
                                     <option value="ssl" <?= old('smtp_crypto', $smtp_crypto ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
@@ -110,14 +110,20 @@
                         </div>
                     </div>
 
-                    <!-- BOTONERA DE ACCIONES -->
-                    <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
-                        <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white d-inline-flex align-items-center gap-1">
-                            <i class="ti ti-send"></i> Probar
-                        </button>
-                        <button type="submit" class="btn btn-primary btn-sm px-4 d-inline-flex align-items-center gap-1">
-                            <i class="ti ti-device-floppy"></i> Guardar
-                        </button>
+                    <!-- BOTONERA DE ACCIONES: RESPONSIVE Y CENTRADOS -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="row g-2 justify-content-center align-items-center">
+                            <div class="col-6 col-sm-auto">
+                                <button type="submit" formaction="<?= base_url('settings/smtp/test') ?>" formmethod="POST" class="btn btn-warning btn-sm text-white w-100 px-sm-4 text-nowrap d-inline-flex align-items-center justify-content-center gap-1">
+                                    <i class="ti ti-send"></i>Probar
+                                </button>
+                            </div>
+                            <div class="col-6 col-sm-auto">
+                                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 text-nowrap d-inline-flex align-items-center justify-content-center gap-1">
+                                    <i class="ti ti-device-floppy"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

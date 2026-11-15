@@ -38,7 +38,7 @@
 
               <div class="col-12 col-md-6">
                 <label for="nebula_cipher" class="form-label fw-semibold">Algoritmo de Cifrado</label>
-                <select class="select2 form-control custom-select" id="nebula_cipher" name="nebula_cipher">
+                <select class="select2 form-control custom-select" id="nebula_cipher" name="nebula_cipher" style="width: 100%">
                   <option value="aes" <?= old('nebula_cipher', $nebula_cipher ?? 'aes') === 'aes' ? 'selected' : '' ?>>AES-256-GCM (Recomendado / Aceleración Hardware)</option>
                   <option value="chacha20" <?= old('nebula_cipher', $nebula_cipher ?? 'aes') === 'chacha20' ? 'selected' : '' ?>>ChaCha20-Poly1305</option>
                 </select>
@@ -92,7 +92,7 @@
 
               <div class="col-12 col-md-4">
                 <label for="nebula_ssh_auth_type" class="form-label fw-semibold">Autenticación SSH</label>
-                <select class="form-select" id="nebula_ssh_auth_type" name="nebula_ssh_auth_type">
+                <select class="select2 form-control custom-select" id="nebula_ssh_auth_type" name="nebula_ssh_auth_type" style="width: 100%">
                   <option value="password" <?= old('nebula_ssh_auth_type', $nebula_ssh_auth_type ?? 'password') === 'password' ? 'selected' : '' ?>>Contraseña</option>
                   <option value="key" <?= old('nebula_ssh_auth_type', $nebula_ssh_auth_type ?? 'password') === 'key' ? 'selected' : '' ?>>Llave Privada</option>
                 </select>
@@ -108,13 +108,19 @@
             </div>
           </div>
 
-          <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
-            <button type="button" id="btnTestNebula" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
-              <i class="ti ti-plug-connected"></i> Comprobar nebula-cert
-            </button>
-            <button type="submit" class="btn btn-primary btn-sm px-4 d-inline-flex align-items-center gap-1">
-              <i class="ti ti-device-floppy"></i> Guardar
-            </button>
+          <div class="mt-4 pt-3 border-top">
+            <div class="row g-2 justify-content-center align-items-center">
+              <div class="col-6 col-sm-auto">
+                <button type="button" id="btnTestNebula" class="btn btn-outline-primary btn-sm w-100 px-sm-4 text-nowrap d-inline-flex align-items-center justify-content-center gap-1">
+                  <i class="ti ti-plug-connected"></i>Comprobar nebula-cert
+                </button>
+              </div>
+              <div class="col-6 col-sm-auto">
+                <button type="submit" class="btn btn-primary btn-sm w-100 px-sm-4 text-nowrap d-inline-flex align-items-center justify-content-center gap-1">
+                  <i class="ti ti-device-floppy"></i>Guardar Cambios
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>

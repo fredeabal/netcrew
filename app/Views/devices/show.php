@@ -301,45 +301,51 @@ $timeAgoView = static function (?int $ts, int $ref): string {
         </div>
 
         <div id="installMobileBox" class="install-mobile-steps mt-3 d-none">
-          <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-            <div class="d-flex flex-column gap-2 small text-muted flex-grow-1">
-              <div class="d-flex align-items-start gap-2">
-                <span class="install-step-badge bg-primary-subtle text-primary">1</span>
-                <span>Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.</span>
-              </div>
-              <div class="d-flex align-items-start gap-2">
-                <span class="install-step-badge bg-primary-subtle text-primary">2</span>
-                <span>Pulsa <strong>Generar QR</strong> y escanéalo con la cámara de tu móvil para abrir el enlace temporal de descarga (válido 60 min, un solo uso).</span>
-              </div>
-              <div class="d-flex align-items-start gap-2">
-                <span class="install-step-badge bg-primary-subtle text-primary">3</span>
-                <span>Descarga el archivo <code>.yml</code> en tu teléfono e impórtalo en la app de Nebula.</span>
-              </div>
-
-              <div id="mobileShareLinkRow" class="mt-2 d-none">
-                <div class="input-group input-group-sm">
-                  <input type="text" id="mobileShareUrlInput" class="form-control net-mono small" readonly aria-label="Enlace temporal móvil">
-                  <button type="button" id="btnCopyMobileShareUrl" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
-                    <i class="ti ti-copy" aria-hidden="true"></i>
-                    <span>Copiar</span>
-                  </button>
-                </div>
-              </div>
+          <div class="d-flex flex-column gap-2 small text-muted">
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">1</span>
+              <span>Instala la app gratuita <strong>Nebula</strong> desde App Store o Google Play.</span>
             </div>
-
-            <div class="flex-shrink-0 text-center">
-              <div id="mobileQrPlaceholder" class="install-qr-placeholder text-muted">
-                <i class="ti ti-qrcode fs-1 opacity-50" aria-hidden="true"></i>
-                <span class="small">Pulsa <strong>Generar QR</strong> para mostrar el código</span>
-              </div>
-              <div id="mobileQrWrapper" class="d-none">
-                <div id="mobileQrContainer" class="install-qr-frame shadow-sm" aria-label="Código QR de descarga móvil"></div>
-                <div class="small text-muted mt-1">
-                  <i class="ti ti-clock me-1" aria-hidden="true"></i>Expira en 60 min
-                </div>
-              </div>
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">2</span>
+              <span>Pulsa <strong>Generar QR</strong> y escanéalo con la cámara de tu móvil para abrir el enlace temporal de descarga (válido 60 min, un solo uso).</span>
+            </div>
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">3</span>
+              <span>Descarga el archivo <code>.yml</code> en tu teléfono e impórtalo en la app de Nebula.</span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal QR Móvil -->
+<div class="modal fade" id="mobileQrModal" tabindex="-1" aria-labelledby="mobileQrModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 380px;">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="mobileQrModalLabel">
+          <i class="ti ti-qrcode text-primary" aria-hidden="true"></i>
+          <span>Conectar desde móvil</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body text-center pt-2">
+        <p class="text-muted small mb-3">
+          Escanea este código con la cámara de tu iPhone o Android para descargar la configuración de <strong><?= esc($device->name) ?></strong>.
+        </p>
+        <div id="mobileQrContainer" class="install-qr-frame shadow-sm mb-3" aria-label="Código QR de descarga móvil"></div>
+        <div class="small text-muted mb-3">
+          <i class="ti ti-clock me-1" aria-hidden="true"></i>Expira en 60 minutos · Un solo uso
+        </div>
+        <div class="input-group input-group-sm">
+          <input type="text" id="mobileShareUrlInput" class="form-control net-mono small" readonly aria-label="Enlace temporal móvil">
+          <button type="button" id="btnCopyMobileShareUrl" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="ti ti-copy" aria-hidden="true"></i>
+            <span>Copiar</span>
+          </button>
         </div>
       </div>
     </div>
@@ -359,10 +365,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const lnkDl = document.getElementById('lnkDownloadYml');
   const lblDl = document.getElementById('lblDownloadFile');
   const btnGenLabel = btnGen ? btnGen.querySelector('span') : null;
-  const mobileQrPlaceholder = document.getElementById('mobileQrPlaceholder');
-  const mobileQrWrapper = document.getElementById('mobileQrWrapper');
+  const mobileQrModalEl = document.getElementById('mobileQrModal');
   const mobileQrContainer = document.getElementById('mobileQrContainer');
-  const mobileShareLinkRow = document.getElementById('mobileShareLinkRow');
   const mobileShareUrlInput = document.getElementById('mobileShareUrlInput');
   const btnCopyMobileShareUrl = document.getElementById('btnCopyMobileShareUrl');
 
@@ -373,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let lastCopyMessage = '';
   const copyTimers = new WeakMap();
 
-  function renderMobileQr(shareUrl) {
+  function renderMobileQr(shareUrl, openModal = false) {
     if (!mobileQrContainer || typeof window.qrcode !== 'function' || !shareUrl) {
       return;
     }
@@ -414,11 +418,11 @@ document.addEventListener('DOMContentLoaded', function() {
     mobileQrContainer.textContent = '';
     mobileQrContainer.appendChild(svg);
 
-    if (mobileQrPlaceholder) mobileQrPlaceholder.classList.add('d-none');
-    if (mobileQrWrapper) mobileQrWrapper.classList.remove('d-none');
-    if (mobileShareUrlInput && mobileShareLinkRow) {
+    if (mobileShareUrlInput) {
       mobileShareUrlInput.value = shareUrl;
-      mobileShareLinkRow.classList.remove('d-none');
+    }
+    if (openModal && mobileQrModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(mobileQrModalEl).show();
     }
   }
 
@@ -590,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
         activeShareUrl = data.share_url || `${baseConnect}/${activeToken}`;
 
         if (selectEl.value === 'mobile') {
-          renderMobileQr(activeShareUrl);
+          renderMobileQr(activeShareUrl, true);
           return { mode: 'mobile', copied: false };
         }
 
@@ -602,19 +606,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return { mode: 'desktop', copied: false };
       })
       .then(result => {
-        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
         if (result.mode === 'mobile') {
-          Swal.fire({
-            icon: 'success',
-            title: 'QR generado',
-            text: 'Escanea el código con tu móvil para descargar la configuración.',
-            timer: 3000,
-            showConfirmButton: false,
-            background: isDark ? '#0b1114' : '#f8f9fa',
-            color: isDark ? '#ffffff' : '#0b1114'
-          });
           return;
         }
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
         if (result.copied && btnInlineCopy) {
           reportCopy(btnInlineCopy, true);
         }

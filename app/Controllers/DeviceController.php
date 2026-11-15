@@ -1126,52 +1126,54 @@ class DeviceController extends BaseController
     {
         $db = \Config\Database::connect();
 
-        // Consumo atómico condicional para evitar condiciones de carrera (TOCTOU)
-        $db->table('device_share_tokens')
-           ->where('token', $token)
-           ->where('expires_at >', date('Y-m-d H:i:s'))
-           ->where('used', 0)
-           ->update(['used' => 1]);
+        $row = $db->table('device_share_tokens')
+                  ->where('token', $token)
+                  ->where('expires_at >', date('Y-m-d H:i:s'))
+                  ->get()
+                  ->getRow();
 
-        if ($db->affectedRows() !== 1) {
-            return view('errors/html/error_404', [
-                'message' => 'El enlace de conexión ha expirado o ya ha sido utilizado.'
-            ]);
-        }
-
-        $row = $db->table('device_share_tokens')->where('token', $token)->get()->getRow();
         if (!$row) {
-            return view('errors/html/error_404', [
-                'message' => 'El enlace de conexión no es válido.'
-            ]);
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => 'El enlace de conexión ha expirado o no es válido.'
+                ])
+            );
         }
 
         $device = $this->deviceModel->find($row->device_id);
         if (!$device) {
-            return view('errors/html/error_404', [
-                'message' => 'Dispositivo no encontrado.'
-            ]);
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => 'Dispositivo no encontrado.'
+                ])
+            );
         }
 
         $network = $this->networkModel->find($device->network_id);
         if (!$network) {
-            return view('errors/html/error_404', [
-                'message' => 'Red no encontrada.'
-            ]);
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => 'Red no encontrada.'
+                ])
+            );
         }
 
         if (!$network->active || !$device->active || (!empty($device->expires_at) && strtotime($device->expires_at) < time())) {
-            return view('errors/html/error_404', [
-                'message' => 'El dispositivo o la red están inactivos o han expirado.'
-            ]);
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => 'El dispositivo o la red están inactivos o han expirado.'
+                ])
+            );
         }
 
         try {
             $payload = $this->buildDeviceConfigPayload($network, $device);
         } catch (\RuntimeException $e) {
-            return view('errors/html/error_404', [
-                'message' => $e->getMessage()
-            ]);
+            return $this->response->setStatusCode(404)->setBody(
+                view('errors/html/error_404', [
+                    'message' => $e->getMessage()
+                ])
+            );
         }
 
         $platform = (string) ($this->request->getGet('platform') ?: 'yml');

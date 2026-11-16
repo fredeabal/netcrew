@@ -199,7 +199,7 @@ class MaintenanceController extends BaseController
             }
 
             // Invalidar todas las sesiones activas en disco y cerrar la sesión actual
-            $this->cleanDirectory(WRITEPATH . 'session', ['index.html', '.gitignore', '.htaccess', 'ci_session' . session_id()]);
+            $this->cleanDirectory(WRITEPATH . 'session', true);
             auth()->logout();
 
             return redirect()->to(base_url('login'))->with('message', "Base de datos restaurada correctamente.<br><small class='text-muted'>Por razones de seguridad, tu sesión ha sido cerrada.</small>");
@@ -245,7 +245,7 @@ class MaintenanceController extends BaseController
     // ---------------------------------------------------------------------
     // Helper privado para vaciar archivos de un directorio
     // ---------------------------------------------------------------------
-    private function cleanDirectory($path)
+    private function cleanDirectory($path, bool $includeCurrentSession = false)
     {
         $path = rtrim($path, '/') . '/';
         if (! is_dir($path)) {
@@ -262,7 +262,7 @@ class MaintenanceController extends BaseController
                 if ($basename === 'index.html' || $basename === '.gitignore' || $basename === '.htaccess') {
                     continue;
                 }
-                if ($currentSessionId && strpos($basename, $currentSessionId) !== false) {
+                if (!$includeCurrentSession && $currentSessionId && strpos($basename, $currentSessionId) !== false) {
                     continue;
                 }
                 if (@unlink($file)) {

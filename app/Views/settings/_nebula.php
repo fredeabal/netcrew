@@ -21,7 +21,7 @@
                 <label for="nebula_lighthouse_host" class="form-label fw-semibold">IP o Dominio Público del Lighthouse</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent text-muted"><i class="ti ti-world"></i></span>
-                  <input type="text" class="form-control" id="nebula_lighthouse_host" name="nebula_lighthouse_host" value="<?= old('nebula_lighthouse_host', esc($nebula_lighthouse_host ?? '')) ?>" placeholder="Ej: vpn.tudominio.com">
+                  <input type="text" class="form-control" id="nebula_lighthouse_host" name="nebula_lighthouse_host" value="<?= esc(old('nebula_lighthouse_host', $nebula_lighthouse_host ?? '')) ?>" placeholder="Ej: vpn.tudominio.com">
                 </div>
                 <div class="form-text fs-2 text-muted">
                   Endpoint efectivo actual: <code><?= esc(($resolved_endpoint['host'] ?: 'Sin definir') . ':' . $resolved_endpoint['port']) ?></code>
@@ -32,7 +32,7 @@
                 <label for="nebula_lighthouse_port" class="form-label fw-semibold">Puerto UDP Lighthouse</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent text-muted"><i class="ti ti-hash"></i></span>
-                  <input type="number" class="form-control" id="nebula_lighthouse_port" name="nebula_lighthouse_port" value="<?= old('nebula_lighthouse_port', esc($nebula_lighthouse_port ?? 4242)) ?>" placeholder="4242">
+                  <input type="number" class="form-control" id="nebula_lighthouse_port" name="nebula_lighthouse_port" value="<?= esc(old('nebula_lighthouse_port', $nebula_lighthouse_port ?? 4242)) ?>" placeholder="4242">
                 </div>
               </div>
 
@@ -56,7 +56,7 @@
 
               <div class="col-12">
                 <label for="nebula_restricted_cidrs" class="form-label fw-semibold">Redes Restringidas (CIDRs bloqueados)</label>
-                <input type="text" class="form-control" id="nebula_restricted_cidrs" name="nebula_restricted_cidrs" value="<?= old('nebula_restricted_cidrs', esc($nebula_restricted_cidrs ?? '')) ?>" placeholder="Ej: 192.168.1.0/24, 10.0.0.0/24">
+                <input type="text" class="form-control" id="nebula_restricted_cidrs" name="nebula_restricted_cidrs" value="<?= esc(old('nebula_restricted_cidrs', $nebula_restricted_cidrs ?? '')) ?>" placeholder="Ej: 192.168.1.0/24, 10.0.0.0/24">
                 <div class="form-text fs-2 text-muted">Subredes separadas por comas que los usuarios no podrán asignar al crear nuevas redes.</div>
               </div>
             </div>
@@ -79,15 +79,15 @@
             <div class="row g-3">
               <div class="col-12 col-md-6">
                 <label for="nebula_ssh_host" class="form-label fw-semibold">IP o Host SSH</label>
-                <input type="text" class="form-control" id="nebula_ssh_host" name="nebula_ssh_host" value="<?= old('nebula_ssh_host', esc($nebula_ssh_host ?? '')) ?>" placeholder="Ej: 192.168.0.123">
+                <input type="text" class="form-control" id="nebula_ssh_host" name="nebula_ssh_host" value="<?= esc(old('nebula_ssh_host', $nebula_ssh_host ?? '')) ?>" placeholder="Ej: 192.168.0.123">
               </div>
               <div class="col-12 col-md-3">
                 <label for="nebula_ssh_port" class="form-label fw-semibold">Puerto SSH</label>
-                <input type="number" class="form-control" id="nebula_ssh_port" name="nebula_ssh_port" value="<?= old('nebula_ssh_port', esc($nebula_ssh_port ?? 22)) ?>" placeholder="22">
+                <input type="number" class="form-control" id="nebula_ssh_port" name="nebula_ssh_port" value="<?= esc(old('nebula_ssh_port', $nebula_ssh_port ?? 22)) ?>" placeholder="22">
               </div>
               <div class="col-12 col-md-3">
                 <label for="nebula_ssh_user" class="form-label fw-semibold">Usuario SSH</label>
-                <input type="text" class="form-control" id="nebula_ssh_user" name="nebula_ssh_user" value="<?= old('nebula_ssh_user', esc($nebula_ssh_user ?? '')) ?>" placeholder="root">
+                <input type="text" class="form-control" id="nebula_ssh_user" name="nebula_ssh_user" value="<?= esc(old('nebula_ssh_user', $nebula_ssh_user ?? '')) ?>" placeholder="root">
               </div>
 
               <div class="col-12 col-md-4">

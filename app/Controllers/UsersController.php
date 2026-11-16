@@ -231,7 +231,7 @@ class UsersController extends BaseController
         $rules = [
             'username' => [
                 'label' => 'nombre de usuario',
-                'rules' => 'required|alpha_numeric_space|min_length[3]|is_unique[users.username,id,' . $id . ']|not_in_list[netcrew,root]',
+                'rules' => 'required|alpha_numeric_space|min_length[3]|is_unique[users.username,id,' . $id . ']|not_in_list[netcrew,root,admin,system]',
                 'errors' => [
                     'is_unique' => 'El nombre de usuario ya está en uso.',
                     'not_in_list' => 'Este nombre de usuario no está permitido.'

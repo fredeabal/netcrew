@@ -46,9 +46,10 @@ class ProfileController extends BaseController
         // o manual a auth_identities
         $rules = [
             'username' => [
-                'rules' => "required|min_length[3]|max_length[30]|is_unique[users.username,id,{$user->id}]",
+                'rules' => "required|alpha_numeric_space|min_length[3]|max_length[30]|is_unique[users.username,id,{$user->id}]|not_in_list[netcrew,root,admin,system]",
                 'errors' => [
-                    'is_unique' => 'El nombre de usuario ya está en uso.'
+                    'is_unique'   => 'El nombre de usuario ya está en uso.',
+                    'not_in_list' => 'Este nombre de usuario no está permitido.',
                 ]
             ],
             'name'     => 'permit_empty|max_length[100]',

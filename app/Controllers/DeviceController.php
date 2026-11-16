@@ -476,17 +476,49 @@ class DeviceController extends BaseController
             'device_type' => $deviceType,
         ];
 
+        $expirationChanged = false;
         if ($expiration === 'never') {
             $updateData['expires_at'] = null;
+            $expirationChanged        = true;
         } elseif ($expiration === '1d') {
             $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+1 day'));
+            $expirationChanged        = true;
         } elseif ($expiration === '7d') {
             $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+7 days'));
+            $expirationChanged        = true;
         } elseif ($expiration === '30d') {
             $updateData['expires_at'] = date('Y-m-d H:i:s', strtotime('+30 days'));
+            $expirationChanged        = true;
+        }
+
+        $oldFingerprint = (string) ($device->public_key ?? '');
+        $oldCrt         = (string) ($device->nebula_crt ?? '');
+        if ($expirationChanged) {
+            try {
+                $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+                if (!empty($network->nebula_ca_crt) && $caKey !== '') {
+                    $signed = NebulaService::signDeviceCert(
+                        $network->nebula_ca_crt,
+                        $caKey,
+                        $name,
+                        $device->ip_address . '/24',
+                        $device->nebula_groups ?: 'devices',
+                        $updateData['expires_at']
+                    );
+                    $updateData['public_key'] = $signed['fingerprint'];
+                    $updateData['nebula_crt'] = $signed['crt'];
+                    $updateData['nebula_key'] = $signed['key'];
+                }
+            } catch (\Throwable $e) {
+                log_message('warning', 'No se pudo re-firmar el certificado al actualizar expiración del nodo ' . $id . ': ' . $e->getMessage());
+            }
         }
 
         if ($this->deviceModel->update($id, $updateData)) {
+            if ($expirationChanged && isset($updateData['public_key']) && $oldFingerprint !== '' && $oldFingerprint !== $updateData['public_key']) {
+                NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint, $oldCrt);
+                $this->syncNetworkLighthouse($network);
+            }
             \App\Models\AuditLogModel::log('DEVICE_UPDATE', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.");
 
             if (!$isAjax) {
@@ -537,7 +569,8 @@ class DeviceController extends BaseController
 
         if ($this->deviceModel->delete($id)) {
             if (!empty($device->public_key)) {
-                NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key);
+                NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key, (string) ($device->nebula_crt ?? ''));
+                $this->syncNetworkLighthouse($network);
             }
             \App\Models\AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})");
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
@@ -600,7 +633,8 @@ class DeviceController extends BaseController
             ];
             if ($this->deviceModel->update($id, $updateData)) {
                 if ($oldFingerprint !== '' && $oldFingerprint !== $signed['fingerprint']) {
-                    NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint);
+                    NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint, (string) ($device->nebula_crt ?? ''));
+                    $this->syncNetworkLighthouse($network);
                 }
                 \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
                 return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado Nebula regenerado con éxito! Descarga la nueva configuración .yml.');
@@ -652,8 +686,13 @@ class DeviceController extends BaseController
         }
 
         if ($this->deviceModel->update($id, ['active' => $newActiveStatus ? 1 : 0])) {
-            if (! $newActiveStatus && !empty($device->public_key)) {
-                NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key);
+            if (!empty($device->public_key)) {
+                if ($newActiveStatus) {
+                    NebulaService::unrevokeFingerprint((int) $networkId, (string) $device->public_key, (string) ($device->nebula_crt ?? ''));
+                } else {
+                    NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key, (string) ($device->nebula_crt ?? ''));
+                }
+                $this->syncNetworkLighthouse($network);
             }
             $status = $newActiveStatus ? 'activado' : 'desactivado';
             \App\Models\AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}");
@@ -1301,7 +1340,7 @@ class DeviceController extends BaseController
     protected function fetchPeerStatus(object $device): ?array
     {
         $telemetry = NebulaService::getLighthousePeerTelemetry();
-        $fp        = strtolower((string) ($device->public_key ?? ''));
+        $fp        = NebulaService::normalizeFingerprint((string) ($device->public_key ?? ''));
         $ip        = (string) ($device->ip_address ?? '');
 
         $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
@@ -1355,7 +1394,7 @@ class DeviceController extends BaseController
         $peers     = [];
 
         foreach ($devices as $dev) {
-            $fp   = strtolower((string) ($dev->public_key ?? ''));
+            $fp   = NebulaService::normalizeFingerprint((string) ($dev->public_key ?? ''));
             $ip   = (string) ($dev->ip_address ?? '');
             $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
 
@@ -1440,5 +1479,19 @@ class DeviceController extends BaseController
         }
 
         return (int) $network->owner_id === (int) $user->id;
+    }
+
+    /**
+     * Sincroniza la configuración del Lighthouse local si la red está activa.
+     */
+    protected function syncNetworkLighthouse(object $network): void
+    {
+        if (empty($network->active) || empty($network->nebula_ca_crt) || empty($network->nebula_ca_key)) {
+            return;
+        }
+        $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+        if ($caKey !== '') {
+            NebulaService::syncLocalLighthouse($network, $caKey);
+        }
     }
 }

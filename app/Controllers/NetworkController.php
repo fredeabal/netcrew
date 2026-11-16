@@ -297,6 +297,8 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Error al eliminar la red de la base de datos.');
         }
 
+        service('settings')->forget('Nebula.blocklist_' . (int) $id);
+
         return redirect()->to('/networks')->with('message', 'Red eliminada y servidor sincronizado.');
     }
 
@@ -449,7 +451,12 @@ class NetworkController extends BaseController
                 $lighthouseIp,
                 'lighthouse,devices'
             );
-            $yaml = NebulaService::buildLighthouseConfig($network, $cert['crt'], $cert['key']);
+            $yaml = NebulaService::buildLighthouseConfig(
+                $network,
+                $cert['crt'],
+                $cert['key'],
+                NebulaService::getBlocklist((int) $network->id)
+            );
         } catch (\Throwable $e) {
             return redirect()->to('/networks')->with('error', 'Error generando configuración Lighthouse: ' . $e->getMessage());
         }

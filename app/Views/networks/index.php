@@ -100,13 +100,13 @@
                             <i class="ti ti-devices"></i> Administrar Nodos
                           </a>
                         </li>
-                        <li>
-                          <a href="<?= site_url('networks/' . $net->id . '/lighthouse-config') ?>" class="dropdown-item d-flex align-items-center gap-2">
-                            <i class="ti ti-radar"></i> Config Lighthouse (.yml)
-                          </a>
-                        </li>
                         <?php endif; ?>
                         <?php if (auth()->user()->can('networks.edit') || auth()->user()->inGroup('superadmin')): ?>
+                          <li>
+                            <a href="<?= site_url('networks/' . $net->id . '/lighthouse-config') ?>" class="dropdown-item d-flex align-items-center gap-2">
+                              <i class="ti ti-radar"></i> Config Lighthouse (.yml)
+                            </a>
+                          </li>
                           <li>
                             <a href="<?= site_url('networks/edit/' . $net->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
                               <i class="ti ti-pencil"></i> Editar
@@ -161,6 +161,11 @@
                       </li>
                       <?php endif; ?>
                       <?php if (auth()->user()->can('networks.edit') || auth()->user()->inGroup('superadmin')): ?>
+                        <li>
+                          <a href="<?= site_url('networks/' . $net->id . '/lighthouse-config') ?>" class="dropdown-item d-flex align-items-center gap-2">
+                            <i class="ti ti-radar"></i> Config Lighthouse (.yml)
+                          </a>
+                        </li>
                         <li>
                           <a href="<?= site_url('networks/edit/' . $net->id) ?>" class="dropdown-item d-flex align-items-center gap-2">
                             <i class="ti ti-pencil"></i> Editar

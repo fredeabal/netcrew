@@ -85,7 +85,7 @@ class SettingsController extends BaseController
                 'cacheCount'     => $cacheStats['count'],
                 'cacheSize'      => $this->formatBytes($cacheStats['size']),
                 'isWgConfigured' => $isNebulaConfigured,
-                'isWgUp'         => $isNebulaConfigured,
+                'isWgUp'         => NebulaService::isLighthouseRunning(),
             ],
         ];
 

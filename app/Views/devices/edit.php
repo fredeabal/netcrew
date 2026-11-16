@@ -45,7 +45,7 @@
 
           <div class="mb-3">
             <label for="name" class="form-label">Nombre del Dispositivo</label>
-            <input type="text" class="form-control" id="name" name="name" value="<?= old('name', esc($device->name)) ?>" required minlength="2" maxlength="100">
+            <input type="text" class="form-control" id="name" name="name" value="<?= esc(old('name', $device->name)) ?>" required minlength="2" maxlength="100">
           </div>
 
           <div class="mb-3">

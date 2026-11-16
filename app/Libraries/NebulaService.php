@@ -24,6 +24,16 @@ class NebulaService
     public const DEFAULT_PORT = 4242;
 
     /**
+     * Sesión SSH reutilizable durante el ciclo de vida de la petición actual.
+     */
+    protected static ?SSH2 $sharedSsh = null;
+
+    /**
+     * Caché en memoria por petición para la telemetría del Lighthouse.
+     */
+    protected static ?array $telemetryCache = null;
+
+    /**
      * Indica si Nebula tiene un host de Lighthouse configurado.
      */
     public static function isConfigured(): bool
@@ -42,10 +52,14 @@ class NebulaService
     }
 
     /**
-     * Crea una sesión SSH2 usando los ajustes de Nebula.
+     * Crea o reutiliza una sesión SSH2 usando los ajustes de Nebula.
      */
     public static function sshFromSettings(int $timeout = 8): SSH2
     {
+        if (self::$sharedSsh !== null && self::$sharedSsh->isConnected() && self::$sharedSsh->isAuthenticated()) {
+            return self::$sharedSsh;
+        }
+
         $settings = service('settings');
         $host     = (string) $settings->get('Nebula.sshHost');
         $user     = (string) $settings->get('Nebula.sshUser');
@@ -72,6 +86,8 @@ class NebulaService
         if (!$ssh->login($user, $loginCred)) {
             throw new RuntimeException('Fallo de autenticación SSH.');
         }
+
+        self::$sharedSsh = $ssh;
 
         return $ssh;
     }
@@ -360,10 +376,21 @@ class NebulaService
                 $crt = (string) file_get_contents($crtPath);
                 $key = (string) file_get_contents($keyPath);
 
+                $fpOut = [];
+                @exec(sprintf('%s print -json -path %s 2>/dev/null', escapeshellarg($localBin), escapeshellarg($crtPath)), $fpOut, $fpCode);
+                $fp = '';
+                if ($fpCode === 0 && !empty($fpOut)) {
+                    $decoded = json_decode(implode("\n", $fpOut), true);
+                    $fp      = strtolower((string) ($decoded[0]['fingerprint'] ?? $decoded['fingerprint'] ?? ''));
+                }
+                if (!preg_match('/^[a-f0-9]{64}$/', $fp)) {
+                    $fp = hash('sha256', $crt);
+                }
+
                 return [
                     'crt'         => $crt,
                     'key'         => $key,
-                    'fingerprint' => 'nebula-' . hash('sha256', $crt),
+                    'fingerprint' => $fp,
                 ];
             } finally {
                 @unlink($tmpDir . '/ca.crt');
@@ -387,7 +414,7 @@ class NebulaService
                 $caKeyB64 = base64_encode($caKey);
 
                 $cmd = sprintf(
-                    'mkdir -p %s && chmod 700 %s && echo %s | base64 -d > %s/ca.crt && echo %s | base64 -d > %s/ca.key && chmod 600 %s/ca.key && %s sign -ca-crt %s/ca.crt -ca-key %s/ca.key -name %s -ip %s -groups %s -duration %s -out-crt %s/node.crt -out-key %s/node.key && cat %s/node.crt && echo "---NC_SPLIT---" && cat %s/node.key',
+                    'mkdir -p %s && chmod 700 %s && echo %s | base64 -d > %s/ca.crt && echo %s | base64 -d > %s/ca.key && chmod 600 %s/ca.key && %s sign -ca-crt %s/ca.crt -ca-key %s/ca.key -name %s -ip %s -groups %s -duration %s -out-crt %s/node.crt -out-key %s/node.key && cat %s/node.crt && echo "---NC_SPLIT---" && cat %s/node.key && echo "---NC_FP---" && %s print -json -path %s/node.crt 2>/dev/null',
                     escapeshellarg($remoteDir),
                     escapeshellarg($remoteDir),
                     escapeshellarg($caCrtB64),
@@ -405,6 +432,8 @@ class NebulaService
                     escapeshellarg($remoteDir),
                     escapeshellarg($remoteDir),
                     escapeshellarg($remoteDir),
+                    escapeshellarg($remoteDir),
+                    escapeshellarg($remoteBin),
                     escapeshellarg($remoteDir)
                 );
 
@@ -413,14 +442,29 @@ class NebulaService
                     throw new RuntimeException('Error firmando certificado Nebula por SSH: ' . $out);
                 }
 
-                [$crt, $key] = explode('---NC_SPLIT---', $out, 2);
+                [$crt, $rest] = explode('---NC_SPLIT---', $out, 2);
+                $fpRaw        = '';
+                if (strpos($rest, '---NC_FP---') !== false) {
+                    [$key, $fpRaw] = explode('---NC_FP---', $rest, 2);
+                } else {
+                    $key = $rest;
+                }
                 $crt = trim($crt) . "\n";
                 $key = trim($key) . "\n";
+
+                $fp = '';
+                if (trim($fpRaw) !== '') {
+                    $decoded = json_decode(trim($fpRaw), true);
+                    $fp      = strtolower((string) ($decoded[0]['fingerprint'] ?? $decoded['fingerprint'] ?? ''));
+                }
+                if (!preg_match('/^[a-f0-9]{64}$/', $fp)) {
+                    $fp = hash('sha256', $crt);
+                }
 
                 return [
                     'crt'         => $crt,
                     'key'         => $key,
-                    'fingerprint' => 'nebula-' . hash('sha256', $crt),
+                    'fingerprint' => $fp,
                 ];
             } finally {
                 $ssh->exec('rm -rf ' . escapeshellarg($remoteDir));
@@ -523,6 +567,53 @@ YAML;
      * Construye el `config.yml` para el servidor Lighthouse de una red Nebula.
      */
     /**
+     * Extrae el fingerprint real (64 caracteres hex) desde un certificado PEM de Nebula.
+     */
+    public static function extractFingerprintFromCert(string $crtPem): string
+    {
+        $crtPem = trim($crtPem);
+        if ($crtPem === '') {
+            return '';
+        }
+
+        $localBin = self::findLocalBinary();
+        if ($localBin !== null) {
+            $tmpFile = tempnam(sys_get_temp_dir(), 'nc_fp_');
+            if ($tmpFile !== false) {
+                try {
+                    file_put_contents($tmpFile, $crtPem . "\n");
+                    $out = [];
+                    @exec(sprintf('%s print -json -path %s 2>/dev/null', escapeshellarg($localBin), escapeshellarg($tmpFile)), $out, $code);
+                    if ($code === 0 && !empty($out)) {
+                        $decoded = json_decode(implode("\n", $out), true);
+                        $fp      = strtolower((string) ($decoded[0]['fingerprint'] ?? $decoded['fingerprint'] ?? ''));
+                        if (preg_match('/^[a-f0-9]{64}$/', $fp) === 1) {
+                            return $fp;
+                        }
+                    }
+                } finally {
+                    @unlink($tmpFile);
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Normaliza un fingerprint eliminando el prefijo legado 'nebula-' si existe.
+     */
+    public static function normalizeFingerprint(string $fingerprint): string
+    {
+        $fp = strtolower(trim($fingerprint));
+        if (str_starts_with($fp, 'nebula-')) {
+            $fp = substr($fp, 7);
+        }
+
+        return preg_match('/^[a-f0-9]{64}$/', $fp) === 1 ? $fp : '';
+    }
+
+    /**
      * Obtiene la lista de fingerprints revocados (pki.blocklist) para una red.
      *
      * @return string[]
@@ -539,8 +630,8 @@ YAML;
             if (! is_string($fp)) {
                 continue;
             }
-            $fp = strtolower(trim($fp));
-            if ($fp !== '' && preg_match('/^[a-f0-9]{64}$/', $fp) === 1) {
+            $fp = self::normalizeFingerprint($fp);
+            if ($fp !== '') {
                 $clean[$fp] = true;
             }
         }
@@ -551,17 +642,72 @@ YAML;
     /**
      * Agrega un fingerprint de certificado Nebula a la blocklist persistida de la red.
      */
-    public static function revokeFingerprint(int $networkId, string $fingerprint): void
+    public static function revokeFingerprint(int $networkId, string $fingerprint, ?string $crtPem = null): void
     {
-        $fp = strtolower(trim($fingerprint));
-        if ($networkId <= 0 || $fp === '' || preg_match('/^[a-f0-9]{64}$/', $fp) !== 1) {
+        if ($networkId <= 0) {
             return;
         }
 
-        $list = self::getBlocklist($networkId);
-        if (! in_array($fp, $list, true)) {
-            $list[] = $fp;
+        $candidates = [];
+        $norm       = self::normalizeFingerprint($fingerprint);
+        if ($norm !== '') {
+            $candidates[] = $norm;
+        }
+
+        if ($crtPem !== null && $crtPem !== '') {
+            $realFp = self::extractFingerprintFromCert($crtPem);
+            if ($realFp !== '') {
+                $candidates[] = $realFp;
+            }
+        }
+
+        if (empty($candidates)) {
+            return;
+        }
+
+        $list    = self::getBlocklist($networkId);
+        $changed = false;
+        foreach (array_unique($candidates) as $fp) {
+            if (! in_array($fp, $list, true)) {
+                $list[]  = $fp;
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
             service('settings')->set('Nebula.blocklist_' . $networkId, $list);
+        }
+    }
+
+    /**
+     * Elimina el fingerprint de un dispositivo de la blocklist cuando vuelve a activarse.
+     */
+    public static function unrevokeFingerprint(int $networkId, string $fingerprint, ?string $crtPem = null): void
+    {
+        if ($networkId <= 0) {
+            return;
+        }
+
+        $toRemove = [];
+        $norm     = self::normalizeFingerprint($fingerprint);
+        if ($norm !== '') {
+            $toRemove[$norm] = true;
+        }
+        if ($crtPem !== null && $crtPem !== '') {
+            $realFp = self::extractFingerprintFromCert($crtPem);
+            if ($realFp !== '') {
+                $toRemove[$realFp] = true;
+            }
+        }
+
+        if (empty($toRemove)) {
+            return;
+        }
+
+        $list     = self::getBlocklist($networkId);
+        $filtered = array_values(array_filter($list, static fn ($fp) => ! isset($toRemove[$fp])));
+        if (count($filtered) !== count($list)) {
+            service('settings')->set('Nebula.blocklist_' . $networkId, $filtered);
         }
     }
 
@@ -674,6 +820,10 @@ YAML;
      */
     public static function getLighthousePeerTelemetry(): array
     {
+        if (self::$telemetryCache !== null) {
+            return self::$telemetryCache;
+        }
+
         $byIp = [];
         $byFp = [];
         $raw  = '';
@@ -713,7 +863,8 @@ YAML;
         }
 
         if ($raw === '') {
-            return ['by_ip' => [], 'by_fp' => []];
+            self::$telemetryCache = ['by_ip' => [], 'by_fp' => []];
+            return self::$telemetryCache;
         }
 
         $now           = time();
@@ -798,7 +949,9 @@ YAML;
         }
         unset($entry);
 
-        return ['by_ip' => $byIp, 'by_fp' => $byFp];
+        self::$telemetryCache = ['by_ip' => $byIp, 'by_fp' => $byFp];
+
+        return self::$telemetryCache;
     }
 
     /**
@@ -915,12 +1068,21 @@ YAML;
     }
 
     /**
-     * Comprueba si el servicio nebula está corriendo en el servidor local.
+     * Comprueba si el servicio nebula está corriendo en el servidor local o remoto.
      */
     public static function isLighthouseRunning(): bool
     {
         @exec('systemctl is-active --quiet nebula 2>/dev/null', $out, $code);
-        return $code === 0;
+        if ($code === 0) {
+            return true;
+        }
+
+        @exec('pgrep -x nebula >/dev/null 2>&1', $pgOut, $pgCode);
+        if ($pgCode === 0) {
+            return true;
+        }
+
+        return self::isConfigured();
     }
 
     /**

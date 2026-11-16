@@ -39,13 +39,13 @@
 
           <div class="mb-3">
             <label for="name" class="form-label">Nombre de la Red</label>
-            <input type="text" class="form-control" id="name" name="name" value="<?= old('name') ?>" placeholder="Ej: Red de Oficina">
+            <input type="text" class="form-control" id="name" name="name" value="<?= esc(old('name')) ?>" placeholder="Ej: Red de Oficina">
           </div>
 
           <div class="mb-3">
             <label for="cidr" class="form-label">Rango de Red (IPv4)</label>
             <div class="input-group">
-              <input type="text" class="form-control" id="cidr" name="cidr" value="<?= old('cidr', '10.50.0.0') ?>" placeholder="Ej: 10.50.0.0">
+              <input type="text" class="form-control" id="cidr" name="cidr" value="<?= esc(old('cidr', '10.50.0.0')) ?>" placeholder="Ej: 10.50.0.0">
               <span class="input-group-text bg-transparent text-muted border">/24</span>
             </div>
             <div class="mt-2">
@@ -55,7 +55,7 @@
 
           <div class="mb-3">
             <label for="dns" class="form-label">Servidores DNS</label>
-            <input type="text" class="form-control" id="dns" name="dns" value="<?= old('dns', '1.1.1.1') ?>" placeholder="Ej: 1.1.1.1, 8.8.8.8">
+            <input type="text" class="form-control" id="dns" name="dns" value="<?= esc(old('dns', '1.1.1.1')) ?>" placeholder="Ej: 1.1.1.1, 8.8.8.8">
             <div class="form-text fs-2 text-muted">Puedes ingresar múltiples servidores DNS separados por comas.</div>
           </div>
 

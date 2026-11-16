@@ -436,7 +436,11 @@ document.addEventListener("DOMContentLoaded", function () {
               const peer = peers[pubkey];
               if (peer && peer.connected) {
                 const publicIp = peer.endpoint ? peer.endpoint.split(':')[0] : 'IP desconocida';
-                cell.innerHTML = `<span class="net-mono">${publicIp}</span>`;
+                cell.textContent = '';
+                const span = document.createElement('span');
+                span.className = 'net-mono';
+                span.textContent = publicIp;
+                cell.appendChild(span);
                 cell.className = isTd ? "text-center device-status-cell" : "device-status-cell mobile-card-value net-mono";
               } else {
                 cell.innerHTML = `<span class="text-muted">—</span>`;
@@ -453,10 +457,23 @@ document.addEventListener("DOMContentLoaded", function () {
             const peer = peers[pubkey];
 
             if (peer && peer.last_seen_date && peer.last_seen_time) {
+              cell.textContent = '';
               if (cell.tagName === 'TD') {
-                cell.innerHTML = `<h6 class="fw-semibold mb-0 text-login-time">${peer.last_seen_date}</h6><span class="d-block fw-normal text-muted text-login-time">${peer.last_seen_time}</span>`;
+                const h6 = document.createElement('h6');
+                h6.className = 'fw-semibold mb-0 text-login-time';
+                h6.textContent = peer.last_seen_date;
+                const span = document.createElement('span');
+                span.className = 'd-block fw-normal text-muted text-login-time';
+                span.textContent = peer.last_seen_time;
+                cell.append(h6, span);
               } else {
-                cell.innerHTML = `<span>${peer.last_seen_date} <span class="text-muted ms-1">${peer.last_seen_time}</span></span>`;
+                const wrap = document.createElement('span');
+                wrap.textContent = peer.last_seen_date + ' ';
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'text-muted ms-1';
+                timeSpan.textContent = peer.last_seen_time;
+                wrap.appendChild(timeSpan);
+                cell.appendChild(wrap);
               }
             }
           });

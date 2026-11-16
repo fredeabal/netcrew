@@ -21,7 +21,7 @@ class DashboardController extends BaseController
         // Estado base de Nebula P2P
         $telemetry = [
             'isConfigured'  => NebulaService::isConfigured(),
-            'isInterfaceUp' => NebulaService::isConfigured(),
+            'isInterfaceUp' => NebulaService::isLighthouseRunning(),
         ];
 
         if ($user->inGroup('superadmin', 'supervisor')) {

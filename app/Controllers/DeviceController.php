@@ -1309,15 +1309,17 @@ class DeviceController extends BaseController
             return null;
         }
 
+        $probedReachable = false;
         if ((int) ($device->active ?? 0) === 1 && $ip !== '') {
             $reachable = NebulaService::probeReachableIps([$ip]);
             if ($reachable !== null) {
-                $peer['connected'] = isset($reachable[$ip]);
+                $probedReachable   = isset($reachable[$ip]);
+                $peer['connected'] = $probedReachable;
             }
         }
 
         $effectiveTs = ! empty($peer['latest_handshake']) ? (int) $peer['latest_handshake'] : 0;
-        if (! empty($peer['connected'])) {
+        if ($probedReachable) {
             $effectiveTs = max($effectiveTs, time());
         }
         if ($effectiveTs > 0) {
@@ -1438,14 +1440,16 @@ class DeviceController extends BaseController
             $ip   = (string) ($dev->ip_address ?? '');
             $peer = $telemetry['by_fp'][$fp] ?? $telemetry['by_ip'][$ip] ?? null;
 
-            $isConnected = $peer ? (bool) ($peer['connected'] ?? false) : false;
+            $probedReachable = false;
+            $isConnected     = $peer ? (bool) ($peer['connected'] ?? false) : false;
             if ($reachable !== null && (int) ($dev->active ?? 0) === 1) {
-                $isConnected = isset($reachable[$ip]);
+                $probedReachable = isset($reachable[$ip]);
+                $isConnected     = $probedReachable;
             }
 
             if ($peer || $isConnected) {
                 $ts = $peer ? (int) ($peer['latest_handshake'] ?? 0) : 0;
-                if ($isConnected) {
+                if ($probedReachable) {
                     $ts = max($ts, time());
                 }
                 if ($ts > 0) {

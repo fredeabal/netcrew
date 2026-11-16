@@ -733,9 +733,10 @@ YAML;
                 $port      = substr($addr, $lastColon + 1);
             }
 
-            // En Nebula los handshakes no se repiten cada pocos minutos; el túnel permanece abierto hasta Close/Goodbye
+            // Sin sondeo ICMP activo (tun deshabilitado), solo consideramos online handshakes recientes (5 min);
+            // si un equipo se apaga o suspende sin enviar Close/Goodbye, no debemos mantenerlo 24h como conectado.
             $entry = [
-                'connected'        => ($now - $ts) <= 86400,
+                'connected'        => ($now - $ts) <= 300,
                 'endpoint'         => $addr,
                 'public_ip'        => $publicIp,
                 'port'             => $port,

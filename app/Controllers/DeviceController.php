@@ -1366,25 +1366,29 @@ class DeviceController extends BaseController
             ]);
         }
 
-        // 2. Si hay SSH configurado, intentar por SSH
+        // 2. Si hay SSH configurado y el servidor remoto tiene nebula1 activa, intentar ping por SSH
         if (NebulaService::isSshConfigured()) {
             try {
-                $ssh        = NebulaService::sshFromSettings(10);
-                $output     = (string) $ssh->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
-                $exitStatus = $ssh->getExitStatus();
+                $ssh    = NebulaService::sshFromSettings(10);
+                $hasTun = trim((string) $ssh->exec('(test -d /sys/class/net/nebula1 || PATH="$PATH:/sbin:/usr/sbin" ip link show nebula1 >/dev/null 2>&1) && echo UP || echo DOWN'));
 
-                if ($exitStatus === 0) {
+                if ($hasTun === 'UP') {
+                    $output     = (string) $ssh->exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1');
+                    $exitStatus = $ssh->getExitStatus();
+
+                    if ($exitStatus === 0) {
+                        return $this->response->setJSON([
+                            'status' => 'success',
+                            'output' => $output
+                        ]);
+                    }
+
                     return $this->response->setJSON([
-                        'status' => 'success',
-                        'output' => $output
+                        'status'  => 'error',
+                        'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
+                        'output'  => $output
                     ]);
                 }
-
-                return $this->response->setJSON([
-                    'status'  => 'error',
-                    'message' => 'El dispositivo no respondió al Ping (ICMP). Puede estar apagado, desconectado, o un Firewall está bloqueando ICMP.',
-                    'output'  => $output
-                ]);
             } catch (\Throwable $e) {
                 return $this->response->setJSON([
                     'status'  => 'error',

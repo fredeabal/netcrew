@@ -633,6 +633,10 @@ relay:
   am_relay: {$amRelay}
   use_relays: false
 
+tunnels:
+  drop_inactive: true
+  inactivity_timeout: 3m
+
 tun:
   disabled: false
   dev: nebula1
@@ -690,19 +694,45 @@ YAML;
             }
         }
 
+        // Respaldo para entornos Docker / sin systemd: leer archivo de log directo
+        if ($raw === '') {
+            $logCandidates = array_filter([
+                (string) (getenv('NEBULA_LOG_FILE') ?: ''),
+                '/var/log/nebula/nebula.log',
+                '/var/log/nebula.log',
+            ]);
+            foreach ($logCandidates as $logFile) {
+                if (is_file($logFile) && is_readable($logFile)) {
+                    @exec('tail -n 1000 ' . escapeshellarg($logFile) . ' 2>/dev/null', $tailLines, $tailCode);
+                    if ($tailCode === 0 && ! empty($tailLines)) {
+                        $raw = implode("\n", $tailLines);
+                        break;
+                    }
+                }
+            }
+        }
+
         if ($raw === '') {
             return ['by_ip' => [], 'by_fp' => []];
         }
 
-        $now    = time();
-        $closed = ['by_ip' => [], 'by_fp' => []];
+        $now           = time();
+        $closed        = ['by_ip' => [], 'by_fp' => []];
+        $lastRestartTs = 0;
 
         foreach (preg_split("/\r\n|\n|\r/", $raw) as $line) {
-            if (! preg_match('/time="([^"]+)"/', $line, $mTime)) {
+            if (! preg_match('/time="?([^"\s]+)"?/', $line, $mTime)) {
                 continue;
             }
             $ts = strtotime($mTime[1]);
             if (! $ts) {
+                continue;
+            }
+
+            if (strpos($line, 'Nebula interface is active') !== false) {
+                if ($ts > $lastRestartTs) {
+                    $lastRestartTs = $ts;
+                }
                 continue;
             }
 
@@ -733,10 +763,10 @@ YAML;
                 $port      = substr($addr, $lastColon + 1);
             }
 
-            // Sin sondeo ICMP activo (tun deshabilitado), solo consideramos online handshakes recientes (5 min);
-            // si un equipo se apaga o suspende sin enviar Close/Goodbye, no debemos mantenerlo 24h como conectado.
+            // El Lighthouse usa tunnels.drop_inactive + inactivity_timeout: 3m para cerrar túneles inactivos;
+            // consideramos conectado mientras no haya Close/Goodbye ni reinicio del daemon posterior al handshake.
             $entry = [
-                'connected'        => ($now - $ts) <= 300,
+                'connected'        => ($now - $ts) <= 86400,
                 'endpoint'         => $addr,
                 'public_ip'        => $publicIp,
                 'port'             => $port,
@@ -755,14 +785,14 @@ YAML;
         }
 
         foreach ($byIp as $ip => &$entry) {
-            if (($closed['by_ip'][$ip] ?? 0) >= $entry['latest_handshake']) {
+            if ($entry['latest_handshake'] < $lastRestartTs || ($closed['by_ip'][$ip] ?? 0) >= $entry['latest_handshake']) {
                 $entry['connected'] = false;
             }
         }
         unset($entry);
 
         foreach ($byFp as $fp => &$entry) {
-            if (($closed['by_fp'][$fp] ?? 0) >= $entry['latest_handshake']) {
+            if ($entry['latest_handshake'] < $lastRestartTs || ($closed['by_fp'][$fp] ?? 0) >= $entry['latest_handshake']) {
                 $entry['connected'] = false;
             }
         }

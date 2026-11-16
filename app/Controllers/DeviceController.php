@@ -1352,7 +1352,7 @@ class DeviceController extends BaseController
         }
 
         // 1. Si el servidor local tiene la interfaz nebula1 activa, hacer ping directo
-        @exec('ip link show nebula1 >/dev/null 2>&1', $tunOut, $tunCode);
+        @exec('test -d /sys/class/net/nebula1 || PATH="$PATH:/sbin:/usr/sbin" ip link show nebula1 >/dev/null 2>&1', $tunOut, $tunCode);
         if ($tunCode === 0) {
             @exec('ping -c 4 -W 2 ' . escapeshellarg($device->ip_address) . ' 2>&1', $pingOut, $pingCode);
             $output = implode("\n", $pingOut);

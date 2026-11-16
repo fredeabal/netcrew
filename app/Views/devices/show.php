@@ -644,13 +644,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="row g-2 justify-content-center">
 
           <div class="col-6 col-md-auto">
-            <button type="button" class="btn btn-dark btn-sm border-0 shadow-none text-white w-100 h-100 d-flex align-items-center justify-content-center px-2 px-md-3 py-2 text-nowrap" onclick="pingDevice(<?= $device->id ?>)">
-              <i class="ti ti-wifi me-1"></i>
-              <span>Hacer Ping</span>
-            </button>
-          </div>
-
-          <div class="col-6 col-md-auto">
             <form action="<?= site_url('devices/rotate-keys/' . $device->id) ?>"
                   method="post"
                   class="h-100 m-0"
@@ -700,56 +693,3 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
-
-<script {csp-script-nonce}>
-function pingDevice(deviceId) {
-    Swal.fire({
-        title: 'Haciendo Ping...',
-        text: 'Enviando paquetes ICMP al nodo, por favor espera (aprox. 4-8 segundos).',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    let formData = new FormData();
-    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-
-    fetch('<?= site_url('devices/ping/') ?>' + deviceId, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, m => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[m]));
-        const safeOutput = escapeHtml(data.output || 'Sin respuesta');
-        const safeMessage = escapeHtml(data.message || '');
-
-        if (data.status === 'success') {
-            Swal.fire({
-                title: 'Ping Exitoso',
-                html: `<pre class="swal-output text-start bg-dark text-success p-3 rounded mt-3">${safeOutput}</pre>`,
-                icon: 'success',
-                confirmButtonColor: '#34c759',
-                width: '600px'
-            });
-        } else {
-            Swal.fire({
-                title: 'Ping Fallido',
-                html: `<p class="mb-2">${safeMessage}</p><pre class="swal-output text-start bg-dark text-danger p-3 rounded mt-3">${safeOutput}</pre>`,
-                icon: 'error',
-                confirmButtonColor: '#b31b34',
-                width: '600px'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.fire('Error', 'No se pudo completar la solicitud de ping. Revisa tu conexión al servidor.', 'error');
-    });
-}
-</script>

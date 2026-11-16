@@ -1545,12 +1545,6 @@ a.net-name:hover {
 /* ==========================================================================
    VISTAS VARIAS - pase unslop (sin estilos inline en las vistas)
    ========================================================================== */
-.swal-output {
-    font-size: 0.8125rem;
-    white-space: pre-wrap;
-    overflow-x: auto;
-}
-
 .connect-page {
     background-color: #0b1114;
     min-height: 100vh;

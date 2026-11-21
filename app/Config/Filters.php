@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\CompanyActiveFilter;
 use App\Filters\SecurityHeadersExtra;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -32,6 +33,7 @@ class Filters extends BaseFilters
         'invalidchars'  => InvalidChars::class,
         'secureheaders'      => SecureHeaders::class,
         'securityheadersextra' => SecurityHeadersExtra::class,
+        'company-active'       => CompanyActiveFilter::class,
         'cors'          => Cors::class,
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,

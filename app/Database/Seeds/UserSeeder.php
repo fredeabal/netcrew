@@ -40,6 +40,7 @@ class UserSeeder extends Seeder
         // Sembrar permisos por defecto
         $defaultPermissions = [
             // Permisos de Superadmin
+            ['group' => 'superadmin', 'permission' => 'admin.companies'],
             ['group' => 'superadmin', 'permission' => 'admin.users'],
             ['group' => 'superadmin', 'permission' => 'admin.roles'],
             ['group' => 'superadmin', 'permission' => 'admin.settings'],
@@ -87,6 +88,48 @@ class UserSeeder extends Seeder
         $admin->addGroup('superadmin');
         $admin->activate();
         $admin->forcePasswordReset();
+
+        // Asegurar empresa predeterminada 'Principal' sin truncar companies y asignar usuarios no-superadmin
+        $defaultCompanyId = null;
+        if ($this->db->tableExists('companies')) {
+            $existingCompany = $this->db->table('companies')->orderBy('id', 'ASC')->get()->getRow();
+            if (! $existingCompany) {
+                $companyNow = date('Y-m-d H:i:s');
+                $this->db->table('companies')->insert([
+                    'name'         => 'Principal',
+                    'slug'         => 'principal',
+                    'active'       => 1,
+                    'max_networks' => 0,
+                    'max_devices'  => 0,
+                    'created_at'   => $companyNow,
+                    'updated_at'   => $companyNow,
+                ]);
+                $defaultCompanyId = (int) $this->db->insertID();
+            } else {
+                $defaultCompanyId = (int) $existingCompany->id;
+            }
+        }
+
+        if ($defaultCompanyId !== null && $this->db->fieldExists('company_id', 'users')) {
+            $superadminRows = $this->db->table('auth_groups_users')
+                ->select('user_id')
+                ->where('group', 'superadmin')
+                ->get()
+                ->getResultArray();
+            $superadminIds = array_map(static fn ($r) => (int) $r['user_id'], $superadminRows);
+
+            if (! empty($superadminIds)) {
+                $this->db->table('users')
+                    ->whereIn('id', $superadminIds)
+                    ->update(['company_id' => null]);
+            }
+
+            $builder = $this->db->table('users')->where('company_id', null);
+            if (! empty($superadminIds)) {
+                $builder->whereNotIn('id', $superadminIds);
+            }
+            $builder->update(['company_id' => $defaultCompanyId]);
+        }
 
         // Establecer puerto SMTP predeterminado en 587 y formato HTML
         $settings = service('settings');

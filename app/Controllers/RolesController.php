@@ -8,6 +8,10 @@ class RolesController extends BaseController
 {
     public function index()
     {
+        if (! $this->isSuperAdmin()) {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para gestionar roles.');
+        }
+
         $allGroups = config('AuthGroups')->groups ?? [];
         $total     = count($allGroups);
         $perPage   = 100;
@@ -37,6 +41,10 @@ class RolesController extends BaseController
     // ---------------------------------------------------------------------
     public function edit(string $groupName)
     {
+        if (! $this->isSuperAdmin()) {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para gestionar roles.');
+        }
+
         $groups = config('AuthGroups')->groups;
 
         if (!isset($groups[$groupName])) {
@@ -59,6 +67,7 @@ class RolesController extends BaseController
 
         // Mapeo amigable de permisos
         $friendlyNames = [
+            'admin.companies'    => 'Gestionar Empresas',
             'admin.users'        => 'Gestionar Usuarios',
             'admin.roles'        => 'Gestionar Roles',
             'admin.settings'     => 'Ajustes del Sistema',
@@ -126,6 +135,10 @@ class RolesController extends BaseController
     // ---------------------------------------------------------------------
     public function update(string $groupName)
     {
+        if (! $this->isSuperAdmin()) {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para gestionar roles.');
+        }
+
         $groups = config('AuthGroups')->groups;
 
         if (!isset($groups[$groupName])) {

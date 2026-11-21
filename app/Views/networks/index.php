@@ -35,6 +35,21 @@
     <div class="card">
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-end align-items-center mb-4 gap-3">
+          <?php if (!empty($isSuperAdmin) && !empty($companies)): ?>
+          <form method="get" action="<?= site_url('networks') ?>" class="d-flex align-items-center gap-2">
+            <?php if (!empty($search)): ?>
+              <input type="hidden" name="q" value="<?= esc($search) ?>">
+            <?php endif; ?>
+            <select name="company_id" class="form-select form-select-sm" data-auto-submit="true">
+              <option value="">Todas las empresas</option>
+              <?php foreach ($companies as $company): ?>
+                <option value="<?= esc($company->id) ?>" <?= (!empty($selectedCompanyId) && (int) $selectedCompanyId === (int) $company->id) ? 'selected' : '' ?>>
+                  <?= esc($company->name) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </form>
+          <?php endif; ?>
           <div class="d-flex align-items-center gap-2 w-100 w-md-auto search-form-responsive ms-auto">
             <div class="position-relative w-100 search-box-container">
               <input type="text" id="search-networks" class="form-control" placeholder="Buscar red...">
@@ -59,6 +74,9 @@
               <tr class="text-muted fw-semibold">
                 <th scope="col">Nombre</th>
                 <th scope="col" class="text-center">Rango CIDR</th>
+                <?php if (!empty($isSuperAdmin)): ?>
+                <th scope="col" class="text-center">Empresa</th>
+                <?php endif; ?>
                 <th scope="col" class="text-center">Propietario</th>
                 <th scope="col" class="text-center">Nodos</th>
                 <th scope="col" class="text-center">Creada</th>
@@ -82,6 +100,9 @@
                      </div>
                    </td>
                    <td class="text-center"><span class="net-mono"><?= esc($net->cidr) ?></span></td>
+                   <?php if (!empty($isSuperAdmin)): ?>
+                   <td class="text-center text-muted"><?= !empty($net->company_name) ? esc($net->company_name) : 'Sin empresa' ?></td>
+                   <?php endif; ?>
                    <td class="text-center text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></td>
                    <td class="text-center"><span class="net-mono text-body"><?= esc($net->device_count) ?></span></td>
                    <td class="text-center">
@@ -187,6 +208,12 @@
                 </div>
               </div>
               <div class="mobile-card-body">
+                <?php if (!empty($isSuperAdmin)): ?>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">Empresa</span>
+                  <span class="mobile-card-value text-muted"><?= !empty($net->company_name) ? esc($net->company_name) : 'Sin empresa' ?></span>
+                </div>
+                <?php endif; ?>
                 <div class="mobile-card-row">
                   <span class="mobile-card-label">Propietario</span>
                   <span class="mobile-card-value text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></span>
@@ -220,6 +247,12 @@
      ===================================================================== -->
 <script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('select[data-auto-submit="true"]').forEach(select => {
+    select.addEventListener('change', function() {
+      if (this.form) this.form.submit();
+    });
+  });
+
   const searchInput = document.getElementById('search-networks');
   if (searchInput) {
     searchInput.addEventListener('input', function() {

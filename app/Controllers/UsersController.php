@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Models\AuditLogModel;
+use App\Models\CompanyModel;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 use CodeIgniter\Shield\Entities\User;
@@ -24,19 +26,62 @@ class UsersController extends BaseController
 
     public function index()
     {
-        $search = $this->request->getGet('q');
-        $groups = config('AuthGroups')->groups;
+        $search       = $this->request->getGet('q');
+        $groups       = config('AuthGroups')->groups;
+        $isSuperAdmin = $this->isSuperAdmin();
 
+        $companyModel = new CompanyModel();
+        $allCompanies = $companyModel->orderBy('name', 'ASC')->findAll();
+        $companyNames = [];
+        foreach ($allCompanies as $company) {
+            $companyNames[(int) $company->id] = $company->name;
+        }
 
+        $rawCompanyId      = $this->request->getGet('company_id');
+        $selectedCompanyId = ($isSuperAdmin && $rawCompanyId !== null && $rawCompanyId !== '' && ctype_digit((string) $rawCompanyId))
+            ? (int) $rawCompanyId
+            : null;
+
+        $db               = $this->usersModel->db;
+        $usersTable       = $db->prefixTable('users');
+        $identitiesTable  = $db->prefixTable('auth_identities');
+        $groupsUsersTable = $db->prefixTable('auth_groups_users');
+        $groupColumn      = $db->protectIdentifiers('group');
+
+        if ($isSuperAdmin) {
+            if ($selectedCompanyId !== null) {
+                $this->usersModel->where('users.company_id', $selectedCompanyId);
+            }
+        } else {
+            $currentCompanyId = $this->currentCompanyId();
+            if ($currentCompanyId === null) {
+                $this->usersModel->where('1 = 0', null, false);
+            } else {
+                $this->usersModel->where('users.company_id', $currentCompanyId);
+            }
+            $this->usersModel->where(
+                "{$usersTable}.id NOT IN (SELECT user_id FROM {$groupsUsersTable} WHERE {$groupColumn} = 'superadmin')",
+                null,
+                false
+            );
+        }
 
         if ($search) {
             $this->usersModel
                 ->groupStart()
-                ->like('users.username', $search)
-                ->orLike('users.id', $search)
-                ->groupEnd()
-                ->orGroupStart()
-                ->where('users.id IN (SELECT user_id FROM ' . $this->usersModel->db->prefixTable('auth_identities') . ' WHERE secret LIKE ' . $this->usersModel->db->escape("%{$search}%") . ' AND type = ' . $this->usersModel->db->escape('email_password') . ')', null, false)
+                    ->groupStart()
+                        ->like('users.username', $search)
+                        ->orLike('users.id', $search)
+                    ->groupEnd()
+                    ->orGroupStart()
+                        ->where(
+                            "{$usersTable}.id IN (SELECT user_id FROM {$identitiesTable} WHERE secret LIKE "
+                            . $db->escape("%{$search}%")
+                            . ' AND type = ' . $db->escape('email_password') . ')',
+                            null,
+                            false
+                        )
+                    ->groupEnd()
                 ->groupEnd();
         }
 
@@ -55,6 +100,8 @@ class UsersController extends BaseController
             $lastLoginDate = $lastLogin && $lastLogin->date ? date('d/m/Y', strtotime((string)$lastLogin->date)) : 'Nunca';
             $lastLoginTime = $lastLogin && $lastLogin->date ? date('H:i', strtotime((string)$lastLogin->date)) : '';
 
+            $userCompanyId = ! empty($user->company_id) ? (int) $user->company_id : null;
+
             $usersWithInfo[] = (object)[
                 'id'            => $user->id,
                 'username'      => $user->username,
@@ -64,15 +111,21 @@ class UsersController extends BaseController
                 'groupTitle'    => $groupTitle,
                 'lastLoginDate' => $lastLoginDate,
                 'lastLoginTime' => $lastLoginTime,
+                'company_id'    => $userCompanyId,
+                'company_name'  => $userCompanyId !== null ? ($companyNames[$userCompanyId] ?? null) : null,
+                'profile_pic'   => $user->profile_pic ?? null,
             ];
         }
 
         $data = [
-            'title'  => 'Gestión de Usuarios',
-            'users'  => $usersWithInfo,
-            'pager'  => $pager,
-            'search' => $search,
-            'total'  => count($usersWithInfo),
+            'title'             => 'Gestión de Usuarios',
+            'users'             => $usersWithInfo,
+            'pager'             => $pager,
+            'search'            => $search,
+            'total'             => count($usersWithInfo),
+            'isSuperAdmin'      => $isSuperAdmin,
+            'companies'         => $isSuperAdmin ? $allCompanies : [],
+            'selectedCompanyId' => $selectedCompanyId,
         ];
 
         echo view('template/header', $data);
@@ -86,9 +139,13 @@ class UsersController extends BaseController
             return redirect()->to('users')->with('error', 'No tienes permisos para crear usuarios con ningún rol.');
         }
 
+        $isSuperAdmin = $this->isSuperAdmin();
+
         $data = [
-            'title' => 'Crear Usuario',
-            'groups' => $groups
+            'title'        => 'Crear Usuario',
+            'groups'       => $groups,
+            'isSuperAdmin' => $isSuperAdmin,
+            'companies'    => $isSuperAdmin ? (new CompanyModel())->where('active', 1)->orderBy('name', 'ASC')->findAll() : [],
         ];
 
         echo view('template/header', $data);
@@ -137,11 +194,38 @@ class UsersController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $targetGroup  = (string) $this->request->getPost('group');
+        $isSuperAdmin = $this->isSuperAdmin();
+        $companyModel = new CompanyModel();
+
+        if (! $isSuperAdmin) {
+            if ($targetGroup === 'superadmin') {
+                return redirect()->back()->withInput()->with('error', 'No tienes permisos para asignar el rol de superadministrador.');
+            }
+            $companyId = $this->currentCompanyId();
+            $company   = $companyId !== null ? $companyModel->find($companyId) : null;
+            if (! $company || empty($company->active)) {
+                return redirect()->back()->withInput()->with('error', 'Tu empresa no está asignada o se encuentra inactiva.');
+            }
+        } else {
+            if ($targetGroup === 'superadmin') {
+                $companyId = null;
+            } else {
+                $rawCompanyId = $this->request->getPost('company_id');
+                $companyId    = ($rawCompanyId !== null && $rawCompanyId !== '' && ctype_digit((string) $rawCompanyId)) ? (int) $rawCompanyId : 0;
+                $company      = $companyId > 0 ? $companyModel->find($companyId) : null;
+                if (! $company || empty($company->active)) {
+                    return redirect()->back()->withInput()->with('error', 'Debes seleccionar una empresa válida y activa.');
+                }
+            }
+        }
+
         $user = new User([
-            'username' => $this->request->getPost('username'),
-            'email'    => $this->request->getPost('email'),
-            'phone'    => $this->request->getPost('phone'),
-            'password' => $this->request->getPost('password'),
+            'username'   => $this->request->getPost('username'),
+            'email'      => $this->request->getPost('email'),
+            'phone'      => $this->request->getPost('phone'),
+            'password'   => $this->request->getPost('password'),
+            'company_id' => $companyId,
         ]);
         $user->active = 1; // Siempre activo para evitar el flujo de verificación de correo de Shield
 
@@ -156,7 +240,7 @@ class UsersController extends BaseController
         }
             $newUserId = $this->usersModel->getInsertID();
             $userObj = $this->usersModel->findById($newUserId);
-            $userObj->addGroup($this->request->getPost('group'));
+            $userObj->addGroup($targetGroup);
 
             // Si no se marcó como activo, lo baneamos (desactivamos) de entrada
             if (!$this->request->getPost('active')) {
@@ -164,6 +248,7 @@ class UsersController extends BaseController
             }
 
             $db->transCommit();
+            AuditLogModel::log('USER_CREATE', "Creó el usuario '{$userObj->username}' (rol: {$targetGroup})", null, null, $companyId);
             return redirect()->to('users')->with('message', 'Usuario creado.');
         } catch (\Throwable $e) {
             $db->transRollback();
@@ -193,11 +278,15 @@ class UsersController extends BaseController
             $groups = $this->getAssignableGroups();
         }
 
+        $isSuperAdmin = $this->isSuperAdmin();
+
         $data = [
-            'title'  => 'Editar Usuario',
-            'user'   => $user,
-            'groups' => $groups,
-            'isSelf' => $isSelf,
+            'title'        => 'Editar Usuario',
+            'user'         => $user,
+            'groups'       => $groups,
+            'isSelf'       => $isSelf,
+            'isSuperAdmin' => $isSuperAdmin,
+            'companies'    => $isSuperAdmin ? (new CompanyModel())->where('active', 1)->orderBy('name', 'ASC')->findAll() : [],
         ];
 
         echo view('template/header', $data);
@@ -268,10 +357,38 @@ class UsersController extends BaseController
             return redirect()->back()->withInput()->with('error', 'No puedes desactivar tu propia cuenta.');
         }
 
+        $isSuperAdmin = $this->isSuperAdmin();
+        $companyModel = new CompanyModel();
+        $targetGroup  = $isSelf
+            ? (! empty($user->getGroups()) ? (string) $user->getGroups()[0] : 'user')
+            : (string) $this->request->getPost('group');
+
+        if (! $isSuperAdmin) {
+            if (! $isSelf && $targetGroup === 'superadmin') {
+                return redirect()->back()->withInput()->with('error', 'No tienes permisos para asignar el rol de superadministrador.');
+            }
+            $companyId = $this->currentCompanyId();
+        } else {
+            if ($targetGroup === 'superadmin') {
+                $companyId = null;
+            } else {
+                $rawCompanyId = $this->request->getPost('company_id');
+                $companyId    = ($rawCompanyId !== null && $rawCompanyId !== '' && ctype_digit((string) $rawCompanyId)) ? (int) $rawCompanyId : 0;
+                $company      = $companyId > 0 ? $companyModel->find($companyId) : null;
+                if (! $company) {
+                    return redirect()->back()->withInput()->with('error', 'Debes seleccionar una empresa válida.');
+                }
+                if ($companyId !== (int) ($user->company_id ?? 0) && empty($company->active)) {
+                    return redirect()->back()->withInput()->with('error', 'La empresa seleccionada no está activa.');
+                }
+            }
+        }
+
         $user->fill([
-            'username' => $this->request->getPost('username'),
-            'email'    => $this->request->getPost('email'),
-            'phone'    => $this->request->getPost('phone'),
+            'username'   => $this->request->getPost('username'),
+            'email'      => $this->request->getPost('email'),
+            'phone'      => $this->request->getPost('phone'),
+            'company_id' => $companyId,
         ]);
 
         if ($this->request->getPost('password')) {
@@ -286,7 +403,7 @@ class UsersController extends BaseController
 
         // Actualizar grupo SOLO si no es uno mismo (previene auto-escalada de privilegios)
         if (! $isSelf) {
-            $user->syncGroups($this->request->getPost('group'));
+            $user->syncGroups($targetGroup);
         }
 
         // Gestor de estado activo/inactivo mediante baneo
@@ -296,12 +413,14 @@ class UsersController extends BaseController
             $user->ban('Desactivado por el administrador');
         }
 
+        AuditLogModel::log('USER_UPDATE', "Actualizó el usuario '{$user->username}' (ID: {$id})", null, null, $companyId);
+
         return redirect()->to('users')->with('message', 'Usuario actualizado.');
     }
 
     public function toggleActive($id)
     {
-        if ($this->request->getMethod() !== 'POST') {
+        if (strtoupper($this->request->getMethod()) !== 'POST') {
             return redirect()->back();
         }
 
@@ -309,7 +428,7 @@ class UsersController extends BaseController
         if ($user) {
 
             // No permitir desactivarse a sí mismo
-            if ($user->id === auth()->id() && !$user->isBanned()) {
+            if ((int) $user->id === (int) auth()->id() && !$user->isBanned()) {
                 return redirect()->to('users')->with('error', 'No puedes desactivar tu cuenta.');
             }
 
@@ -326,6 +445,9 @@ class UsersController extends BaseController
                 $statusStr = 'desactivado';
             }
 
+            $targetCompanyId = ! empty($user->company_id) ? (int) $user->company_id : null;
+            AuditLogModel::log('USER_TOGGLE_ACTIVE', "Cambió estado a {$statusStr} para el usuario '{$user->username}' (ID: {$id})", null, null, $targetCompanyId);
+
             return redirect()->to('users')->with('message', "Usuario {$statusStr}.");
         }
 
@@ -337,7 +459,7 @@ class UsersController extends BaseController
         $user = $this->usersModel->findById($id);
         if ($user) {
             // No permitir eliminarse a sí mismo
-            if ($user->id === auth()->id()) {
+            if ((int) $user->id === (int) auth()->id()) {
                 return redirect()->to('users')->with('error', 'No puedes eliminar tu propia cuenta.');
             }
 
@@ -345,6 +467,9 @@ class UsersController extends BaseController
             if (! $this->canManageUser($user)) {
                 return redirect()->to('users')->with('error', 'Sin permisos para eliminar a este usuario.');
             }
+
+            $targetCompanyId = ! empty($user->company_id) ? (int) $user->company_id : null;
+            $deletedUsername = $user->username;
 
             $db = \Config\Database::connect();
             $db->transStart();
@@ -381,6 +506,8 @@ class UsersController extends BaseController
                 if ($db->transStatus() === false) {
                     return redirect()->to('users')->with('error', 'Error en la transacción al eliminar usuario.');
                 }
+
+                AuditLogModel::log('USER_DELETE', "Eliminó al usuario '{$deletedUsername}' (ID: {$id})", null, null, $targetCompanyId);
 
                 return redirect()->to('users')->with('message', 'Usuario eliminado correctamente.');
             } catch (\Throwable $e) {
@@ -484,6 +611,12 @@ class UsersController extends BaseController
         // El superadmin puede gestionar a cualquier cuenta
         if (method_exists($currentUser, 'inGroup') && $currentUser->inGroup('superadmin')) {
             return true;
+        }
+
+        // Aislamiento estricto por empresa para usuarios no superadmin
+        $currentCompanyId = $this->currentCompanyId();
+        if ($currentCompanyId === null || (int) ($targetUser->company_id ?? 0) !== $currentCompanyId) {
+            return false;
         }
 
         $myLevel     = $this->getUserLevel($currentUser);

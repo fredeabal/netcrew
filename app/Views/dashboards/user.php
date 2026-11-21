@@ -16,9 +16,9 @@
         </nav>
       </div>
       <div class="flex-shrink-0 text-end">
-        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?>">
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Servicio VPN <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?>">
           <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-          <span class="d-none d-sm-inline">Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
+          <span class="d-none d-sm-inline">Servicio VPN <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
           <span class="d-inline d-sm-none"><?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
         </div>
       </div>

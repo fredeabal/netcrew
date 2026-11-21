@@ -9,6 +9,68 @@ class SettingsController extends BaseController
 {
     public function index(?string $tab = null)
     {
+        $isSuperAdmin   = $this->isSuperAdmin();
+        $isCompanyAdmin = $this->isCompanyAdmin();
+
+        if (! $isSuperAdmin && ! $isCompanyAdmin) {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección.');
+        }
+
+        if (! $isSuperAdmin && $tab !== 'audit') {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para acceder a la configuración del sistema.');
+        }
+
+        // Vista standalone de Auditoría (/audit-logs) antes de cargar secretos/stats de sistema
+        if ($tab === 'audit') {
+            $auditModel = new AuditLogModel();
+            $search     = $this->request->getGet('q');
+
+            if (! $isSuperAdmin) {
+                $companyId = $this->currentCompanyId();
+                if ($companyId === null) {
+                    $auditLogs  = [];
+                    $auditPager = null;
+                } else {
+                    $builder = $auditModel->where('audit_logs.company_id', $companyId)
+                        ->orderBy('id', 'DESC');
+                    if (! empty($search)) {
+                        $builder->groupStart()
+                            ->like('username', $search)
+                            ->orLike('action', $search)
+                            ->orLike('description', $search)
+                            ->orLike('ip_address', $search)
+                            ->groupEnd();
+                    }
+                    $auditLogs  = $builder->paginate(25, 'audit');
+                    $auditPager = $auditModel->pager;
+                }
+            } else {
+                $builder = $auditModel->orderBy('id', 'DESC');
+                if (! empty($search)) {
+                    $builder->groupStart()
+                        ->like('username', $search)
+                        ->orLike('action', $search)
+                        ->orLike('description', $search)
+                        ->orLike('ip_address', $search)
+                        ->groupEnd();
+                }
+                $auditLogs  = $builder->paginate(25, 'audit');
+                $auditPager = $auditModel->pager;
+            }
+
+            $data = [
+                'title'  => 'Registro de Auditoría',
+                'logs'   => $auditLogs,
+                'pager'  => $auditPager,
+                'search' => $search,
+            ];
+
+            echo view('template/header', $data);
+            echo view('audit/index', $data);
+            echo view('template/footer');
+            return;
+        }
+
         $requestedTab = $tab ?? (string) $this->request->getGet('tab');
         $allowedTabs  = ['nebula', 'smtp', 'audit', 'maintenance'];
         $currentTab   = in_array($requestedTab, $allowedTabs, true) ? $requestedTab : 'nebula';

@@ -60,7 +60,14 @@ Events::on('pre_system', static function (): void {
 // Eventos de Auditoría de Autenticación
 // --------------------------------------------------------------------
 Events::on('login', static function ($user): void {
-    \App\Models\AuditLogModel::log('LOGIN_SUCCESS', 'Inicio de sesión exitoso', $user->id ?? null, $user->username ?? $user->email ?? 'Usuario');
+    $companyId = ! empty($user->company_id) ? (int) $user->company_id : null;
+    \App\Models\AuditLogModel::log(
+        'LOGIN_SUCCESS',
+        'Inicio de sesión exitoso',
+        $user->id ?? null,
+        $user->username ?? $user->email ?? 'Usuario',
+        $companyId
+    );
 });
 
 Events::on('failedLogin', static function ($credentials): void {
@@ -69,6 +76,13 @@ Events::on('failedLogin', static function ($credentials): void {
 });
 
 Events::on('logout', static function ($user): void {
-    \App\Models\AuditLogModel::log('LOGOUT', 'Cierre de sesión', $user->id ?? null, $user->username ?? $user->email ?? 'Usuario');
+    $companyId = ! empty($user->company_id) ? (int) $user->company_id : null;
+    \App\Models\AuditLogModel::log(
+        'LOGOUT',
+        'Cierre de sesión',
+        $user->id ?? null,
+        $user->username ?? $user->email ?? 'Usuario',
+        $companyId
+    );
 });
 

@@ -47,6 +47,7 @@ class AuthGroups extends ShieldAuthGroups
 
                 // Asegurar acceso permanente de superadmin para evitar bloqueos
                 if (isset($dbMatrix['superadmin'])) {
+                    if (!in_array('admin.companies', $dbMatrix['superadmin'])) $dbMatrix['superadmin'][] = 'admin.companies';
                     if (!in_array('admin.users', $dbMatrix['superadmin'])) $dbMatrix['superadmin'][] = 'admin.users';
                     if (!in_array('admin.roles', $dbMatrix['superadmin'])) $dbMatrix['superadmin'][] = 'admin.roles';
                     if (!in_array('admin.settings', $dbMatrix['superadmin'])) $dbMatrix['superadmin'][] = 'admin.settings';
@@ -84,17 +85,17 @@ class AuthGroups extends ShieldAuthGroups
      */
     public array $groups = [
         'superadmin' => [
-            'title'       => 'Administrador',
-            'description' => 'Administrador global. Control absoluto y configuración técnica de la infraestructura.',
+            'title'       => 'Superadministrador',
+            'description' => 'Administrador global de la plataforma. Acceso total a todas las empresas y configuración del servidor.',
         ],
         'supervisor' => [
-            'title'       => 'Supervisor',
-            'description' => 'Supervisor técnico. Gestión y monitoreo general de usuarios y dispositivos.',
+            'title'       => 'Admin de Empresa',
+            'description' => 'Administrador de su empresa. Gestiona usuarios, redes y dispositivos exclusivamente de su empresa.',
         ],
 
         'user' => [
             'title'       => 'Usuario',
-            'description' => 'Usuario estándar del sistema.',
+            'description' => 'Usuario estándar dentro de su empresa.',
         ],
     ];
 
@@ -107,6 +108,7 @@ class AuthGroups extends ShieldAuthGroups
      * If a permission is not listed here it cannot be used.
      */
     public array $permissions = [
+        'admin.companies'      => 'Gestión global de empresas (multitenant)',
         'admin.users'          => 'Gestión completa de usuarios',
         'admin.roles'          => 'Gestión de roles y permisos',
         'admin.settings'       => 'Acceso a configuración del sistema',

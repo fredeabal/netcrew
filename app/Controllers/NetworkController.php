@@ -3,18 +3,22 @@
 namespace App\Controllers;
 
 use App\Libraries\NebulaService;
+use App\Models\AuditLogModel;
+use App\Models\CompanyModel;
 use App\Models\NetworkModel;
-use CodeIgniter\Shield\Models\UserModel;
+use App\Models\UserModel;
 
 class NetworkController extends BaseController
 {
     protected $networkModel;
     protected $userModel;
+    protected $companyModel;
 
     public function __construct()
     {
         $this->networkModel = new NetworkModel();
-        $this->userModel = new UserModel();
+        $this->userModel    = new UserModel();
+        $this->companyModel = new CompanyModel();
     }
 
     // ---------------------------------------------------------------------
@@ -22,15 +26,24 @@ class NetworkController extends BaseController
     // ---------------------------------------------------------------------
     public function index()
     {
+        $search         = $this->request->getGet('q');
+        $isSuperAdmin   = $this->isSuperAdmin();
+        $isCompanyAdmin = $this->isCompanyAdmin();
 
-        $search = $this->request->getGet('q');
-        $isSuperAdmin = auth()->user()->inGroup('superadmin', 'supervisor');
+        $rawCompanyId = $this->request->getGet('company_id');
+        $selectedCid  = ($isSuperAdmin && $rawCompanyId !== null && $rawCompanyId !== '' && ctype_digit((string) $rawCompanyId))
+            ? (int) $rawCompanyId
+            : null;
+        $companyId    = $isSuperAdmin ? $selectedCid : $this->currentCompanyId();
 
         $data = [
-            'title'    => 'Redes',
-            'networks' => $this->networkModel->getNetworksForUser(auth()->id(), $isSuperAdmin, $search, 100),
-            'pager'    => $this->networkModel->pager,
-            'search'   => $search,
+            'title'             => 'Redes',
+            'networks'          => $this->networkModel->getNetworksForUser((int) auth()->id(), $isSuperAdmin, $search, 100, $companyId, $isCompanyAdmin),
+            'pager'             => $this->networkModel->pager,
+            'search'            => $search,
+            'isSuperAdmin'      => $isSuperAdmin,
+            'companies'         => $isSuperAdmin ? $this->companyModel->orderBy('name', 'ASC')->findAll() : [],
+            'selectedCompanyId' => $selectedCid,
         ];
 
         echo view('template/header', $data);
@@ -43,12 +56,22 @@ class NetworkController extends BaseController
     // ---------------------------------------------------------------------
     public function create()
     {
+        $isSuperAdmin   = $this->isSuperAdmin();
+        $isCompanyAdmin = $this->isCompanyAdmin();
+        $users          = null;
 
-        $isSuperAdmin = auth()->user()->inGroup('superadmin', 'supervisor');
+        if ($isSuperAdmin) {
+            $users = $this->getActiveUsers();
+        } elseif ($isCompanyAdmin) {
+            $users = $this->getActiveUsers($this->currentCompanyId());
+        }
 
         $data = [
-            'title' => 'Crear Red',
-            'users' => $isSuperAdmin ? $this->userModel->findAll() : null,
+            'title'         => 'Crear Red',
+            'users'         => $users,
+            'companies'     => $isSuperAdmin ? $this->companyModel->where('active', 1)->orderBy('name', 'ASC')->findAll() : [],
+            'isSuperAdmin'  => $isSuperAdmin,
+            'suggestedCidr' => $this->networkModel->suggestNextCidr(),
         ];
 
         echo view('template/header', $data);
@@ -57,16 +80,86 @@ class NetworkController extends BaseController
     }
 
     // ---------------------------------------------------------------------
+    // Helper para obtener usuarios activos no suspendidos (opcionalmente por empresa)
+    // ---------------------------------------------------------------------
+    protected function getActiveUsers(?int $companyId = null): array
+    {
+        $builder = $this->userModel->where('active', 1)
+            ->groupStart()
+            ->where('status IS NULL', null, false)
+            ->orWhere('status !=', 'banned')
+            ->groupEnd();
+
+        if ($companyId !== null) {
+            $builder->where('company_id', $companyId);
+        }
+
+        return $builder->orderBy('username', 'ASC')->findAll();
+    }
+
+    // ---------------------------------------------------------------------
     // Guardar nueva red
     // ---------------------------------------------------------------------
     public function store()
     {
-        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id']);
+        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id', 'company_id']);
+
+        $user           = auth()->user();
+        $isSuperAdmin   = $this->isSuperAdmin();
+        $isCompanyAdmin = $this->isCompanyAdmin();
 
         // Si no es superadmin ni supervisor, forzar que el owner sea él mismo
-        $user = auth()->user();
-        if (! $user->inGroup('superadmin', 'supervisor')) {
-            $data['owner_id'] = $user->id;
+        if (! $isSuperAdmin && ! $isCompanyAdmin) {
+            $data['owner_id'] = (int) $user->id;
+        } elseif (empty($data['owner_id'])) {
+            $data['owner_id'] = (int) $user->id;
+        }
+
+        // Resolver y validar empresa activa
+        if ($isSuperAdmin) {
+            $companyId = (! empty($data['company_id']) && ctype_digit((string) $data['company_id']))
+                ? (int) $data['company_id']
+                : 0;
+            if ($companyId <= 0 && ! empty($data['owner_id'])) {
+                $ownerCandidate = $this->userModel->findById((int) $data['owner_id']);
+                if ($ownerCandidate && ! empty($ownerCandidate->company_id)) {
+                    $companyId = (int) $ownerCandidate->company_id;
+                }
+            }
+            $company = $companyId > 0 ? $this->companyModel->find($companyId) : null;
+            if (! $company || empty($company->active)) {
+                return redirect()->back()->withInput()->with('error', 'Debes seleccionar una empresa válida y activa.');
+            }
+        } else {
+            $companyId = $this->currentCompanyId();
+            $company   = $companyId !== null ? $this->companyModel->find($companyId) : null;
+            if (! $company || empty($company->active)) {
+                return redirect()->back()->withInput()->with('error', 'Tu empresa no está asignada o se encuentra inactiva.');
+            }
+        }
+
+        // Validar que el owner exista y pertenezca a la empresa
+        $owner = ! empty($data['owner_id']) ? $this->userModel->findById((int) $data['owner_id']) : null;
+        if (! $owner) {
+            return redirect()->back()->withInput()->with('error', 'El propietario seleccionado no existe.');
+        }
+
+        $ownerAllowed = $isSuperAdmin
+            ? ($owner->inGroup('superadmin') || (int) ($owner->company_id ?? 0) === $companyId)
+            : (! $owner->inGroup('superadmin') && (int) ($owner->company_id ?? 0) === $companyId);
+        if (! $ownerAllowed) {
+            return redirect()->back()->withInput()->with('error', 'El propietario seleccionado no pertenece a la empresa de la red.');
+        }
+
+        $data['owner_id']   = (int) $owner->id;
+        $data['company_id'] = $companyId;
+
+        // Validar cuota máxima de redes de la empresa
+        if ((int) ($company->max_networks ?? 0) > 0) {
+            $existingNetworksCount = $this->networkModel->where('company_id', $companyId)->countAllResults();
+            if ($existingNetworksCount >= (int) $company->max_networks) {
+                return redirect()->back()->withInput()->with('error', "La empresa ha alcanzado el límite máximo de redes ({$company->max_networks}).");
+            }
         }
 
         // Forzar siempre a /24 y asegurar que termine en .0 (dirección de red base)
@@ -112,27 +205,16 @@ class NetworkController extends BaseController
         $data['engine'] = 'nebula';
 
         try {
-            $ca = NebulaService::createCa((string) ($data['name'] ?? 'NetCrew'));
+            $ca = NebulaService::getOrCreateGlobalCa();
             $data['nebula_ca_crt'] = $ca['crt'];
-            $data['nebula_ca_key'] = $ca['key'];
+            $data['nebula_ca_key'] = null;
         } catch (\Throwable $e) {
-            return redirect()->back()->withInput()->with('error', 'No se pudo generar la CA de Nebula: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'No se pudo obtener la CA global de Nebula: ' . $e->getMessage());
         }
 
         if ($this->networkModel->save($data)) {
-            $newId   = $this->networkModel->getInsertID();
-            $created = $newId ? $this->networkModel->find($newId) : null;
-            if ($created) {
-                $user = auth()->user();
-                $isPrivileged = $user && $user->inGroup('superadmin', 'supervisor');
-                $activeCount = (int) $this->networkModel->where('active', 1)->countAllResults();
-                if ($isPrivileged || $activeCount <= 1) {
-                    $plainCaKey = $this->networkModel->decryptCaKey((string) $created->nebula_ca_key);
-                    if ($plainCaKey !== '') {
-                        NebulaService::syncLocalLighthouse($created, $plainCaKey);
-                    }
-                }
-            }
+            NebulaService::syncGlobalLighthouse();
+            AuditLogModel::log('NETWORK_CREATE', "Creó la red '{$data['name']}' ({$data['cidr']})", null, null, $companyId);
             return redirect()->to('/networks')->with('message', 'Red Nebula P2P creada.');
         }
 
@@ -150,17 +232,22 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        $isSuperAdmin = auth()->user()->inGroup('superadmin', 'supervisor');
-
-        // Validar propiedad de la red
-        if ($network->owner_id != auth()->id() && !$isSuperAdmin) {
+        if (! $this->canAccessNetwork($network)) {
             return redirect()->to('/networks')->with('error', 'No tienes permisos para editar esta red.');
         }
 
+        $isSuperAdmin   = $this->isSuperAdmin();
+        $isCompanyAdmin = $this->isCompanyAdmin();
+        $users          = $isSuperAdmin
+            ? $this->getActiveUsers()
+            : ($isCompanyAdmin ? $this->getActiveUsers($this->currentCompanyId()) : null);
+
         $data = [
-            'title'   => 'Editar Red',
-            'network' => $network,
-            'users'   => $isSuperAdmin ? $this->userModel->findAll() : null,
+            'title'        => 'Editar Red',
+            'network'      => $network,
+            'users'        => $users,
+            'isSuperAdmin' => $isSuperAdmin,
+            'companies'    => $isSuperAdmin ? $this->companyModel->where('active', 1)->orderBy('name', 'ASC')->findAll() : [],
         ];
 
         echo view('template/header', $data);
@@ -179,26 +266,60 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        $isSuperAdmin = auth()->user()->inGroup('superadmin', 'supervisor');
-
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !$isSuperAdmin) {
+        if (! $this->canAccessNetwork($network)) {
             return redirect()->to('/networks')->with('error', 'No tienes permisos.');
         }
 
-        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id', 'active']);
-        
+        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id', 'company_id', 'active']);
+
         // Añadir el ID para que la regla de validación is_unique pueda ignorar la red actual
         $data['id'] = $id;
-        
-        // Si no es superadmin, forzar mantener el owner original
-        if (! $isSuperAdmin) {
+
+        $isSuperAdmin      = $this->isSuperAdmin();
+        $isCompanyAdmin    = $this->isCompanyAdmin();
+        $originalCompanyId = (int) ($network->company_id ?? 0);
+
+        if ($isSuperAdmin) {
+            $companyId = (! empty($data['company_id']) && ctype_digit((string) $data['company_id']))
+                ? (int) $data['company_id']
+                : $originalCompanyId;
+            $company = $companyId > 0 ? $this->companyModel->find($companyId) : null;
+            if (! $company || empty($company->active)) {
+                return redirect()->back()->withInput()->with('error', 'Debes seleccionar una empresa válida y activa.');
+            }
+            if ($companyId !== $originalCompanyId && (int) ($company->max_networks ?? 0) > 0) {
+                $existingNetworksCount = $this->networkModel->where('company_id', $companyId)->countAllResults();
+                if ($existingNetworksCount >= (int) $company->max_networks) {
+                    return redirect()->back()->withInput()->with('error', "La empresa ha alcanzado el límite máximo de redes ({$company->max_networks}).");
+                }
+            }
+            $data['company_id'] = $companyId;
+        } else {
+            $companyId          = $originalCompanyId;
+            $data['company_id'] = $companyId > 0 ? $companyId : null;
+        }
+
+        // Resolver y validar propietario dentro de la empresa
+        if ($isSuperAdmin || $isCompanyAdmin) {
+            if (empty($data['owner_id'])) {
+                $data['owner_id'] = $network->owner_id;
+            }
+            $owner = $this->userModel->findById((int) $data['owner_id']);
+            if (! $owner) {
+                return redirect()->back()->withInput()->with('error', 'El propietario seleccionado no existe.');
+            }
+            $ownerAllowed = $isSuperAdmin
+                ? ($owner->inGroup('superadmin') || (int) ($owner->company_id ?? 0) === $companyId)
+                : (! $owner->inGroup('superadmin') && (int) ($owner->company_id ?? 0) === $companyId);
+            if (! $ownerAllowed) {
+                return redirect()->back()->withInput()->with('error', 'El propietario seleccionado no pertenece a la empresa de la red.');
+            }
+            $data['owner_id'] = (int) $owner->id;
+        } else {
             $data['owner_id'] = $network->owner_id;
         }
 
         $data['active'] = isset($data['active']) ? 1 : 0;
-
-
 
         // Forzar siempre a /24 y asegurar que termine en .0 (dirección de red base)
         $cidr = $data['cidr'] ?? '';
@@ -255,6 +376,7 @@ class NetworkController extends BaseController
         }
 
         if ($this->networkModel->update($id, $data)) {
+            AuditLogModel::log('NETWORK_UPDATE', "Actualizó la red '{$data['name']}' ({$data['cidr']})", null, null, $companyId ?: null);
             return redirect()->to('/networks')->with('message', 'Red actualizada.');
         }
 
@@ -266,18 +388,17 @@ class NetworkController extends BaseController
     // ---------------------------------------------------------------------
     public function delete($id)
     {
-        // El permiso se valida abajo verificando el owner_id
-
         $network = $this->networkModel->find($id);
 
         if (! $network) {
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        if (! $this->canAccessNetwork($network)) {
             return redirect()->to('/networks')->with('error', 'Sin permisos.');
         }
+
+        $companyId = ! empty($network->company_id) ? (int) $network->company_id : null;
 
         // Transacción de base de datos para eliminar dispositivos y la red
         $db = \Config\Database::connect();
@@ -294,6 +415,10 @@ class NetworkController extends BaseController
         }
 
         service('settings')->forget('Nebula.blocklist_' . (int) $id);
+        if (NebulaService::getGlobalCa() !== null) {
+            NebulaService::syncGlobalLighthouse();
+        }
+        AuditLogModel::log('NETWORK_DELETE', "Eliminó la red '{$network->name}' ({$network->cidr})", null, null, $companyId);
 
         return redirect()->to('/networks')->with('message', 'Red eliminada y servidor sincronizado.');
     }
@@ -313,15 +438,16 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        // Validar propiedad
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        if (! $this->canAccessNetwork($network)) {
             return redirect()->to('/networks')->with('error', 'Sin permisos.');
         }
 
         $newActive = !$network->active;
 
         if ($this->networkModel->update($id, ['active' => $newActive ? 1 : 0])) {
-            $status = $newActive ? 'activada' : 'desactivada';
+            $status    = $newActive ? 'activada' : 'desactivada';
+            $companyId = ! empty($network->company_id) ? (int) $network->company_id : null;
+            AuditLogModel::log('NETWORK_TOGGLE_ACTIVE', "Cambió estado a {$status} para la red '{$network->name}' (ID: {$id})", null, null, $companyId);
             return redirect()->to('/networks')->with('message', "Red {$status}.");
         }
 
@@ -425,39 +551,69 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'Red no encontrada.');
         }
 
-        if ($network->owner_id != auth()->id() && !auth()->user()->inGroup('superadmin', 'supervisor')) {
+        if (! $this->canAccessNetwork($network)) {
             return redirect()->to('/networks')->with('error', 'No tienes permisos para acceder a esta red.');
         }
 
-        if (empty($network->nebula_ca_crt)) {
-            return redirect()->to('/networks')->with('error', 'Esta red no tiene una CA de Nebula configurada.');
-        }
-
-        $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
-        if (empty($network->nebula_ca_crt) || $caKey === '') {
-            return redirect()->to('/networks')->with('error', 'No se pudo descifrar la CA de Nebula de esta red.');
-        }
-
         try {
-            $lighthouseIp = NebulaService::getLighthouseVpnIp($network->cidr) . '/24';
-            $cert         = NebulaService::signDeviceCert(
-                $network->nebula_ca_crt,
-                $caKey,
-                'lighthouse-' . $network->id,
-                $lighthouseIp,
-                'lighthouse,devices'
-            );
-            $yaml = NebulaService::buildLighthouseConfig(
-                $network,
-                $cert['crt'],
-                $cert['key'],
-                NebulaService::getBlocklist((int) $network->id)
-            );
+            if (NebulaService::usesGlobalCa($network)) {
+                $globalCa = NebulaService::getGlobalCa();
+                if ($globalCa === null) {
+                    return redirect()->to('/networks')->with('error', 'La CA global de Nebula no está configurada.');
+                }
+                $lighthouseIp = NebulaService::getGlobalLighthouseVpnIp() . '/8';
+                $cert         = NebulaService::signDeviceCert(
+                    $globalCa['crt'],
+                    $globalCa['key'],
+                    'netcrew-lighthouse-global',
+                    $lighthouseIp,
+                    'lighthouse'
+                );
+                $lhNetwork                = clone $network;
+                $lhNetwork->nebula_ca_crt = $globalCa['crt'];
+                $yaml                     = NebulaService::buildLighthouseConfig(
+                    $lhNetwork,
+                    $cert['crt'],
+                    $cert['key'],
+                    NebulaService::getAllBlocklists()
+                );
+            } else {
+                if (empty($network->nebula_ca_crt)) {
+                    return redirect()->to('/networks')->with('error', 'Esta red no tiene una CA de Nebula configurada.');
+                }
+
+                $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+                if ($caKey === '') {
+                    return redirect()->to('/networks')->with('error', 'No se pudo descifrar la CA de Nebula de esta red.');
+                }
+
+                $lighthouseIp = NebulaService::getLighthouseVpnIp($network->cidr) . '/24';
+                $cert         = NebulaService::signDeviceCert(
+                    $network->nebula_ca_crt,
+                    $caKey,
+                    'lighthouse-' . $network->id,
+                    $lighthouseIp,
+                    'lighthouse,devices'
+                );
+                $yaml = NebulaService::buildLighthouseConfig(
+                    $network,
+                    $cert['crt'],
+                    $cert['key'],
+                    NebulaService::getBlocklist((int) $network->id)
+                );
+            }
         } catch (\Throwable $e) {
             return redirect()->to('/networks')->with('error', 'Error generando configuración Lighthouse: ' . $e->getMessage());
         }
 
+        $companyId = ! empty($network->company_id) ? (int) $network->company_id : null;
+        AuditLogModel::log('NETWORK_LIGHTHOUSE_DOWNLOAD', "Descargó configuración Lighthouse de la red '{$network->name}' (ID: {$id})", null, null, $companyId);
+
         $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $network->name);
-        return $this->response->download("lighthouse-{$safeName}.yml", $yaml);
+        return $this->response->setHeader('Content-Type', 'application/x-yaml; charset=utf-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="lighthouse-' . $safeName . '.yml"')
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->setHeader('Pragma', 'no-cache')
+            ->setBody($yaml);
     }
 }

@@ -115,12 +115,16 @@ class NebulaController extends BaseController
 
         AuditLogModel::log('SETTINGS_NEBULA_UPDATE', "Actualizó ajustes globales de Nebula (Lighthouse: {$host}:{$port}, Relay: {$relayEnabled}, Cipher: {$cipher})");
 
-        $netModel  = new \App\Models\NetworkModel();
-        $activeNet = $netModel->where('active', 1)->orderBy('id', 'ASC')->first();
-        if ($activeNet) {
-            $caKey = $netModel->decryptCaKey((string) ($activeNet->nebula_ca_key ?? ''));
-            if ($caKey !== '') {
-                NebulaService::syncLocalLighthouse($activeNet, $caKey);
+        if (NebulaService::getGlobalCa() !== null) {
+            NebulaService::syncGlobalLighthouse();
+        } else {
+            $netModel  = new \App\Models\NetworkModel();
+            $activeNet = $netModel->where('active', 1)->orderBy('id', 'ASC')->first();
+            if ($activeNet) {
+                $caKey = $netModel->decryptCaKey((string) ($activeNet->nebula_ca_key ?? ''));
+                if ($caKey !== '') {
+                    NebulaService::syncLocalLighthouse($activeNet, $caKey);
+                }
             }
         }
 

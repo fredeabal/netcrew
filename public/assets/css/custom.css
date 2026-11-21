@@ -255,15 +255,25 @@ code,
 
 .badge-audit,
 .badge-action {
-    width: 96px !important;
-    min-width: 96px !important;
+    width: auto !important;
+    min-width: 110px !important;
     justify-content: center !important;
     text-align: center !important;
     font-size: 0.6875rem !important; /* ~11px texto pequeño como en la app */
-    padding: 0.25rem 0.5rem !important;
+    padding: 0.25rem 0.6rem !important;
     font-weight: 600 !important;
     border-radius: 6px !important;
     white-space: nowrap !important;
+}
+
+#audit-table td:has(> .badge-action) {
+    width: 1%;
+    white-space: nowrap;
+}
+
+#audit-table .badge-action {
+    display: inline-flex !important;
+    width: 100% !important;
 }
 
 @media (max-width: 767.98px) {

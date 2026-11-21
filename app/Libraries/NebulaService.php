@@ -127,6 +127,78 @@ class NebulaService
     }
 
     /**
+     * Devuelve el nombre de grupo Nebula inmutable para aislar una red específica.
+     */
+    public static function getNetworkGroupName(int $networkId): string
+    {
+        return 'net_' . $networkId;
+    }
+
+    /**
+     * Devuelve la IP VPN fija del Lighthouse global compartido (dentro de 10.0.0.0/8).
+     */
+    public static function getGlobalLighthouseVpnIp(): string
+    {
+        return '10.0.0.1';
+    }
+
+    /**
+     * Obtiene la CA raíz global si ya existe en settings.
+     *
+     * @return array{crt: string, key: string}|null
+     */
+    public static function getGlobalCa(): ?array
+    {
+        $settings = service('settings');
+        $crt      = trim((string) ($settings->get('Nebula.globalCaCrt') ?? ''));
+        $encKey   = (string) ($settings->get('Nebula.globalCaKey') ?? '');
+        $key      = $encKey !== '' ? self::decryptSetting($encKey) : '';
+
+        if ($crt === '' || $key === '') {
+            return null;
+        }
+
+        return ['crt' => $crt, 'key' => $key];
+    }
+
+    /**
+     * Obtiene o genera la CA raíz global compartida para el Lighthouse multitenant.
+     *
+     * @return array{crt: string, key: string}
+     */
+    public static function getOrCreateGlobalCa(): array
+    {
+        $existing = self::getGlobalCa();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $ca       = self::createCa('NetCrew-Global');
+        $settings = service('settings');
+        $encKey   = base64_encode(\Config\Services::encrypter()->encrypt($ca['key']));
+
+        $settings->set('Nebula.globalCaCrt', $ca['crt']);
+        $settings->set('Nebula.globalCaKey', $encKey);
+
+        return $ca;
+    }
+
+    /**
+     * Indica si una red está firmada bajo la CA global compartida.
+     */
+    public static function usesGlobalCa(object $network): bool
+    {
+        $global = self::getGlobalCa();
+        if ($global === null) {
+            return false;
+        }
+
+        $netCrt = trim((string) ($network->nebula_ca_crt ?? ''));
+
+        return $netCrt === '' || $netCrt === trim($global['crt']);
+    }
+
+    /**
      * Devuelve la IP VPN del Lighthouse dentro del rango de la red (primer host .1).
      */
     public static function getLighthouseVpnIp(string $cidr): string
@@ -483,16 +555,25 @@ class NebulaService
         $endpoint        = self::resolveLighthouseEndpoint();
         $lighthouseHost  = $endpoint['host'] !== '' ? $endpoint['host'] : 'YOUR_LIGHTHOUSE_PUBLIC_IP';
         $lighthousePort  = $endpoint['port'];
-        $lighthouseVpnIp = self::getLighthouseVpnIp($network->cidr);
+        $usesGlobal      = self::usesGlobalCa($network);
+        $globalCa        = $usesGlobal ? self::getGlobalCa() : null;
+        $lighthouseVpnIp = $usesGlobal
+            ? self::getGlobalLighthouseVpnIp()
+            : self::getLighthouseVpnIp($network->cidr);
         $relayEnabled    = (bool) ($settings->get('Nebula.relayEnabled') ?? true);
         $cipher          = (string) ($settings->get('Nebula.cipher') ?: 'aes');
         if (!in_array($cipher, ['aes', 'chacha20'], true)) {
             $cipher = 'aes';
         }
 
-        $caBlock  = self::indentPem((string) $network->nebula_ca_crt, 4);
+        $caCrtPem = $globalCa !== null ? $globalCa['crt'] : (string) $network->nebula_ca_crt;
+        $caBlock  = self::indentPem($caCrtPem, 4);
         $crtBlock = self::indentPem($decryptedCrt, 4);
         $keyBlock = self::indentPem($decryptedKey, 4);
+
+        $netGroup = self::getNetworkGroupName((int) ($network->id ?? 0));
+        $deviceGroups = array_filter(array_map('trim', explode(',', (string) ($device->nebula_groups ?? ''))));
+        $isolatedGroup = in_array($netGroup, $deviceGroups, true) ? $netGroup : 'devices';
 
         $safeNetworkName = self::sanitizeYamlComment((string) $network->name);
         $safeDeviceName  = self::sanitizeYamlComment((string) $device->name);
@@ -555,10 +636,13 @@ firewall:
   inbound:
     - port: any
       proto: icmp
-      host: any
+      group: {$isolatedGroup}
+    - port: any
+      proto: icmp
+      group: lighthouse
     - port: any
       proto: any
-      group: devices
+      group: {$isolatedGroup}
 
 YAML;
     }
@@ -727,11 +811,15 @@ YAML;
             $cipher = 'aes';
         }
 
-        $caBlock         = self::indentPem((string) $network->nebula_ca_crt, 4);
+        $usesGlobal      = self::usesGlobalCa($network);
+        $globalCa        = $usesGlobal ? self::getGlobalCa() : null;
+        $caCrtPem        = $globalCa !== null ? $globalCa['crt'] : (string) ($network->nebula_ca_crt ?? '');
+        $caBlock         = self::indentPem($caCrtPem, 4);
         $crtBlock        = self::indentPem($lighthouseCrt, 4);
         $keyBlock        = self::indentPem($lighthouseKey, 4);
         $amRelay         = $relayEnabled ? 'true' : 'false';
-        $safeNetworkName = self::sanitizeYamlComment((string) $network->name);
+        $safeNetworkName = self::sanitizeYamlComment((string) ($network->name ?? 'NetCrew'));
+        $safeCidr        = self::sanitizeYamlComment((string) ($network->cidr ?? '10.0.0.0/8'));
 
         $blocklistYaml = '';
         $validBlocklist = [];
@@ -752,7 +840,7 @@ YAML;
 
         return <<<YAML
 # Configuración de Servidor Lighthouse Nebula generada por NetCrew
-# Red: {$safeNetworkName} ({$network->cidr})
+# Red: {$safeNetworkName} ({$safeCidr})
 
 pki:
   ca: |
@@ -807,7 +895,7 @@ firewall:
       host: any
     - port: any
       proto: any
-      group: devices
+      group: lighthouse
 
 YAML;
     }
@@ -1086,11 +1174,78 @@ YAML;
     }
 
     /**
+     * Combina las blocklists de todas las redes para el Lighthouse global compartido.
+     *
+     * @return string[]
+     */
+    public static function getAllBlocklists(): array
+    {
+        $combined = [];
+        try {
+            $db   = \Config\Database::connect();
+            $rows = $db->table('networks')->select('id')->get()->getResult();
+            foreach ($rows as $row) {
+                foreach (self::getBlocklist((int) $row->id) as $fp) {
+                    $combined[$fp] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('warning', 'No se pudieron consolidar blocklists globales: ' . $e->getMessage());
+        }
+
+        return array_keys($combined);
+    }
+
+    /**
+     * Sincroniza el Lighthouse global compartido (/etc/nebula/config.yml) usando la CA global (10.0.0.1/8).
+     */
+    public static function syncGlobalLighthouse(): bool
+    {
+        $globalCa = self::getGlobalCa();
+        if ($globalCa === null) {
+            return false;
+        }
+
+        $virtualNetwork = (object) [
+            'id'            => 0,
+            'name'          => 'NetCrew Global Multitenant',
+            'cidr'          => '10.0.0.0/8',
+            'nebula_ca_crt' => $globalCa['crt'],
+        ];
+
+        try {
+            $lighthouseIp = self::getGlobalLighthouseVpnIp() . '/8';
+            $cert         = self::signDeviceCert(
+                $globalCa['crt'],
+                $globalCa['key'],
+                'netcrew-lighthouse-global',
+                $lighthouseIp,
+                'lighthouse'
+            );
+            $yaml = self::buildLighthouseConfig(
+                $virtualNetwork,
+                $cert['crt'],
+                $cert['key'],
+                self::getAllBlocklists()
+            );
+        } catch (\Throwable $e) {
+            log_message('warning', 'No se pudo generar config Lighthouse global: ' . $e->getMessage());
+            return false;
+        }
+
+        return self::writeAndRestartLocalLighthouse($yaml);
+    }
+
+    /**
      * Sincroniza automáticamente la configuración del Lighthouse local (/etc/nebula/config.yml)
      * y reinicia el servicio systemd nebula si el servidor está preparado.
      */
     public static function syncLocalLighthouse(object $network, string $caKey): bool
     {
+        if (self::getGlobalCa() !== null) {
+            return self::syncGlobalLighthouse();
+        }
+
         if (empty($network->nebula_ca_crt) || $caKey === '' || empty($network->cidr)) {
             return false;
         }
@@ -1114,6 +1269,15 @@ YAML;
             log_message('warning', 'No se pudo generar config Lighthouse local: ' . $e->getMessage());
             return false;
         }
+
+        return self::writeAndRestartLocalLighthouse($yaml);
+    }
+
+    /**
+     * Escribe /etc/nebula/config.yml (directamente como root o vía helper sudo) y reinicia el servicio.
+     */
+    protected static function writeAndRestartLocalLighthouse(string $yaml): bool
+    {
 
         $isRoot = function_exists('posix_geteuid') && posix_geteuid() === 0;
         if ($isRoot) {

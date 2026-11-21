@@ -13,6 +13,7 @@ class AuditLogModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
+        'company_id',
         'user_id',
         'username',
         'action',
@@ -27,13 +28,19 @@ class AuditLogModel extends Model
     /**
      * Helper estático para registrar un log de auditoría fácilmente
      */
-    public static function log(string $action, string $description = '', ?int $userId = null, ?string $username = null): void
+    public static function log(string $action, string $description = '', ?int $userId = null, ?string $username = null, ?int $companyId = null): void
     {
         try {
             $user = auth()->user();
             $request = service('request');
 
+            $resolvedCompanyId = $companyId;
+            if ($resolvedCompanyId === null && $user && ! empty($user->company_id)) {
+                $resolvedCompanyId = (int) $user->company_id;
+            }
+
             $data = [
+                'company_id'  => $resolvedCompanyId,
                 'user_id'     => $userId ?? ($user ? $user->id : null),
                 'username'    => $username ?? ($user ? ($user->username ?? $user->email) : 'Sistema'),
                 'action'      => $action,

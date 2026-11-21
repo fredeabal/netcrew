@@ -40,11 +40,31 @@
               </a>
             </li>
             <?php endif; ?>
-            <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create') || auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
+            <?php if (auth()->user()->can('admin.companies') || auth()->user()->inGroup('superadmin') || auth()->user()->can('admin.users') || auth()->user()->can('users.create') || auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles') || auth()->user()->inGroup('supervisor')): ?>
             <li class="nav-small-cap mt-4">
               <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
               <span class="hide-menu">Administración</span>
             </li>
+            <?php if (auth()->user()->can('admin.companies') || auth()->user()->inGroup('superadmin')): ?>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="<?= base_url('companies') ?>" aria-expanded="false">
+                <span>
+                  <i class="ti ti-building"></i>
+                </span>
+                <span class="hide-menu">Empresas</span>
+              </a>
+            </li>
+            <?php endif; ?>
+            <?php if (auth()->user()->inGroup('superadmin') && auth()->user()->can('admin.roles')): ?>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="<?= base_url('roles') ?>" aria-expanded="false">
+                <span>
+                  <i class="ti ti-shield-lock"></i>
+                </span>
+                <span class="hide-menu">Roles</span>
+              </a>
+            </li>
+            <?php endif; ?>
             <?php if (auth()->user()->can('admin.users') || auth()->user()->can('users.create')): ?>
             <li class="sidebar-item">
               <a class="sidebar-link" href="<?= base_url('users') ?>" aria-expanded="false">
@@ -55,36 +75,24 @@
               </a>
             </li>
             <?php endif; ?>
-            <?php if (auth()->user()->can('admin.settings') || auth()->user()->can('admin.roles')): ?>
+            <?php if (auth()->user()->inGroup('supervisor') && !auth()->user()->inGroup('superadmin')): ?>
             <li class="sidebar-item">
-              <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <span class="d-flex">
+              <a class="sidebar-link" href="<?= base_url('audit-logs') ?>" aria-expanded="false">
+                <span>
+                  <i class="ti ti-history"></i>
+                </span>
+                <span class="hide-menu">Auditoría</span>
+              </a>
+            </li>
+            <?php endif; ?>
+            <?php if (auth()->user()->inGroup('superadmin') && auth()->user()->can('admin.settings')): ?>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="<?= base_url('settings') ?>" aria-expanded="false">
+                <span>
                   <i class="ti ti-settings"></i>
                 </span>
                 <span class="hide-menu">Configuración</span>
               </a>
-              <ul aria-expanded="false" class="collapse first-level">
-                <?php if (auth()->user()->can('admin.roles')): ?>
-                <li class="sidebar-item">
-                  <a href="<?= base_url('roles') ?>" class="sidebar-link">
-                    <div class="round-16 d-flex align-items-center justify-content-center">
-                      <i class="ti ti-circle"></i>
-                    </div>
-                    <span class="hide-menu">Roles</span>
-                  </a>
-                </li>
-                <?php endif; ?>
-                 <?php if (auth()->user()->can('admin.settings')): ?>
-                 <li class="sidebar-item">
-                   <a href="<?= base_url('settings') ?>" class="sidebar-link">
-                     <div class="round-16 d-flex align-items-center justify-content-center">
-                       <i class="ti ti-circle"></i>
-                     </div>
-                     <span class="hide-menu">Configuración</span>
-                   </a>
-                 </li>
-                 <?php endif; ?>
-              </ul>
             </li>
             <?php endif; ?>
             <?php endif; ?>

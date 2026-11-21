@@ -15,6 +15,15 @@ class SyncLighthouse extends BaseCommand
 
     public function run(array $params)
     {
+        if (NebulaService::getGlobalCa() !== null) {
+            if (NebulaService::syncGlobalLighthouse()) {
+                CLI::write('Lighthouse global sincronizado (10.0.0.1/8).', 'green');
+            } else {
+                CLI::error('No se pudo sincronizar el Lighthouse global local.');
+            }
+            return;
+        }
+
         $model   = new NetworkModel();
         $network = $model->where('active', 1)->orderBy('id', 'ASC')->first();
 

@@ -5,8 +5,8 @@ use CodeIgniter\Router\RouteCollection;
 /** @var RouteCollection $routes */
 $routes->get('/', 'HomeController::index');
 
-// Agrupamos las rutas que requieren autenticación
-$routes->group('', ['filter' => 'session'], static function ($routes) {
+// Agrupamos las rutas que requieren autenticación y empresa activa
+$routes->group('', ['filter' => ['session', 'company-active']], static function ($routes) {
     // Dashboards
     $routes->get('dashboard', 'DashboardController::index');
     
@@ -19,7 +19,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
 });
 
 // Rutas de administración (requieren permisos extra)
-$routes->group('', ['filter' => 'session'], static function ($routes) {
+$routes->group('', ['filter' => ['session', 'company-active']], static function ($routes) {
     $routes->get('users', 'UsersController::index', ['filter' => 'permission:admin.users,users.create,users.edit,users.delete']);
     $routes->get('users/create', 'UsersController::create', ['filter' => 'permission:admin.users,users.create']);
     $routes->post('users/store', 'UsersController::store', ['filter' => 'permission:admin.users,users.create']);
@@ -28,17 +28,28 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('users/toggle-active/(:num)', 'UsersController::toggleActive/$1', ['filter' => 'permission:admin.users,users.edit']);
     $routes->post('users/delete/(:num)', 'UsersController::delete/$1', ['filter' => 'permission:admin.users,users.delete']);
 
-    // Rutas de Roles
-    $routes->get('roles', 'RolesController::index', ['filter' => 'permission:admin.roles']);
-    $routes->get('roles/edit/(:segment)', 'RolesController::edit/$1', ['filter' => 'permission:admin.roles']);
-    $routes->post('roles/update/(:segment)', 'RolesController::update/$1', ['filter' => 'permission:admin.roles']);
+    // Rutas de Roles (exclusivo de superadmin)
+    $routes->get('roles', 'RolesController::index', ['filter' => ['group:superadmin', 'permission:admin.roles']]);
+    $routes->get('roles/edit/(:segment)', 'RolesController::edit/$1', ['filter' => ['group:superadmin', 'permission:admin.roles']]);
+    $routes->post('roles/update/(:segment)', 'RolesController::update/$1', ['filter' => ['group:superadmin', 'permission:admin.roles']]);
 
-    // Registro de Auditoría
-    $routes->get('audit-logs', 'SettingsController::index/audit', ['filter' => 'permission:admin.settings']);
+    // Registro de Auditoría (superadmin global + supervisor filtrado a su empresa)
+    $routes->get('audit-logs', 'SettingsController::index/audit', ['filter' => 'group:superadmin,supervisor']);
 });
 
-// Rutas de Superadmin (Configuración - requieren permisos)
-$routes->group('settings', ['filter' => ['session', 'permission:admin.settings']], static function ($routes) {
+// Rutas de Empresas (Companies - multitenant)
+$routes->group('companies', ['filter' => ['session', 'company-active', 'permission:admin.companies']], static function ($routes) {
+    $routes->get('', 'CompaniesController::index');
+    $routes->get('create', 'CompaniesController::create');
+    $routes->post('store', 'CompaniesController::store');
+    $routes->get('edit/(:num)', 'CompaniesController::edit/$1');
+    $routes->post('update/(:num)', 'CompaniesController::update/$1');
+    $routes->post('toggle-active/(:num)', 'CompaniesController::toggleActive/$1');
+    $routes->post('delete/(:num)', 'CompaniesController::delete/$1');
+});
+
+// Rutas de Superadmin (Configuración - exclusivo de superadmin)
+$routes->group('settings', ['filter' => ['session', 'company-active', 'group:superadmin', 'permission:admin.settings']], static function ($routes) {
     $routes->get('/', 'SettingsController::index');
     $routes->get('smtp', 'SettingsController::index/smtp');
     $routes->post('smtp/update', 'SmtpController::smtpUpdate');
@@ -53,7 +64,7 @@ $routes->group('settings', ['filter' => ['session', 'permission:admin.settings']
 });
 
 // Rutas de Redes (Networks)
-$routes->group('networks', ['filter' => 'session'], static function ($routes) {
+$routes->group('networks', ['filter' => ['session', 'company-active']], static function ($routes) {
     $routes->get('', 'NetworkController::index', ['filter' => 'permission:networks.view']);
     $routes->get('create', 'NetworkController::create', ['filter' => 'permission:networks.create']);
     $routes->post('store', 'NetworkController::store', ['filter' => 'permission:networks.create']);
@@ -67,7 +78,7 @@ $routes->group('networks', ['filter' => 'session'], static function ($routes) {
 });
 
 // Rutas de Dispositivos (Devices)
-$routes->group('devices', ['filter' => 'session'], static function ($routes) {
+$routes->group('devices', ['filter' => ['session', 'company-active']], static function ($routes) {
     $routes->get('create/(:num)', 'DeviceController::create/$1', ['filter' => 'permission:devices.create']);
     $routes->get('edit/(:num)', 'DeviceController::edit/$1', ['filter' => 'permission:devices.edit']);
     $routes->get('list/(:num)', 'DeviceController::listByNetwork/$1', ['filter' => 'permission:devices.view']);

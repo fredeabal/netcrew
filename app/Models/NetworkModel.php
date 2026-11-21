@@ -13,7 +13,7 @@ class NetworkModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'owner_id', 'name', 'cidr', 'dns', 'active', 'engine', 'nebula_ca_crt', 'nebula_ca_key'
+        'company_id', 'owner_id', 'name', 'cidr', 'dns', 'active', 'engine', 'nebula_ca_crt', 'nebula_ca_key'
     ];
 
     // Dates
@@ -28,12 +28,13 @@ class NetworkModel extends Model
 
     // Validation
     protected $validationRules      = [
-        'id'       => 'permit_empty|is_natural_no_zero',
-        'name'     => 'required|min_length[3]|max_length[100]',
-        'cidr'     => 'required|min_length[9]|max_length[45]|is_unique[networks.cidr,id,{id}]',
-        'dns'      => 'permit_empty|string|max_length[255]',
-        'owner_id' => 'required|integer',
-        'engine'   => 'permit_empty|in_list[nebula]',
+        'id'         => 'permit_empty|is_natural_no_zero',
+        'company_id' => 'permit_empty|is_natural_no_zero',
+        'name'       => 'required|min_length[3]|max_length[100]',
+        'cidr'       => 'required|min_length[9]|max_length[45]|is_unique[networks.cidr,id,{id}]',
+        'dns'        => 'permit_empty|string|max_length[255]',
+        'owner_id'   => 'required|integer',
+        'engine'     => 'permit_empty|in_list[nebula]',
     ];
     protected $validationMessages   = [
         'name' => [
@@ -56,19 +57,36 @@ class NetworkModel extends Model
     protected $cleanValidationRules = true;
 
     /**
-     * Obtiene las redes filtradas por usuario.
-     * Si el usuario es superadmin, devuelve todas las redes del sistema.
-     * Soporta buscador y paginado.
+     * Obtiene las redes filtradas por rol y empresa.
+     * - superadmin: ve todas las redes del sistema (opcionalmente filtradas por empresa).
+     * - companyAdmin (supervisor): ve todas las redes de su empresa.
+     * - user: ve solo sus redes dentro de su empresa.
      */
-    public function getNetworksForUser(int $userId, bool $isSuperAdmin = false, $search = null, $perPage = 10)
-    {
-        $builder = $this->select('networks.*, users.username as owner_username, COUNT(devices.id) as device_count')
+    public function getNetworksForUser(
+        int $userId,
+        bool $isSuperAdmin = false,
+        $search = null,
+        $perPage = 10,
+        ?int $companyId = null,
+        bool $isCompanyAdmin = false
+    ) {
+        $builder = $this->select('networks.*, users.username as owner_username, companies.name as company_name, COUNT(devices.id) as device_count')
                         ->join('users', 'users.id = networks.owner_id', 'left')
+                        ->join('companies', 'companies.id = networks.company_id', 'left')
                         ->join('devices', 'devices.network_id = networks.id', 'left')
                         ->groupBy('networks.id');
 
-        if (!$isSuperAdmin) {
+        if ($isSuperAdmin) {
+            if ($companyId !== null) {
+                $builder->where('networks.company_id', $companyId);
+            }
+        } elseif ($isCompanyAdmin) {
+            $builder->where('networks.company_id', (int) $companyId);
+        } else {
             $builder->where('networks.owner_id', $userId);
+            if ($companyId !== null) {
+                $builder->where('networks.company_id', $companyId);
+            }
         }
 
         if (!empty($search)) {
@@ -76,10 +94,32 @@ class NetworkModel extends Model
                     ->like('networks.name', $search)
                     ->orLike('networks.cidr', $search)
                     ->orLike('users.username', $search)
+                    ->orLike('companies.name', $search)
                     ->groupEnd();
         }
 
         return $builder->paginate($perPage, 'networks');
+    }
+
+    /**
+     * Sugiere el siguiente bloque /24 libre dentro de 10.0.0.0/8 (empezando en 10.1.0.0)
+     * para evitar colisiones con el Lighthouse global (10.0.0.1) y entre empresas.
+     */
+    public function suggestNextCidr(): string
+    {
+        $used = array_column($this->select('cidr')->findAll(), 'cidr');
+        $usedMap = array_flip($used);
+
+        for ($second = 1; $second <= 254; $second++) {
+            for ($third = 0; $third <= 254; $third++) {
+                $candidate = "10.{$second}.{$third}.0/24";
+                if (! isset($usedMap[$candidate])) {
+                    return "10.{$second}.{$third}.0";
+                }
+            }
+        }
+
+        return '10.50.0.0';
     }
 
     /**

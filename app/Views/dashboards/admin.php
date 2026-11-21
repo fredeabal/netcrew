@@ -5,7 +5,12 @@
   <div class="card-body px-3 px-md-4 py-3">
     <div class="d-flex align-items-center justify-content-between gap-2">
       <div>
-        <h4 class="fw-semibold mb-1">Panel de Administración</h4>
+        <h4 class="fw-semibold mb-1">
+          Panel de Administración
+          <?php if (empty($isSuperAdmin) && !empty($companyName)): ?>
+            <span class="badge bg-primary-subtle text-primary ms-2 align-middle"><?= esc($companyName) ?></span>
+          <?php endif; ?>
+        </h4>
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item">
@@ -15,10 +20,11 @@
           </ol>
         </nav>
       </div>
+      <?php $serviceLabel = !empty($isSuperAdmin) ? 'Nebula P2P' : 'Servicio VPN'; ?>
       <div class="flex-shrink-0 text-end">
-        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?>">
+        <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="<?= $serviceLabel ?> <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?>">
           <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>
-          <span class="d-none d-sm-inline">Nebula P2P <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
+          <span class="d-none d-sm-inline"><?= $serviceLabel ?> <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
           <span class="d-inline d-sm-none"><?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?></span>
         </div>
       </div>
@@ -27,11 +33,29 @@
 </div>
 
 <!-- =====================================================================
-     TARJETAS DE ESTADÍSTICAS (MÉTRICAS GLOBALES)
+     TARJETAS DE ESTADÍSTICAS
      ===================================================================== -->
+<?php $statColClass = !empty($isSuperAdmin) ? 'col-6 col-md-3' : 'col-4'; ?>
 <div class="row g-2 g-md-3 mb-3 mb-md-4">
+    <?php if (!empty($isSuperAdmin)): ?>
+    <!-- Card Empresas Registradas -->
+    <div class="<?= $statColClass ?>">
+        <div class="card border shadow-none h-100 mb-0 dash-stat-card">
+            <div class="card-body p-2 p-sm-3 p-md-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted fs-2 fw-semibold text-truncate">Empresas</span>
+                    <div class="dash-stat-icon bg-warning-subtle text-warning">
+                        <i class="ti ti-building"></i>
+                    </div>
+                </div>
+                <h3 class="dash-stat-number fw-bold text-body mb-0 dash-figure"><?= esc($totalCompanies ?? 0) ?></h3>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Card Usuarios Registrados -->
-    <div class="col-4">
+    <div class="<?= $statColClass ?>">
         <div class="card border shadow-none h-100 mb-0 dash-stat-card">
             <div class="card-body p-2 p-sm-3 p-md-4">
                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -46,7 +70,7 @@
     </div>
 
     <!-- Card Redes Totales -->
-    <div class="col-4">
+    <div class="<?= $statColClass ?>">
         <div class="card border shadow-none h-100 mb-0 dash-stat-card">
             <div class="card-body p-2 p-sm-3 p-md-4">
                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -61,7 +85,7 @@
     </div>
 
     <!-- Card Dispositivos Totales -->
-    <div class="col-4">
+    <div class="<?= $statColClass ?>">
         <div class="card border shadow-none h-100 mb-0 dash-stat-card">
             <div class="card-body p-2 p-sm-3 p-md-4">
                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -109,6 +133,9 @@
                             <tr class="text-muted fw-semibold">
                                 <th scope="col" class="text-start">Nombre</th>
                                 <th scope="col" class="text-center">Rango CIDR</th>
+                                <?php if (!empty($isSuperAdmin)): ?>
+                                <th scope="col" class="text-center">Empresa</th>
+                                <?php endif; ?>
                                 <th scope="col" class="text-center">Propietario</th>
                                 <th scope="col" class="text-center">Nodos</th>
                                 <th scope="col" class="text-center">Creada</th>
@@ -142,6 +169,11 @@
                                     <td class="text-center text-muted">
                                         <span class="net-mono"><?= esc($net->cidr) ?></span>
                                     </td>
+                                    <?php if (!empty($isSuperAdmin)): ?>
+                                    <td class="text-center text-muted">
+                                        <?= !empty($net->company_name) ? esc($net->company_name) : 'Sin empresa' ?>
+                                    </td>
+                                    <?php endif; ?>
                                     <td class="text-center text-muted">
                                         <?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?>
                                     </td>
@@ -241,6 +273,12 @@
                                 </div>
                             </div>
                             <div class="mobile-card-body">
+                                <?php if (!empty($isSuperAdmin)): ?>
+                                <div class="mobile-card-row">
+                                    <span class="mobile-card-label">Empresa</span>
+                                    <span class="mobile-card-value text-muted"><?= !empty($net->company_name) ? esc($net->company_name) : 'Sin empresa' ?></span>
+                                </div>
+                                <?php endif; ?>
                                 <div class="mobile-card-row">
                                     <span class="mobile-card-label">Propietario</span>
                                     <span class="mobile-card-value text-muted"><?= $net->owner_username ? esc($net->owner_username) : 'Sin propietario' ?></span>

@@ -45,7 +45,7 @@
           <div class="mb-3">
             <label for="cidr" class="form-label">Rango de Red (IPv4)</label>
             <div class="input-group">
-              <input type="text" class="form-control" id="cidr" name="cidr" value="<?= esc(old('cidr', '10.50.0.0')) ?>" placeholder="Ej: 10.50.0.0">
+              <input type="text" class="form-control" id="cidr" name="cidr" value="<?= esc(old('cidr', $suggestedCidr ?? '10.50.0.0')) ?>" placeholder="Ej: 10.50.0.0">
               <span class="input-group-text bg-transparent text-muted border">/24</span>
             </div>
             <div class="mt-2">
@@ -60,6 +60,20 @@
           </div>
 
 
+
+          <?php if (!empty($isSuperAdmin) && !empty($companies)): ?>
+            <div class="mb-3">
+              <label for="company_id" class="form-label">Empresa</label>
+              <select class="select2 form-control custom-select" id="company_id" name="company_id" required>
+                <option value="">Seleccione una empresa</option>
+                <?php foreach ($companies as $company): ?>
+                  <option value="<?= esc($company->id) ?>" <?= old('company_id') == $company->id ? 'selected' : '' ?>>
+                    <?= esc($company->name) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
 
           <?php if (auth()->user()->inGroup('superadmin', 'supervisor') && !empty($users)): ?>
             <div class="mb-3">

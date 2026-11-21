@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Libraries\NebulaService;
+use App\Models\AuditLogModel;
+use App\Models\CompanyModel;
 use App\Models\DeviceModel;
 use App\Models\NetworkModel;
 
@@ -278,6 +280,29 @@ class DeviceController extends BaseController
             ])->setStatusCode(403);
         }
 
+        // Validar cuota máxima de dispositivos de la empresa
+        $companyId = (int) ($network->company_id ?? 0);
+        if ($companyId > 0) {
+            $company = (new CompanyModel())->find($companyId);
+            if ($company && (int) ($company->max_devices ?? 0) > 0) {
+                $companyDevicesCount = (int) \Config\Database::connect()
+                    ->table('devices')
+                    ->join('networks', 'networks.id = devices.network_id', 'inner')
+                    ->where('networks.company_id', $companyId)
+                    ->countAllResults();
+                if ($companyDevicesCount >= (int) $company->max_devices) {
+                    $msg = "La empresa ha alcanzado su límite máximo de dispositivos ({$company->max_devices}).";
+                    if (!$isAjax) {
+                        return redirect()->back()->withInput()->with('error', $msg);
+                    }
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'message' => $msg
+                    ])->setStatusCode(400);
+                }
+            }
+        }
+
         // Validar capacidad de la red (/24 = máx 253 nodos)
         $currentNodesCount = $this->deviceModel->where('network_id', $networkId)->countAllResults();
         if ($currentNodesCount >= 253) {
@@ -313,23 +338,20 @@ class DeviceController extends BaseController
 
         // Firmar certificado Nebula P2P para el dispositivo
         try {
-            $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
-            if (empty($network->nebula_ca_crt) || $caKey === '') {
-                throw new \RuntimeException('La CA de Nebula de esta red no es válida o no se pudo descifrar.');
-            }
+            $ctx          = $this->resolveSigningContext($network);
             $signed       = NebulaService::signDeviceCert(
-                $network->nebula_ca_crt,
-                $caKey,
+                $ctx['ca_crt'],
+                $ctx['ca_key'],
                 $name,
-                $ipAddress . '/24',
-                'devices',
+                $ipAddress . $ctx['mask'],
+                $ctx['groups'],
                 $expiresAt
             );
             $publicKey    = $signed['fingerprint'];
             $privateKey   = 'nebula';
             $nebulaCrt    = $signed['crt'];
             $nebulaKey    = $signed['key'];
-            $nebulaGroups = 'devices';
+            $nebulaGroups = $ctx['groups'];
         } catch (\Throwable $e) {
             $msg = 'Error al firmar certificado Nebula: ' . $e->getMessage();
             if (!$isAjax) {
@@ -381,8 +403,9 @@ class DeviceController extends BaseController
             ])->setStatusCode(409);
         }
 
-        $insertId = $this->deviceModel->getInsertID();
-        \App\Models\AuditLogModel::log('DEVICE_CREATE', "Creó el nodo '{$data['name']}' ({$data['ip_address']}) en red ID: {$networkId}");
+        $insertId       = $this->deviceModel->getInsertID();
+        $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+        AuditLogModel::log('DEVICE_CREATE', "Creó el nodo '{$data['name']}' ({$data['ip_address']}) en red ID: {$networkId}", null, null, $auditCompanyId);
 
         if (!$isAjax) {
             return redirect()->to('/networks/' . $networkId . '/devices')->with('message', 'Dispositivo agregado correctamente.');
@@ -495,19 +518,20 @@ class DeviceController extends BaseController
         $oldCrt         = (string) ($device->nebula_crt ?? '');
         if ($expirationChanged) {
             try {
-                $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
-                if (!empty($network->nebula_ca_crt) && $caKey !== '') {
-                    $signed = NebulaService::signDeviceCert(
-                        $network->nebula_ca_crt,
-                        $caKey,
-                        $name,
-                        $device->ip_address . '/24',
-                        $device->nebula_groups ?: 'devices',
-                        $updateData['expires_at']
-                    );
-                    $updateData['public_key'] = $signed['fingerprint'];
-                    $updateData['nebula_crt'] = $signed['crt'];
-                    $updateData['nebula_key'] = $signed['key'];
+                $ctx    = $this->resolveSigningContext($network, $device->nebula_groups ?: 'devices');
+                $signed = NebulaService::signDeviceCert(
+                    $ctx['ca_crt'],
+                    $ctx['ca_key'],
+                    $name,
+                    $device->ip_address . $ctx['mask'],
+                    $ctx['groups'],
+                    $updateData['expires_at']
+                );
+                $updateData['public_key'] = $signed['fingerprint'];
+                $updateData['nebula_crt'] = $signed['crt'];
+                $updateData['nebula_key'] = $signed['key'];
+                if ($ctx['is_global']) {
+                    $updateData['nebula_groups'] = $ctx['groups'];
                 }
             } catch (\Throwable $e) {
                 log_message('warning', 'No se pudo re-firmar el certificado al actualizar expiración del nodo ' . $id . ': ' . $e->getMessage());
@@ -519,7 +543,8 @@ class DeviceController extends BaseController
                 NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint, $oldCrt);
                 $this->syncNetworkLighthouse($network);
             }
-            \App\Models\AuditLogModel::log('DEVICE_UPDATE', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.");
+            $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+            AuditLogModel::log('DEVICE_UPDATE', "Nodo '{$name}' (IP: {$device->ip_address}) actualizado en la red '{$network->name}'.", null, null, $auditCompanyId);
 
             if (!$isAjax) {
                 return redirect()->to('/devices/show/' . $id)->with('message', 'Nodo actualizado correctamente.');
@@ -572,7 +597,8 @@ class DeviceController extends BaseController
                 NebulaService::revokeFingerprint((int) $networkId, (string) $device->public_key, (string) ($device->nebula_crt ?? ''));
                 $this->syncNetworkLighthouse($network);
             }
-            \App\Models\AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})");
+            $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+            AuditLogModel::log('DEVICE_DELETE', "Eliminó el nodo '{$device->name}' ({$device->ip_address})", null, null, $auditCompanyId);
             return redirect()->to("networks/{$networkId}/devices")->with('message', 'Nodo eliminado.');
         }
 
@@ -613,30 +639,29 @@ class DeviceController extends BaseController
         }
 
         try {
-            $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
-            if (empty($network->nebula_ca_crt) || $caKey === '') {
-                return redirect()->back()->with('error', 'No se pudo descifrar la CA de Nebula.');
-            }
+            $ctx    = $this->resolveSigningContext($network, $device->nebula_groups ?: 'devices');
             $signed = NebulaService::signDeviceCert(
-                $network->nebula_ca_crt,
-                $caKey,
+                $ctx['ca_crt'],
+                $ctx['ca_key'],
                 $device->name,
-                $device->ip_address . '/24',
-                $device->nebula_groups ?: 'devices',
+                $device->ip_address . $ctx['mask'],
+                $ctx['groups'],
                 $device->expires_at
             );
             $oldFingerprint = (string) ($device->public_key ?? '');
             $updateData = [
-                'public_key' => $signed['fingerprint'],
-                'nebula_crt' => $signed['crt'],
-                'nebula_key' => $signed['key'],
+                'public_key'    => $signed['fingerprint'],
+                'nebula_crt'    => $signed['crt'],
+                'nebula_key'    => $signed['key'],
+                'nebula_groups' => $ctx['groups'],
             ];
             if ($this->deviceModel->update($id, $updateData)) {
                 if ($oldFingerprint !== '' && $oldFingerprint !== $signed['fingerprint']) {
                     NebulaService::revokeFingerprint((int) $network->id, $oldFingerprint, (string) ($device->nebula_crt ?? ''));
                     $this->syncNetworkLighthouse($network);
                 }
-                \App\Models\AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+                $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+                AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}", null, null, $auditCompanyId);
                 return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado Nebula regenerado con éxito! Descarga la nueva configuración .yml.');
             }
         } catch (\Throwable $e) {
@@ -694,8 +719,9 @@ class DeviceController extends BaseController
                 }
                 $this->syncNetworkLighthouse($network);
             }
-            $status = $newActiveStatus ? 'activado' : 'desactivado';
-            \App\Models\AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}");
+            $status         = $newActiveStatus ? 'activado' : 'desactivado';
+            $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+            AuditLogModel::log('DEVICE_TOGGLE_ACTIVE', "Cambió estado a {$status} para el nodo '{$device->name}' (ID: {$id}) en red ID: {$networkId}", null, null, $auditCompanyId);
             return redirect()->to("networks/{$networkId}/devices")->with('message', "Nodo {$status}.");
         }
 
@@ -747,7 +773,8 @@ class DeviceController extends BaseController
             ])->setStatusCode(400);
         }
 
-        \App\Models\AuditLogModel::log('DEVICE_VIEW_KEYS', "Visualizó configuración y claves del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+        $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+        AuditLogModel::log('DEVICE_VIEW_KEYS', "Visualizó configuración y claves del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}", null, null, $auditCompanyId);
 
         return $this->response->setJSON([
             'success' => true,
@@ -800,7 +827,8 @@ class DeviceController extends BaseController
         $slug     = url_title((string) $device->name, '-', true) ?: 'nodo-' . $device->id;
         $bundle   = \App\Libraries\NebulaInstallerService::buildForPlatform($platform, $slug, $payload['content']);
 
-        \App\Models\AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó {$bundle['filename']} ({$platform}) del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+        $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+        AuditLogModel::log('DEVICE_DOWNLOAD', "Descargó {$bundle['filename']} ({$platform}) del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}", null, null, $auditCompanyId);
 
         return $this->response->setHeader('Content-Type', $bundle['contentType'])
                                 ->setHeader('Content-Disposition', 'attachment; filename="' . $bundle['filename'] . '"')
@@ -854,7 +882,8 @@ class DeviceController extends BaseController
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        \App\Models\AuditLogModel::log('DEVICE_SHARE_LINK', "Generó enlace temporal compartido para el nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}");
+        $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+        AuditLogModel::log('DEVICE_SHARE_LINK', "Generó enlace temporal compartido para el nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}", null, null, $auditCompanyId);
 
         $shareUrl = site_url('connect/' . $token);
 
@@ -1038,7 +1067,8 @@ class DeviceController extends BaseController
             $emailService->setMessage($htmlMessage);
 
             if ($emailService->send()) {
-                \App\Models\AuditLogModel::log('DEVICE_SEND_EMAIL', "Envió configuración del nodo '{$device->name}' (ID: {$id}) por correo a: {$targetEmail}");
+                $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
+                AuditLogModel::log('DEVICE_SEND_EMAIL', "Envió configuración del nodo '{$device->name}' (ID: {$id}) por correo a: {$targetEmail}", null, null, $auditCompanyId);
                 return $this->response->setJSON(['success' => true, 'message' => 'Configuración enviada exitosamente a ' . esc($targetEmail)]);
             } else {
                 $debugger = $emailService->printDebugger(['headers']);
@@ -1264,7 +1294,8 @@ class DeviceController extends BaseController
     {
         $slug         = url_title($device->name, '-', true) ?: 'device';
         $decryptedKey = $this->deviceModel->decryptKey((string) $device->nebula_key);
-        if (empty($device->nebula_crt) || $decryptedKey === '' || empty($network->nebula_ca_crt)) {
+        $usesGlobalCa = NebulaService::usesGlobalCa($network);
+        if (empty($device->nebula_crt) || $decryptedKey === '' || (! $usesGlobalCa && empty($network->nebula_ca_crt))) {
             throw new \RuntimeException('No se pudo desencriptar el certificado o la llave privada Nebula del nodo.');
         }
 
@@ -1456,25 +1487,73 @@ class DeviceController extends BaseController
     }
 
     /**
-     * Valida permisos para operar sobre dispositivos de una red según RBAC y propiedad.
+     * Resuelve la CA, máscara CIDR y grupos Nebula para firmar certificados de nodos.
+     *
+     * @return array{ca_crt: string, ca_key: string, mask: string, groups: string, is_global: bool}
+     */
+    protected function resolveSigningContext(object $network, ?string $legacyGroups = null): array
+    {
+        if (NebulaService::usesGlobalCa($network)) {
+            $globalCa = NebulaService::getGlobalCa();
+            if ($globalCa !== null) {
+                return [
+                    'ca_crt'    => $globalCa['crt'],
+                    'ca_key'    => $globalCa['key'],
+                    'mask'      => '/8',
+                    'groups'    => NebulaService::getNetworkGroupName((int) $network->id),
+                    'is_global' => true,
+                ];
+            }
+        } elseif (empty($network->nebula_ca_crt) && empty($network->nebula_ca_key)) {
+            $globalCa = NebulaService::getOrCreateGlobalCa();
+            return [
+                'ca_crt'    => $globalCa['crt'],
+                'ca_key'    => $globalCa['key'],
+                'mask'      => '/8',
+                'groups'    => NebulaService::getNetworkGroupName((int) $network->id),
+                'is_global' => true,
+            ];
+        }
+
+        $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
+        if (empty($network->nebula_ca_crt) || $caKey === '') {
+            throw new \RuntimeException('La CA de Nebula de esta red no es válida o no se pudo descifrar.');
+        }
+
+        return [
+            'ca_crt'    => (string) $network->nebula_ca_crt,
+            'ca_key'    => $caKey,
+            'mask'      => '/24',
+            'groups'    => ($legacyGroups ?: 'devices'),
+            'is_global' => false,
+        ];
+    }
+
+    /**
+     * Valida permisos para operar sobre dispositivos de una red según RBAC, empresa y propiedad.
      */
     protected function hasNetworkAccess(object $network, string $action = 'view'): bool
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
-        if ($user->inGroup('superadmin')) {
+        if ($this->isSuperAdmin()) {
             return true;
         }
 
         $hasPermission = $user->can('devices.*') || $user->can("devices.{$action}");
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             return false;
         }
 
-        if ($user->inGroup('supervisor')) {
+        $userCompanyId = $this->currentCompanyId();
+        if ($userCompanyId === null || (int) ($network->company_id ?? 0) !== $userCompanyId) {
+            return false;
+        }
+
+        if ($this->isCompanyAdmin()) {
             return true;
         }
 
@@ -1486,9 +1565,19 @@ class DeviceController extends BaseController
      */
     protected function syncNetworkLighthouse(object $network): void
     {
-        if (empty($network->active) || empty($network->nebula_ca_crt) || empty($network->nebula_ca_key)) {
+        if (empty($network->active)) {
             return;
         }
+
+        if (NebulaService::getGlobalCa() !== null) {
+            NebulaService::syncGlobalLighthouse();
+            return;
+        }
+
+        if (empty($network->nebula_ca_crt) || empty($network->nebula_ca_key)) {
+            return;
+        }
+
         $caKey = $this->networkModel->decryptCaKey((string) $network->nebula_ca_key);
         if ($caKey !== '') {
             NebulaService::syncLocalLighthouse($network, $caKey);

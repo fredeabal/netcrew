@@ -119,7 +119,7 @@
                 </thead>
                 <tbody class="border-top">
                   <?php foreach ($devices as $dev): ?>
-                    <tr onclick="window.location='<?= site_url('devices/show/' . $dev->id) ?>'" class="cursor-pointer">
+                    <tr data-row-href="<?= site_url('devices/show/' . $dev->id) ?>" class="cursor-pointer">
                       <td class="text-start">
                         <div class="d-flex align-items-center">
                           <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle me-3 device-icon-status-wrapper <?= $dev->active ? 'bg-danger-subtle text-danger' : 'bg-light text-muted' ?>"
@@ -158,7 +158,7 @@
                           <span class="text-muted">—</span>
                         <?php endif; ?>
                       </td>
-                      <td class="text-end" onclick="event.stopPropagation();">
+                      <td class="text-end" data-stop-propagation="true">
                         <div class="dropdown">
                           <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                             <i class="ti ti-dots-vertical fs-5"></i>
@@ -225,7 +225,7 @@
                   ];
                   $iconClass = $typeIconsMap[$dev->device_type ?? 'pc'] ?? 'ti-device-laptop';
                 ?>
-                <div class="mobile-card-item device-card-item" onclick="window.location='<?= site_url('devices/show/' . $dev->id) ?>'">
+                <div class="mobile-card-item device-card-item" data-row-href="<?= site_url('devices/show/' . $dev->id) ?>">
                   <div class="mobile-card-header">
                     <div class="d-flex align-items-center gap-2">
                       <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle device-icon-status-wrapper flex-shrink-0 <?= $dev->active ? 'bg-danger-subtle text-danger' : 'bg-light text-muted' ?>"
@@ -238,7 +238,7 @@
                         <span class="net-mono"><?= esc($dev->ip_address) ?></span>
                       </div>
                     </div>
-                    <div class="d-flex align-items-center" onclick="event.stopPropagation();">
+                    <div class="d-flex align-items-center" data-stop-propagation="true">
                       <div class="dropdown">
                         <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                           <i class="ti ti-dots-vertical fs-5"></i>

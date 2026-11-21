@@ -64,7 +64,7 @@
                         </thead>
                         <tbody>
                             <?php foreach ($users as $user): ?>
-                             <tr onclick="window.location='<?= site_url('users/edit/' . $user->id) ?>'" class="cursor-pointer">
+                             <tr data-row-href="<?= site_url('users/edit/' . $user->id) ?>" class="cursor-pointer">
                                  <td>
                                      <div class="d-flex align-items-center">
                                          <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle me-3 object-fit-cover" width="40" height="40" />
@@ -92,7 +92,7 @@
                                         <span class="badge bg-danger-subtle text-danger badge-status">Suspendido</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-end" onclick="event.stopPropagation();">
+                                <td class="text-end" data-stop-propagation="true">
                                     <div class="dropdown">
                                         <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                                             <i class="ti ti-dots-vertical fs-5"></i>
@@ -125,7 +125,7 @@
                 <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
                 <div class="d-block d-md-none" id="usersCardsContainer">
                   <?php foreach ($users as $user): ?>
-                    <div class="mobile-card-item user-card-item" onclick="window.location='<?= site_url('users/edit/' . $user->id) ?>'">
+                    <div class="mobile-card-item user-card-item" data-row-href="<?= site_url('users/edit/' . $user->id) ?>">
                       <div class="mobile-card-header">
                         <div class="d-flex align-items-center gap-2">
                           <img src="<?= !empty($user->profile_pic) ? base_url('uploads/profile/' . esc($user->profile_pic)) : base_url('assets/images/profile/user-default.png') ?>" alt="Avatar" class="rounded-circle object-fit-cover flex-shrink-0 border border-2 <?= $user->active ? 'border-primary' : 'border-danger' ?>" width="36" height="36" />
@@ -134,7 +134,7 @@
                             <span class="text-muted fs-2"><?= esc($user->email) ?></span>
                           </div>
                         </div>
-                        <div class="d-flex align-items-center" onclick="event.stopPropagation();">
+                        <div class="d-flex align-items-center" data-stop-propagation="true">
                           <div class="dropdown">
                             <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                               <i class="ti ti-dots-vertical fs-5"></i>

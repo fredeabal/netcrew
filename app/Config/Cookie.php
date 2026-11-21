@@ -56,6 +56,22 @@ class Cookie extends BaseConfig
      */
     public bool $secure = false;
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // En producción sobre HTTPS garantizamos el flag Secure sin romper localhost HTTP en desarrollo/testing
+        if (defined('ENVIRONMENT') && ENVIRONMENT === 'production') {
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+                || (($_SERVER['SERVER_PORT'] ?? null) == 443);
+
+            if ($isHttps) {
+                $this->secure = true;
+            }
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Cookie HTTPOnly

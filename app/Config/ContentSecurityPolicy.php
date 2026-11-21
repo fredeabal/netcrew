@@ -61,7 +61,7 @@ class ContentSecurityPolicy extends BaseConfig
      */
     public $scriptSrc = [
         'self',
-        'https://cdn.jsdelivr.net',
+        'https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js',
     ];
 
     /**
@@ -71,7 +71,7 @@ class ContentSecurityPolicy extends BaseConfig
      */
     public array|string $scriptSrcElem = [
         'self',
-        'https://cdn.jsdelivr.net',
+        'https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js',
     ];
 
     /**
@@ -80,9 +80,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string
      */
-    public array|string $scriptSrcAttr = [
-        'unsafe-inline',
-    ];
+    public array|string $scriptSrcAttr = 'none';
 
     /**
      * Lists allowed stylesheets' URLs.

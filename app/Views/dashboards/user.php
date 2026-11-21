@@ -137,7 +137,7 @@ if (!empty($networks)) {
                             <tbody class="border-top">
                                 <?php foreach ($networks as $net): ?>
                                     <?php $canViewDevices = auth()->user()->can('devices.view') || auth()->user()->inGroup('superadmin'); ?>
-                                    <tr <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'" class="cursor-pointer"' : '' ?>>
+                                    <tr <?= $canViewDevices ? 'data-row-href="' . site_url('networks/' . $net->id . '/devices') . '" class="cursor-pointer"' : '' ?>>
                                         <td class="text-start">
                                             <div class="d-flex align-items-center">
                                                 <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle me-3 network-icon-circle">
@@ -171,7 +171,7 @@ if (!empty($networks)) {
                                             <h6 class="fw-semibold mb-0 text-login-time"><?= date('d/m/Y', strtotime($net->created_at)) ?></h6>
                                             <span class="fw-normal text-muted text-login-time"><?= date('H:i', strtotime($net->created_at)) ?></span>
                                         </td>
-                                        <td class="text-end" onclick="event.stopPropagation();">
+                                        <td class="text-end" data-stop-propagation="true">
                                             <div class="dropdown">
                                                 <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                                                     <i class="ti ti-dots-vertical fs-5"></i>
@@ -214,7 +214,7 @@ if (!empty($networks)) {
                     <div class="d-block d-md-none" id="userNetworksCardsContainer">
                         <?php foreach ($networks as $net): ?>
                             <?php $canViewDevices = auth()->user()->can('devices.view') || auth()->user()->inGroup('superadmin'); ?>
-                            <div class="mobile-card-item network-card-item" <?= $canViewDevices ? 'onclick="window.location=\'' . site_url('networks/' . $net->id . '/devices') . '\'"' : '' ?>>
+                            <div class="mobile-card-item network-card-item" <?= $canViewDevices ? 'data-row-href="' . site_url('networks/' . $net->id . '/devices') . '"' : '' ?>>
                                 <div class="mobile-card-header">
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="d-flex align-items-center justify-content-center <?= $net->active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> rounded-circle network-icon-circle flex-shrink-0">
@@ -225,7 +225,7 @@ if (!empty($networks)) {
                                             <span class="net-mono"><?= esc($net->cidr) ?></span>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center" onclick="event.stopPropagation();">
+                                    <div class="d-flex align-items-center" data-stop-propagation="true">
                                         <div class="dropdown">
                                             <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'>
                                                 <i class="ti ti-dots-vertical fs-5"></i>

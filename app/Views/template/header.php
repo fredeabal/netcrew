@@ -146,7 +146,7 @@
                               <span class="fs-2 d-block text-body-secondary">Aprende a usar NetCrew</span>
                             </div>
                           </a>
-                          <a href="javascript:void(0)" onclick="installNetCrewPWA()" class="py-8 px-7 d-flex align-items-center">
+                          <a href="#" id="btnInstallNetCrewPWA" class="py-8 px-7 d-flex align-items-center">
                             <span class="d-flex align-items-center justify-content-center bg-light-primary rounded p-2 text-primary">
                               <i class="ti ti-device-mobile fs-7"></i>
                             </span>

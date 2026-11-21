@@ -39,7 +39,7 @@
                         </thead>
                         <tbody>
                             <?php foreach($groups as $key => $group): ?>
-                            <tr onclick="window.location='<?= base_url('roles/edit/' . esc($key)) ?>'" class="cursor-pointer">
+                            <tr data-row-href="<?= base_url('roles/edit/' . esc($key)) ?>" class="cursor-pointer">
                                 <td class="text-start">
                                     <div class="d-flex align-items-center">
                                         <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary me-3 flex-shrink-0">
@@ -54,7 +54,7 @@
                                 <td class="text-start text-muted">
                                     <?= esc($group['description']) ?>
                                 </td>
-                                <td class="text-end" onclick="event.stopPropagation();">
+                                <td class="text-end" data-stop-propagation="true">
                                     <div class="dropdown">
                                         <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             <i class="ti ti-dots-vertical fs-5"></i>
@@ -77,7 +77,7 @@
                 <!-- VISTA MÓVIL: TARJETAS (d-block d-md-none) -->
                 <div class="d-block d-md-none" id="rolesCardsContainer">
                   <?php foreach($groups as $key => $group): ?>
-                    <div class="mobile-card-item role-card-item" onclick="window.location='<?= base_url('roles/edit/' . esc($key)) ?>'">
+                    <div class="mobile-card-item role-card-item" data-row-href="<?= base_url('roles/edit/' . esc($key)) ?>">
                       <div class="mobile-card-header">
                         <div class="d-flex align-items-center gap-2">
                           <div class="network-icon-circle d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary flex-shrink-0">
@@ -88,7 +88,7 @@
                             <span class="net-mono"><?= esc($key) ?></span>
                           </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation();">
+                        <div class="d-flex align-items-center gap-2" data-stop-propagation="true">
                           <div class="dropdown">
                             <button class="btn btn-sm bg-transparent border-0 text-muted shadow-none p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                               <i class="ti ti-dots-vertical fs-5"></i>

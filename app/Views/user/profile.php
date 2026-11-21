@@ -45,7 +45,7 @@
               <label for="profile_pic" class="btn btn-primary btn-sm px-3 shadow-sm cursor-pointer">
                 <i class="ti ti-upload me-1"></i> Seleccionar Nueva Foto
               </label>
-              <input class="form-control d-none" type="file" id="profile_pic" name="profile_pic" accept="image/*" onchange="previewImage(event)">
+              <input class="form-control d-none" type="file" id="profile_pic" name="profile_pic" accept="image/*">
               <div class="form-text text-muted fs-2 mt-2">Formatos recomendados: JPG, PNG o WEBP. Máx. 2MB.</div>
             </div>
           </div>
@@ -189,4 +189,11 @@ function previewImage(event) {
     reader.readAsDataURL(event.target.files[0]);
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  const profilePicInput = document.getElementById('profile_pic');
+  if (profilePicInput) {
+    profilePicInput.addEventListener('change', previewImage);
+  }
+});
 </script>

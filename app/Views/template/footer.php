@@ -166,6 +166,26 @@
           : toastErrors;
         systemAlert.fire({ icon: 'error', title: 'Error de Validación', html: `<div class="text-center">${errorContent}</div>`, iconColor: '#b31b34' });
       }
+
+      const btnInstallPWA = document.getElementById('btnInstallNetCrewPWA');
+      if (btnInstallPWA) {
+        btnInstallPWA.addEventListener('click', function(e) {
+          e.preventDefault();
+          if (typeof installNetCrewPWA === 'function') {
+            installNetCrewPWA();
+          }
+        });
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('[data-stop-propagation]')) {
+        return;
+      }
+      const row = e.target.closest('[data-row-href]');
+      if (row && row.dataset.rowHref) {
+        window.location = row.dataset.rowHref;
+      }
     });
   </script>
   <script src="<?= base_url('assets/libs/sweetalert2/dist/sweetalert2.min.js') ?>"></script>

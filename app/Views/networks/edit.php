@@ -68,7 +68,7 @@
           <?php if (!empty($isSuperAdmin) && !empty($companies)): ?>
             <div class="mb-3">
               <label for="company_id" class="form-label">Empresa</label>
-              <select class="select2 form-control custom-select" id="company_id" name="company_id" required>
+              <select class="select2 form-control custom-select" id="company_id" name="company_id" data-minimum-results-for-search="0" required>
                 <option value="">Seleccione una empresa</option>
                 <?php foreach ($companies as $company): ?>
                   <option value="<?= esc($company->id) ?>" <?= old('company_id', (string) ($network->company_id ?? '')) == (string) $company->id ? 'selected' : '' ?>>

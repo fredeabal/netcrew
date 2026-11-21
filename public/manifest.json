@@ -1,7 +1,7 @@
 {
   "name": "NetCrew VPN Manager",
   "short_name": "NetCrew",
-  "description": "Plataforma de administración y control de redes VPN P2P con Nebula.",
+  "description": "Plataforma de administración y control de redes VPN privadas.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

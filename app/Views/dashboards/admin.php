@@ -20,7 +20,7 @@
           </ol>
         </nav>
       </div>
-      <?php $serviceLabel = !empty($isSuperAdmin) ? 'Nebula P2P' : 'Servicio VPN'; ?>
+      <?php $serviceLabel = 'Servicio VPN'; ?>
       <div class="flex-shrink-0 text-end">
         <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-pill-success' : 'status-pill-warning' ?> fs-2 fw-semibold" title="<?= $serviceLabel ?> <?= ($telemetry['isInterfaceUp'] ?? false) ? 'Online' : 'No online' ?>">
           <span class="status-indicator-dot <?= ($telemetry['isInterfaceUp'] ?? false) ? 'status-online' : 'status-offline' ?>"></span>

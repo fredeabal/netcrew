@@ -112,7 +112,7 @@
                           <form action="<?= site_url('companies/toggle-active/' . $company->id) ?>" method="post">
                             <?= csrf_field() ?>
                             <button type="submit" class="dropdown-item d-flex align-items-center gap-2 w-100 border-0 bg-transparent text-start">
-                              <i class="ti <?= $company->active ? 'ti-ban text-warning' : 'ti-check text-success' ?>"></i>
+                              <i class="ti <?= $company->active ? 'ti-ban' : 'ti-check' ?>"></i>
                               <?= $company->active ? 'Suspender' : 'Activar' ?>
                             </button>
                           </form>
@@ -163,7 +163,7 @@
                         <form action="<?= site_url('companies/toggle-active/' . $company->id) ?>" method="post">
                           <?= csrf_field() ?>
                           <button type="submit" class="dropdown-item d-flex align-items-center gap-2 w-100 border-0 bg-transparent text-start">
-                            <i class="ti <?= $company->active ? 'ti-ban text-warning' : 'ti-check text-success' ?>"></i>
+                            <i class="ti <?= $company->active ? 'ti-ban' : 'ti-check' ?>"></i>
                             <?= $company->active ? 'Suspender' : 'Activar' ?>
                           </button>
                         </form>

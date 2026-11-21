@@ -103,7 +103,7 @@
                 <i class="ti ti-devices fs-5"></i>
               </div>
               <h6 class="fw-medium mb-1">Aún no hay nodos</h6>
-              <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración Nebula (.yml).</p>
+              <p class="text-muted fs-3 mb-0">Registra tu primer dispositivo para empezar a generar archivos de configuración VPN (.yml).</p>
             </div>
           <?php else: ?>
             <div class="table-responsive d-none d-md-block">

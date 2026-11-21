@@ -76,8 +76,8 @@
                             <?php if (!empty($isSuperAdmin) && !empty($companies)): ?>
                             <div class="col-12 col-md-6">
                                 <label for="company_id" class="form-label fw-semibold">Empresa</label>
-                                <select class="select2 form-select" id="company_id" name="company_id">
-                                    <option value="">Global (solo Superadministrador)</option>
+                                <select class="select2 form-select" id="company_id" name="company_id" data-minimum-results-for-search="0">
+                                    <option value="">Global</option>
                                     <?php foreach ($companies as $company): ?>
                                         <option value="<?= esc($company->id) ?>" <?= old('company_id') == $company->id ? 'selected' : '' ?>><?= esc($company->name) ?></option>
                                     <?php endforeach; ?>

@@ -38,8 +38,8 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="NetCrew - Plataforma avanzada de administración de redes VPN P2P con Nebula. Gestión intuitiva de nodos, certificados y seguridad corporativa." />
-  <meta name="keywords" content="NetCrew, VPN, Nebula, P2P, Mesh, Gestión de Redes, Seguridad Corporativa, Control de Nodos" />
+  <meta name="description" content="NetCrew - Plataforma avanzada de administración de redes VPN privadas. Gestión intuitiva de nodos, certificados y seguridad corporativa." />
+  <meta name="keywords" content="NetCrew, VPN, P2P, Mesh, Gestión de Redes, Seguridad Corporativa, Control de Nodos" />
   <meta name="author" content="NetCrew" />
 
   <!-- Configuración PWA (Instalable en iOS y Android) -->

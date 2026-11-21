@@ -662,7 +662,7 @@ class DeviceController extends BaseController
                 }
                 $auditCompanyId = ((int) ($network->company_id ?? 0)) ?: null;
                 AuditLogModel::log('DEVICE_ROTATE_KEYS', "Rotó certificado Nebula del nodo '{$device->name}' (ID: {$id}) en red ID: {$network->id}", null, null, $auditCompanyId);
-                return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado Nebula regenerado con éxito! Descarga la nueva configuración .yml.');
+                return redirect()->to("devices/show/{$id}")->with('message', '¡Certificado regenerado con éxito! Descarga la nueva configuración .yml.');
             }
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Error regenerando certificado Nebula: ' . $e->getMessage());
@@ -979,10 +979,10 @@ class DeviceController extends BaseController
             }
 
             $fromEmail = $settings->get('Email.fromEmail') ?: ($userSmtp ?: 'no-reply@tudominio.com');
-            $fromName  = $settings->get('Email.fromName') ?: 'NetCrew Nebula';
+            $fromName  = $settings->get('Email.fromName') ?: 'NetCrew';
             $emailService->setFrom($fromEmail, $fromName);
             $emailService->setTo($targetEmail);
-            $emailService->setSubject('Configuración VPN Nebula P2P - ' . $device->name);
+            $emailService->setSubject('Configuración VPN - ' . $device->name);
 
             // Adjuntar archivo .yml de Nebula
             $emailService->attach($configContent, 'attachment', $filename, 'text/plain');
@@ -1013,7 +1013,7 @@ class DeviceController extends BaseController
                     <tr>
                         <td align="left" style="padding: 35px 30px;">
                             <h2 style="color: #333f52; -webkit-text-fill-color: #333f52; margin-top: 0; margin-bottom: 8px; text-align: center; font-weight: 600; font-size: 22px;">
-                                Configuración de Nebula P2P
+                                Configuración de Red VPN
                             </h2>
                             <p style="color: #5a6a85; -webkit-text-fill-color: #5a6a85; font-size: 14px; line-height: 1.5; text-align: center; margin-top: 0; margin-bottom: 25px;">
                                 Te enviamos los parámetros de conexión VPN para tu dispositivo en la red de NetCrew.
@@ -1037,7 +1037,7 @@ class DeviceController extends BaseController
 
                             <!-- Aviso de archivos adjuntos -->
                             <div style="margin-top: 20px; padding: 12px 14px; background-color: #edf2f7; border-radius: 8px; color: #475569; font-size: 13px; text-align: center;">
-                                <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en Nebula.
+                                <strong>Adjunto:</strong> <code>' . esc($filename) . '</code> para importar en tu cliente VPN.
                             </div>
 
                             <div style="text-align: center; margin-top: 25px;">
@@ -1053,7 +1053,7 @@ class DeviceController extends BaseController
                     <tr>
                         <td align="center" style="padding: 0 20px;">
                             <p style="color: #8c98a4; -webkit-text-fill-color: #8c98a4; font-size: 12px; line-height: 1.5; margin: 0;">
-                                &copy; ' . $year . ' NetCrew &bull; Gestión Segura de Redes Nebula P2P
+                                &copy; ' . $year . ' NetCrew &bull; Gestión Segura de Redes VPN
                             </p>
                         </td>
                     </tr>

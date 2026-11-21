@@ -34,11 +34,11 @@
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-end align-items-center mb-4 gap-3">
                     <?php if (!empty($isSuperAdmin) && !empty($companies)): ?>
-                    <form method="get" action="<?= site_url('users') ?>" class="d-flex align-items-center gap-2">
+                    <form method="get" action="<?= site_url('users') ?>" class="d-flex align-items-center gap-2" style="min-width: 220px;">
                         <?php if (!empty($search)): ?>
                             <input type="hidden" name="q" value="<?= esc($search) ?>">
                         <?php endif; ?>
-                        <select name="company_id" class="form-select form-select-sm" data-auto-submit="true">
+                        <select name="company_id" class="select2 form-select form-select-sm" data-minimum-results-for-search="0" data-auto-submit="true">
                             <option value="">Todas las empresas</option>
                             <?php foreach ($companies as $company): ?>
                                 <option value="<?= esc($company->id) ?>" <?= (!empty($selectedCompanyId) && (int) $selectedCompanyId === (int) $company->id) ? 'selected' : '' ?>>
@@ -229,9 +229,12 @@
 <script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('select[data-auto-submit="true"]').forEach(select => {
-    select.addEventListener('change', function() {
-      if (this.form) this.form.submit();
-    });
+    const submitForm = () => { if (select.form) select.form.submit(); };
+    if (window.jQuery) {
+      window.jQuery(select).on('change', submitForm);
+    } else {
+      select.addEventListener('change', submitForm);
+    }
   });
 
   const searchInput = document.getElementById('search-users');

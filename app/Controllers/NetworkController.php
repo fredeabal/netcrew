@@ -215,7 +215,7 @@ class NetworkController extends BaseController
         if ($this->networkModel->save($data)) {
             NebulaService::syncGlobalLighthouse();
             AuditLogModel::log('NETWORK_CREATE', "Creó la red '{$data['name']}' ({$data['cidr']})", null, null, $companyId);
-            return redirect()->to('/networks')->with('message', 'Red Nebula P2P creada.');
+            return redirect()->to('/networks')->with('message', 'Red VPN creada.');
         }
 
         return redirect()->back()->withInput()->with('errors', $this->networkModel->errors());

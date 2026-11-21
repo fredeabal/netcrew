@@ -1614,8 +1614,9 @@ a.net-name:hover {
     }
 
     .install-action-btn {
-        flex: 0 0 7.25rem;
+        flex: 0 0 auto;
         min-inline-size: 7.25rem;
+        padding-inline: 1rem;
     }
 }
 

@@ -122,20 +122,20 @@
         </div>
 
         <h5 class="fw-semibold mb-2">Establecer la Conexión VPN</h5>
-        <p class="text-muted small mb-4">Enlaza tus equipos usando el cliente oficial de Nebula P2P.</p>
+        <p class="text-muted small mb-4">Enlaza tus equipos usando <strong>NetCrew Client</strong> o perfiles <code>.yml</code>.</p>
 
         <ul class="list-unstyled d-flex flex-column gap-3 mb-0 fs-3 text-muted">
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">1</span>
-            <span>Descarga e instala el <a href="https://github.com/slackhq/nebula/releases" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">cliente oficial de Nebula <i class="ti ti-external-link fs-2"></i></a> en tu dispositivo.</span>
+            <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu ordenador (macOS, Windows o Linux).</span>
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">2</span>
-            <span>En la tabla de Nodos, abre el menú de opciones <i class="ti ti-dots-vertical text-muted"></i> para descargar el <code class="text-primary font-monospace">.yml</code>, enviarlo por correo o abrir los detalles del nodo.</span>
+            <span>En la tabla o detalle del nodo, descarga el <code class="text-primary font-monospace">.yml</code>, envíalo por correo o genera un enlace temporal <code class="text-primary font-monospace">/connect/{token}</code>.</span>
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">3</span>
-            <span><strong>Móviles:</strong> Importa el archivo <code class="text-primary font-monospace">.yml</code> en la app oficial. <strong>Desktop:</strong> Usa el comando de instalación rápida desde los detalles del nodo o importa el <code class="text-primary font-monospace">.yml</code>.</span>
+            <span><strong>Desktop:</strong> Importa el <code class="text-primary font-monospace">.yml</code> o pega el enlace temporal en <strong>NetCrew Client</strong> y pulsa conectar. <strong>Móviles:</strong> Importa el <code class="text-primary font-monospace">.yml</code> en la app móvil de Nebula.</span>
           </li>
         </ul>
       </div>

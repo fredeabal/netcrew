@@ -122,6 +122,15 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 
           <div class="col-12 col-sm-6 col-lg-3">
             <div class="border p-3 rounded h-100">
+              <span class="text-muted d-block small mb-1">Enrutamiento</span>
+              <span class="fw-semibold small text-success">
+                <i class="ti ti-topology-star-3 me-1"></i> P2P Mesh Directo
+              </span>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="border p-3 rounded h-100">
               <span class="text-muted d-block small mb-1">Última Conexión</span>
               <?php if ($device->last_seen): ?>
                 <span class="d-flex justify-content-between align-items-center">
@@ -240,47 +249,70 @@ $timeAgoView = static function (?int $ts, int $ref): string {
       <div class="card-body">
         <div class="d-flex align-items-center gap-2 mb-3">
           <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center network-icon-circle flex-shrink-0">
-            <i class="ti ti-terminal-2 fs-5"></i>
+            <i class="ti ti-apps fs-5"></i>
           </div>
           <div>
             <h5 class="fw-semibold mb-0">Instalar y Conectar Cliente</h5>
-            <small class="text-muted">Selecciona el sistema operativo del dispositivo para obtener el comando o archivo de conexión.</small>
+            <small class="text-muted">Descarga NetCrew Client y conecta este nodo importando su perfil <code>.yml</code> o enlace temporal.</small>
           </div>
         </div>
 
         <div class="install-controls-row">
           <div>
-            <label for="installPlatformSelect" class="form-label fw-semibold">Sistema Operativo</label>
+            <label for="installPlatformSelect" class="form-label fw-semibold">Plataforma</label>
             <select class="select2 form-control custom-select" id="installPlatformSelect">
-              <option value="mac">macOS (Apple Silicon / Intel)</option>
-              <option value="windows">Windows (10 / 11)</option>
-              <option value="linux">Linux (Ubuntu / Debian / etc.)</option>
+              <option value="desktop">macOS / Windows / Linux (NetCrew Client)</option>
+              <option value="linux-cli">Linux Servidor / Headless (Terminal)</option>
               <option value="mobile">iOS / Android (Móvil / Tablet)</option>
             </select>
           </div>
 
           <div class="install-actions">
             <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm install-action-btn">
-              <i class="ti ti-wand" aria-hidden="true"></i>
+              <i class="ti ti-link" aria-hidden="true"></i>
               <span>Generar</span>
             </button>
             <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm install-action-btn">
               <i class="ti ti-download" aria-hidden="true"></i>
-              <span id="lblDownloadFile">Descargar</span>
+              <span id="lblDownloadFile">Descargar .yml</span>
             </a>
           </div>
         </div>
 
-        <div id="installCommandBox" class="install-terminal mt-3">
+        <div id="installDesktopBox" class="install-mobile-steps mt-3">
+          <div class="d-flex flex-column gap-2 small text-muted">
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">1</span>
+              <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu equipo.</span>
+            </div>
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">2</span>
+              <span>Pulsa <strong>Descargar .yml</strong> o <strong>Generar</strong> para copiar un enlace temporal (válido 60 min).</span>
+            </div>
+            <div class="d-flex align-items-start gap-2">
+              <span class="install-step-badge bg-primary-subtle text-primary">3</span>
+              <span>Abre <strong>NetCrew Client</strong>, importa el archivo <code>.yml</code> o pega el enlace y pulsa <strong>Conectar</strong>.</span>
+            </div>
+          </div>
+          <div id="desktopShareLinkRow" class="input-group input-group-sm mt-3 d-none">
+            <input type="text" id="desktopShareUrlInput" class="form-control net-mono small" readonly aria-label="Enlace temporal para NetCrew Client">
+            <button type="button" id="btnCopyDesktopShareUrl" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
+              <i class="ti ti-copy" aria-hidden="true"></i>
+              <span>Copiar</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="installCommandBox" class="install-terminal mt-3 d-none">
           <div class="install-terminal-header">
             <small class="fw-semibold text-muted d-inline-flex align-items-center gap-1" id="installCommandHint">
               <i class="ti ti-terminal text-primary" aria-hidden="true"></i>
-              <span>Pega este comando en Terminal (macOS):</span>
+              <span>Pega este comando en Terminal (Linux):</span>
             </small>
           </div>
           <div class="install-terminal-body">
             <span class="install-terminal-prompt" aria-hidden="true">$</span>
-            <pre class="install-terminal-pre" tabindex="0"><code id="installCommandPreview">bash &lt;(curl -fsSL "<?= esc(site_url('connect/TOKEN/download?platform=mac-sh')) ?>")</code></pre>
+            <pre class="install-terminal-pre" tabindex="0"><code id="installCommandPreview">sudo bash &lt;(curl -fsSL "<?= esc(site_url('connect/TOKEN/download?platform=linux')) ?>")</code></pre>
             <span class="copy">
               <button type="button" id="btnInlineCopyCmd" class="copy-button" command="--copy" commandfor="installCommandPreview" aria-label="Copiar comando de instalación">
                 <i class="ti ti-copy icon-copy fs-5" aria-hidden="true"></i>
@@ -347,6 +379,10 @@ $timeAgoView = static function (?int $ts, int $ref): string {
 <script {csp-script-nonce}>
 document.addEventListener('DOMContentLoaded', function() {
   const selectEl = document.getElementById('installPlatformSelect');
+  const desktopBox = document.getElementById('installDesktopBox');
+  const desktopShareLinkRow = document.getElementById('desktopShareLinkRow');
+  const desktopShareUrlInput = document.getElementById('desktopShareUrlInput');
+  const btnCopyDesktopShareUrl = document.getElementById('btnCopyDesktopShareUrl');
   const cmdBox = document.getElementById('installCommandBox');
   const mobBox = document.getElementById('installMobileBox');
   const cmdPreview = document.getElementById('installCommandPreview');
@@ -419,13 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function buildCommand(platform, token) {
     const t = token || 'TOKEN';
-    if (platform === 'mac') {
-      return `bash <(curl -fsSL "${baseConnect}/${t}/download?platform=mac-sh")`;
-    }
-    if (platform === 'windows') {
-      return `curl -fsSL "${baseConnect}/${t}/download?platform=windows" -o "%TEMP%\\netcrew.bat" && "%TEMP%\\netcrew.bat"`;
-    }
-    if (platform === 'linux') {
+    if (platform === 'linux-cli') {
       return `sudo bash <(curl -fsSL "${baseConnect}/${t}/download?platform=linux")`;
     }
     return '';
@@ -501,10 +531,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updatePlatformUI() {
     const p = selectEl.value;
+    if (desktopBox) desktopBox.classList.add('d-none');
+    cmdBox.classList.add('d-none');
+    mobBox.classList.add('d-none');
+
     if (p === 'mobile') {
-      cmdBox.classList.add('d-none');
       btnGen.classList.remove('d-none');
       if (btnGenLabel) btnGenLabel.textContent = 'Generar QR';
+      if (lblDl) lblDl.textContent = 'Descargar .yml';
       mobBox.classList.remove('d-none');
       lnkDl.href = baseDownload + '?platform=yml';
       if (activeShareUrl) {
@@ -516,21 +550,25 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    mobBox.classList.add('d-none');
+    if (p === 'desktop') {
+      if (desktopBox) desktopBox.classList.remove('d-none');
+      btnGen.classList.remove('d-none');
+      if (btnGenLabel) btnGenLabel.textContent = 'Generar';
+      if (lblDl) lblDl.textContent = 'Descargar .yml';
+      lnkDl.href = baseDownload + '?platform=yml';
+      if (activeShareUrl && desktopShareLinkRow && desktopShareUrlInput) {
+        desktopShareUrlInput.value = activeShareUrl;
+        desktopShareLinkRow.classList.remove('d-none');
+      }
+      return;
+    }
+
     cmdBox.classList.remove('d-none');
     btnGen.classList.remove('d-none');
     if (btnGenLabel) btnGenLabel.textContent = 'Generar';
-
-    if (p === 'mac') {
-      cmdHint.textContent = 'Pega este comando en Terminal (macOS):';
-      lnkDl.href = baseDownload + '?platform=yml';
-    } else if (p === 'windows') {
-      cmdHint.textContent = 'Pega este comando en Símbolo del sistema (CMD):';
-      lnkDl.href = baseDownload + '?platform=windows';
-    } else if (p === 'linux') {
-      cmdHint.textContent = 'Pega este comando en Terminal (Linux):';
-      lnkDl.href = baseDownload + '?platform=linux';
-    }
+    if (lblDl) lblDl.textContent = 'Descargar .sh';
+    cmdHint.textContent = 'Pega este comando en Terminal (Linux):';
+    lnkDl.href = baseDownload + '?platform=linux';
 
     renderCommandPreview(buildCommand(p, activeToken), activeToken);
   }
@@ -541,6 +579,20 @@ document.addEventListener('DOMContentLoaded', function() {
       jQuery(selectEl).on('change select2:select', updatePlatformUI);
     }
     updatePlatformUI();
+  }
+
+  if (btnCopyDesktopShareUrl && desktopShareUrlInput) {
+    btnCopyDesktopShareUrl.addEventListener('click', function() {
+      const url = desktopShareUrlInput.value;
+      if (!url || !navigator.clipboard || !navigator.clipboard.writeText) return;
+      navigator.clipboard.writeText(url).then(() => {
+        const lbl = btnCopyDesktopShareUrl.querySelector('span');
+        if (lbl) lbl.textContent = '¡Copiado!';
+        setTimeout(() => {
+          if (lbl) lbl.textContent = 'Copiar';
+        }, 2000);
+      });
+    });
   }
 
   if (btnCopyMobileShareUrl && mobileShareUrlInput) {
@@ -589,25 +641,48 @@ document.addEventListener('DOMContentLoaded', function() {
           return { mode: 'mobile', copied: false };
         }
 
+        if (selectEl.value === 'desktop') {
+          if (desktopShareUrlInput && desktopShareLinkRow) {
+            desktopShareUrlInput.value = activeShareUrl;
+            desktopShareLinkRow.classList.remove('d-none');
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(activeShareUrl).then(() => ({ mode: 'desktop-app', copied: true })).catch(() => ({ mode: 'desktop-app', copied: false }));
+          }
+          return { mode: 'desktop-app', copied: false };
+        }
+
         const cmd = buildCommand(selectEl.value, activeToken);
         renderCommandPreview(cmd, activeToken);
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          return navigator.clipboard.writeText(cmd).then(() => ({ mode: 'desktop', copied: true })).catch(() => ({ mode: 'desktop', copied: false }));
+          return navigator.clipboard.writeText(cmd).then(() => ({ mode: 'cli', copied: true })).catch(() => ({ mode: 'cli', copied: false }));
         }
-        return { mode: 'desktop', copied: false };
+        return { mode: 'cli', copied: false };
       })
       .then(result => {
         if (result.mode === 'mobile') {
           return;
         }
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        if (result.mode === 'desktop-app') {
+          Swal.fire({
+            icon: 'success',
+            title: result.copied ? 'Enlace temporal copiado' : 'Enlace temporal generado',
+            text: result.copied ? 'Pégalo en NetCrew Client para importar el perfil automáticamente.' : 'Copia el enlace mostrado para importarlo en NetCrew Client.',
+            timer: 3000,
+            showConfirmButton: false,
+            background: isDark ? '#0b1114' : '#f8f9fa',
+            color: isDark ? '#ffffff' : '#0b1114'
+          });
+          return;
+        }
         if (result.copied && btnInlineCopy) {
           reportCopy(btnInlineCopy, true);
         }
         Swal.fire({
           icon: 'success',
           title: result.copied ? 'Comando copiado' : 'Comando generado',
-          text: result.copied ? 'Pégalo en la terminal del dispositivo para conectarlo automáticamente.' : 'Copia el comando mostrado en el recuadro.',
+          text: result.copied ? 'Pégalo en la terminal del servidor para conectarlo automáticamente.' : 'Copia el comando mostrado en el recuadro.',
           timer: 3000,
           showConfirmButton: false,
           background: isDark ? '#0b1114' : '#f8f9fa',

@@ -17,7 +17,7 @@
 
     <h4 class="fw-semibold text-white mb-2"><?= esc($device->name) ?></h4>
     <p class="text-muted small mb-4">
-      Usa el comando de instalación rápida o descarga el archivo <code>.yml</code> para importarlo en la app oficial de Nebula.
+      Descarga el archivo <code>.yml</code> o pega este enlace en <strong>NetCrew Client</strong> para conectarte.
     </p>
 
     <div class="bg-dark p-3 rounded-3 text-start small mb-4 border border-secondary border-opacity-25">
@@ -34,15 +34,35 @@
     <div class="text-start mb-3">
       <label for="sharePlatformSelect" class="form-label small fw-semibold text-muted">Tu dispositivo</label>
       <select id="sharePlatformSelect" class="form-select">
-        <option value="mac">macOS (MacBook / iMac)</option>
-        <option value="windows">Windows (10 / 11)</option>
-        <option value="linux">Linux</option>
+        <option value="desktop">macOS / Windows / Linux (NetCrew Client)</option>
+        <option value="linux-cli">Linux Servidor / Headless (Terminal)</option>
         <option value="mobile">iPhone / iPad / Android</option>
       </select>
     </div>
 
-    <div id="shareCmdSection" class="text-start mb-3">
-      <small id="shareCmdHint" class="text-muted d-block mb-2">Abre Terminal, pega este comando y pulsa Enter:</small>
+    <div id="shareDesktopSection" class="text-start mb-3">
+      <div class="d-grid gap-2">
+        <a href="<?= site_url('connect/' . $token . '/download?platform=yml') ?>" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+          <i class="ti ti-download"></i>
+          <span>Descargar perfil (.yml)</span>
+        </a>
+        <button type="button" id="btnCopyAppLink" class="btn btn-outline-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+          <i class="ti ti-copy"></i>
+          <span>Copiar enlace para NetCrew Client</span>
+        </button>
+      </div>
+      <div class="text-center mt-3">
+        <small class="text-muted d-block">
+          ¿Aún no tienes la app?
+          <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">
+            Descargar NetCrew Client <i class="ti ti-external-link"></i>
+          </a>
+        </small>
+      </div>
+    </div>
+
+    <div id="shareCmdSection" class="text-start mb-3 d-none">
+      <small id="shareCmdHint" class="text-muted d-block mb-2">Abre Terminal en tu servidor Linux, pega este comando y pulsa Enter:</small>
       <pre class="p-3 rounded bg-dark border border-secondary border-opacity-25 net-mono small text-break mb-2" style="white-space: pre-wrap;"><code id="shareCmdText"></code></pre>
       <div class="d-grid gap-2">
         <button type="button" id="btnCopyShareCmd" class="btn btn-primary py-2 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
@@ -74,48 +94,56 @@
       const baseDownloadUrl = <?= json_encode(site_url('connect/' . $token . '/download')) ?>;
 
       const selectEl = document.getElementById('sharePlatformSelect');
+      const desktopSec = document.getElementById('shareDesktopSection');
       const cmdSec = document.getElementById('shareCmdSection');
       const mobSec = document.getElementById('shareMobileSection');
       const cmdHint = document.getElementById('shareCmdHint');
       const cmdText = document.getElementById('shareCmdText');
       const btnCopy = document.getElementById('btnCopyShareCmd');
+      const btnCopyAppLink = document.getElementById('btnCopyAppLink');
 
       const ua = navigator.userAgent || '';
-      const plat = (navigator.platform || '').toLowerCase();
       if (/iphone|ipad|ipod|android/i.test(ua)) {
         selectEl.value = 'mobile';
-      } else if (plat.includes('mac') || /macintosh|mac os x/i.test(ua)) {
-        selectEl.value = 'mac';
-      } else if (plat.includes('win') || /windows/i.test(ua)) {
-        selectEl.value = 'windows';
-      } else if (plat.includes('linux') || /linux/i.test(ua)) {
-        selectEl.value = 'linux';
+      } else {
+        selectEl.value = 'desktop';
       }
 
       function renderShareUI() {
         const p = selectEl.value;
+        desktopSec.classList.add('d-none');
+        cmdSec.classList.add('d-none');
+        mobSec.classList.add('d-none');
+
         if (p === 'mobile') {
-          cmdSec.classList.add('d-none');
           mobSec.classList.remove('d-none');
           return;
         }
-        mobSec.classList.add('d-none');
-        cmdSec.classList.remove('d-none');
-
-        if (p === 'mac') {
-          cmdHint.textContent = 'Abre Terminal en tu Mac, pega este comando y pulsa Enter:';
-          cmdText.textContent = `bash <(curl -fsSL "${baseDownloadUrl}?platform=mac-sh")`;
-        } else if (p === 'windows') {
-          cmdHint.textContent = 'Abre Símbolo del sistema (CMD), pega este comando y pulsa Enter:';
-          cmdText.textContent = `curl -fsSL "${baseDownloadUrl}?platform=windows" -o "%TEMP%\\netcrew.bat" && "%TEMP%\\netcrew.bat"`;
-        } else {
-          cmdHint.textContent = 'Abre Terminal en Linux, pega este comando y pulsa Enter:';
-          cmdText.textContent = `sudo bash <(curl -fsSL "${baseDownloadUrl}?platform=linux")`;
+        if (p === 'desktop') {
+          desktopSec.classList.remove('d-none');
+          return;
         }
+
+        cmdSec.classList.remove('d-none');
+        cmdHint.textContent = 'Abre Terminal en tu servidor Linux, pega este comando y pulsa Enter:';
+        cmdText.textContent = `sudo bash <(curl -fsSL "${baseDownloadUrl}?platform=linux")`;
       }
 
       selectEl.addEventListener('change', renderShareUI);
       renderShareUI();
+
+      if (btnCopyAppLink) {
+        btnCopyAppLink.addEventListener('click', function () {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+              btnCopyAppLink.innerHTML = '<i class="ti ti-check"></i><span>¡Enlace copiado!</span>';
+              setTimeout(() => {
+                btnCopyAppLink.innerHTML = '<i class="ti ti-copy"></i><span>Copiar enlace para NetCrew Client</span>';
+              }, 2500);
+            });
+          }
+        });
+      }
 
       btnCopy.addEventListener('click', function () {
         const text = cmdText.textContent;

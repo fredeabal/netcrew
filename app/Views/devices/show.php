@@ -268,11 +268,11 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           </div>
 
           <div class="install-actions">
-            <button type="button" id="btnGenerateCommand" class="btn btn-primary install-action-btn">
+            <button type="button" id="btnGenerateCommand" class="btn btn-primary btn-sm install-action-btn">
               <i class="ti ti-link" aria-hidden="true"></i>
               <span>Generar</span>
             </button>
-            <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary install-action-btn">
+            <a id="lnkDownloadYml" href="<?= site_url('devices/download/' . $device->id . '?platform=yml') ?>" class="btn btn-outline-primary btn-sm install-action-btn">
               <i class="ti ti-download" aria-hidden="true"></i>
               <span id="lblDownloadFile">Descargar .yml</span>
             </a>

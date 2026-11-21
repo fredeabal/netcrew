@@ -1585,6 +1585,12 @@ a.net-name:hover {
     display: block !important;
 }
 
+.install-controls-row .select2-container--default .select2-selection--single {
+    height: 30px !important;
+    border-radius: 6px !important;
+    font-size: 0.8125rem !important;
+}
+
 .install-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1594,17 +1600,17 @@ a.net-name:hover {
 
 .btn.install-action-btn,
 .install-action-btn {
-    height: 39px;
-    min-height: 39px;
-    min-block-size: 39px;
+    height: 30px;
+    min-height: 30px;
+    min-block-size: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    padding: 0 1rem;
+    padding: 0 0.85rem !important;
     font-size: 0.8125rem;
     font-weight: 500;
-    border-radius: 7px;
+    border-radius: 6px;
     flex: 1 1 7.5rem;
     white-space: nowrap;
 }

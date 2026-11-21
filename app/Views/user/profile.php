@@ -109,11 +109,20 @@
             </div>
 
             <div class="row g-3">
+              <div class="col-12">
+                <label for="current_password" class="form-label fw-semibold">Contraseña Actual</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-transparent text-muted"><i class="ti ti-key"></i></span>
+                  <input type="password" class="form-control" id="current_password" name="current_password" autocomplete="current-password" placeholder="Solo necesaria si cambias tu correo o contraseña">
+                </div>
+                <div class="form-text text-muted fs-2">Requerida únicamente al modificar el correo electrónico o establecer una nueva contraseña.</div>
+              </div>
+
               <div class="col-12 col-md-6">
                 <label for="password" class="form-label fw-semibold">Nueva Contraseña</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent text-muted"><i class="ti ti-lock"></i></span>
-                  <input type="password" class="form-control" id="password" name="password" placeholder="Dejar en blanco para conservar actual">
+                  <input type="password" class="form-control" id="password" name="password" autocomplete="new-password" placeholder="Dejar en blanco para conservar actual">
                 </div>
                 <div class="form-text text-muted fs-2">Opcional. Mínimo 8 caracteres.</div>
               </div>
@@ -122,7 +131,7 @@
                 <label for="password_confirm" class="form-label fw-semibold">Confirmar Nueva Contraseña</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent text-muted"><i class="ti ti-lock-check"></i></span>
-                  <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Repite la contraseña">
+                  <input type="password" class="form-control" id="password_confirm" name="password_confirm" autocomplete="new-password" placeholder="Repite la contraseña">
                 </div>
               </div>
             </div>

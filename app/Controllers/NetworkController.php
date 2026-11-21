@@ -61,16 +61,12 @@ class NetworkController extends BaseController
     // ---------------------------------------------------------------------
     public function store()
     {
-
-
-        $data = $this->request->getPost();
+        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id']);
 
         // Si no es superadmin ni supervisor, forzar que el owner sea él mismo
         $user = auth()->user();
         if (! $user->inGroup('superadmin', 'supervisor')) {
             $data['owner_id'] = $user->id;
-
-
         }
 
         // Forzar siempre a /24 y asegurar que termine en .0 (dirección de red base)
@@ -190,7 +186,7 @@ class NetworkController extends BaseController
             return redirect()->to('/networks')->with('error', 'No tienes permisos.');
         }
 
-        $data = $this->request->getPost();
+        $data = $this->request->getPost(['name', 'cidr', 'dns', 'owner_id', 'active']);
         
         // Añadir el ID para que la regla de validación is_unique pueda ignorar la red actual
         $data['id'] = $id;

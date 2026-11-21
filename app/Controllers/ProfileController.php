@@ -69,15 +69,40 @@ class ProfileController extends BaseController
             'theme'    => 'permit_empty|in_list[light,dark,system]',
         ];
 
-        // Si se va a cambiar la contraseña
-        $password = $this->request->getPost('password');
-        if (!empty($password)) {
-            $rules['password'] = 'required|min_length[8]';
+        // Detectar si el usuario solicita un cambio sensible (correo o contraseña)
+        $password        = (string) $this->request->getPost('password');
+        $newEmail        = trim((string) $this->request->getPost('email'));
+        $emailIdentity   = $user->getEmailIdentity();
+        $currentEmail    = $emailIdentity ? (string) $emailIdentity->secret : (string) $user->email;
+        $emailChanged    = strcasecmp($newEmail, $currentEmail) !== 0;
+        $passwordChanged = $password !== '';
+
+        if ($passwordChanged) {
+            $rules['password']         = 'required|min_length[8]';
             $rules['password_confirm'] = 'required|matches[password]';
+        }
+
+        if ($emailChanged || $passwordChanged) {
+            $rules['current_password'] = [
+                'label'  => 'contraseña actual',
+                'rules'  => 'required',
+                'errors' => [
+                    'required' => 'Debes ingresar tu contraseña actual para cambiar tu correo electrónico o contraseña.',
+                ],
+            ];
         }
 
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        if ($emailChanged || $passwordChanged) {
+            $currentPassword = (string) $this->request->getPost('current_password');
+            $currentHash     = $emailIdentity ? (string) $emailIdentity->secret2 : (string) $user->password_hash;
+
+            if ($currentHash === '' || !service('passwords')->verify($currentPassword, $currentHash)) {
+                return redirect()->back()->withInput()->with('error', 'La contraseña actual no es correcta.');
+            }
         }
 
         // Llenar datos base

@@ -97,7 +97,7 @@ if [ ! -f "./spark" ]; then
         cd /tmp
         rm -rf "$INSTALL_DIR"
     fi
-    git clone -b feat/nebula-p2p https://github.com/fredeabal/netcrew.git "$INSTALL_DIR"
+    git clone -b main https://github.com/fredeabal/netcrew.git "$INSTALL_DIR"
 else
     echo -e "${YELLOW}⏳ [2/6] Preparando el directorio del proyecto en ${INSTALL_DIR}...${NC}"
     mkdir -p "$INSTALL_DIR"

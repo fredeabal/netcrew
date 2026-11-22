@@ -155,7 +155,7 @@
 <!-- =====================================================================
      BOTONERA DE ACCIONES: RESPONSIVE Y CENTRADOS (LIBRO DE DISEÑO)
      ===================================================================== -->
-<div class="mt-2 pt-3 border-top">
+<div class="mt-2 pt-3 pb-4 border-top">
   <div class="row g-2 justify-content-center align-items-center">
     <div class="col-6 col-sm-auto">
       <a href="<?= base_url('dashboard') ?>" class="btn btn-dark btn-sm w-100 px-sm-4 py-2 text-nowrap d-flex align-items-center justify-content-center">

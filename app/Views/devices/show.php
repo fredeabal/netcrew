@@ -283,7 +283,7 @@ $timeAgoView = static function (?int $ts, int $ref): string {
           <div class="d-flex flex-column gap-2 small text-muted">
             <div class="d-flex align-items-start gap-2">
               <span class="install-step-badge bg-primary-subtle text-primary">1</span>
-              <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu equipo.</span>
+              <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu equipo.</span>
             </div>
             <div class="d-flex align-items-start gap-2">
               <span class="install-step-badge bg-primary-subtle text-primary">2</span>

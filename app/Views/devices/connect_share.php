@@ -54,7 +54,7 @@
       <div class="text-center mt-3">
         <small class="text-muted d-block">
           ¿Aún no tienes la app?
-          <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">
+          <a href="https://github.com/fredeabal/netcrew-app/releases" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">
             Descargar NetCrew Client <i class="ti ti-external-link"></i>
           </a>
         </small>

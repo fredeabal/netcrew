@@ -127,7 +127,7 @@
         <ul class="list-unstyled d-flex flex-column gap-3 mb-0 fs-3 text-muted">
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">1</span>
-            <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases/latest" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu ordenador (macOS, Windows o Linux).</span>
+            <span>Descarga e instala <a href="https://github.com/fredeabal/netcrew-app/releases" target="_blank" rel="noopener" class="text-primary text-decoration-none fw-semibold">NetCrew Client <i class="ti ti-external-link fs-2"></i></a> en tu ordenador (macOS, Windows o Linux).</span>
           </li>
           <li class="d-flex align-items-start gap-2">
             <span class="badge bg-primary-subtle text-primary rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width:20px;height:20px;font-size:11px;">2</span>
